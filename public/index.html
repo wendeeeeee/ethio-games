@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CONQUER - Ethiopian Card Betting Game</title>
+  <link rel="stylesheet" href="styles.css?v=21">
+</head>
+<body>
+
+  <!-- App Header -->
+  <header class="app-header">
+    <div class="logo-area">
+      <div class="logo-icon">👑</div>
+      <div class="logo-title">CONQUER <span style="font-size: 13px; color: #cbd5e1; font-weight: normal;">(ኮንከር)</span></div>
+    </div>
+    <div class="wallet-badge">
+      <span>💰 <span id="walletUserDisplay">Player</span>:</span>
+      <span id="walletBalanceDisplay">1,000 ETB</span>
+      <button class="deposit-btn" id="depositBtn">+ Deposit</button>
+    </div>
+  </header>
+
+  <!-- LOBBY VIEW -->
+  <div id="lobbyView" class="view-container">
+    <div class="lobby-grid">
+      <!-- Create Room / Play Bot -->
+      <div class="lobby-card">
+        <div class="card-title">🎲 Create a Game Table</div>
+        <div class="form-group">
+          <label>Your Name</label>
+          <input type="text" id="playerNameInput" value="Player 1" placeholder="Enter your name">
+        </div>
+        <div class="form-group">
+          <label>Table Stake (Bet Amount)</label>
+          <select id="stakeSelect">
+            <option value="50">50 ETB (Low Stakes)</option>
+            <option value="100" selected>100 ETB (Standard Table)</option>
+            <option value="250">250 ETB (High Roller)</option>
+            <option value="500">500 ETB (VIP Lounge)</option>
+          </select>
+        </div>
+        <button class="btn-primary" id="createRoomBtn">Create Multiplayer Table</button>
+        <button class="btn-primary btn-bot" id="playBotBtn">🤖 Play Immediately vs AI Bot</button>
+      </div>
+
+      <!-- Active Rooms List -->
+      <div class="lobby-card">
+        <div class="card-title">🟢 Active Tables to Join</div>
+        <div id="roomsListContainer">
+          <p style="color: #64748b; font-size: 14px;">No active tables currently waiting. Create one or play against the AI Bot!</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 14 Rules Accordion -->
+    <div class="lobby-card" style="margin-top: 24px;">
+      <div class="card-title">📜 The 14 Authentic Ethiopian Conquer Rules (የኮንከር 14ቱ ህጎች)</div>
+      <div style="font-size: 13px; line-height: 1.8; color: #cbd5e1;">
+        <ol style="padding-left: 20px;">
+          <li><strong>Yemejemeria ye meret:</strong> Starter's first ground discard cannot be drawn even with 41 points.</li>
+          <li><strong>Joker Naming:</strong> The player who joins cuts/names the round's Joker.</li>
+          <li><strong>Golden Star (⭐):</strong> Designated Jokers display a gold star badge.</li>
+          <li><strong>41 + Tris:</strong> Need $\ge 41$ points AND at least 1 valid Tris to pick from the ground.</li>
+          <li><strong>Gebi:</strong> Drop the final winning card into the GEBI slot to conquer.</li>
+          <li><strong>Joker Drop:</strong> If a Joker is accidentally discarded, the opponent can pick it up.</li>
+          <li><strong>Endless Deck:</strong> Reshuffle ground cards when deck empties (no draws/ties).</li>
+          <li><strong>Poke & 30s Forfeit:</strong> Poke the opponent—if they don't play in 30s, you win automatically.</li>
+          <li><strong>Joker Swap:</strong> Real cards can replace table Jokers to take the Joker back into hand.</li>
+          <li><strong>4 Aces:</strong> Quatris of Aces equals 41 points and unlocks ground draw.</li>
+          <li><strong>J-Q-K-A:</strong> Consecutive J-Q-K-A suited counts as 41 points.</li>
+          <li><strong>Base Card Win:</strong> Using the Base card allows winning without revealing early melds.</li>
+          <li><strong>Joker Steal:</strong> Replace table Joker to complete your conquer.</li>
+          <li><strong>1 Joker Limit:</strong> Maximum 1 Joker per Tris or Quatris (never 2 together).</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+
+  <!-- GAME TABLE VIEW -->
+  <div id="gameView" class="view-container" style="display: none;">
+    <div class="game-table">
+      
+      <!-- Top Bar: Room ID, Stakes, Pot, Poke Button -->
+      <div class="table-top-bar">
+        <div>
+          <span style="font-size: 13px; color: #94a3b8;">TABLE: <strong id="tableIdDisplay" style="color:#fff;">#1234</strong></span>
+        </div>
+        <div class="pot-badge" id="potDisplay">
+          POT: 200 ETB
+        </div>
+        <div>
+          <button class="poke-btn" id="pokeBtn">
+            <span>⏰</span> POKE (30s)
+          </button>
+        </div>
+      </div>
+
+      <!-- Active Poke Timer Banner -->
+      <div id="pokeTimerBanner" class="poke-timer-bar" style="display: none;">
+        ⚠️ POKE ACTIVE! <span id="pokeSecondsDisplay">30</span>s remaining!
+      </div>
+
+      <!-- Opponent Area -->
+      <div class="opponent-area">
+        <div class="opponent-badge">
+          👤 <strong id="opponentNameDisplay">Opponent</strong> (<span id="opponentCardCount">13</span> cards)
+        </div>
+        <div class="opponent-cards" id="opponentCardsContainer">
+          <!-- Back faces populated by JS -->
+        </div>
+      </div>
+
+      <!-- Center Field: Combined Deck on Open Joker, Discard (Meret), GEBI -->
+      <div class="center-field">
+        
+        <!-- Stock Deck Placed Directly On Top of the Open Joker Card -->
+        <div class="deck-slot" id="stockDeckSlot" style="cursor: pointer;">
+          <div class="deck-stack-wrapper">
+            <!-- Open Base Joker Card Underneath -->
+            <div id="baseJokerCardContainer" class="base-joker-underneath">
+              <div class="card" style="border: 2px dashed var(--primary-gold); display: flex; align-items: center; justify-content: center; color: var(--primary-gold); font-size: 11px;">Joker</div>
+            </div>
+            <!-- Closed Draw Deck on Top -->
+            <div class="card-back stock-deck-top" style="width: 76px; height: 110px; margin: 0;"></div>
+          </div>
+          <div class="slot-label"><span id="deckCount">25</span></div>
+          <button class="draw-action-btn" id="drawDeckBtn">ሳብ</button>
+        </div>
+
+        <!-- Discard Pile (Meret / Ground) -->
+        <div class="deck-slot" id="groundDiscardSlot">
+          <div id="groundCardContainer">
+            <div class="card" style="border: 2px dashed #94a3b8; display: flex; align-items: center; justify-content: center; color: #94a3b8; font-size: 12px;">ባዶ</div>
+          </div>
+          <div class="slot-label">መሬት</div>
+          <button class="draw-action-btn ground-btn" id="takeGroundBtn">ከመሬት አንሳ</button>
+        </div>
+
+        <!-- GEBI Box -->
+        <div class="gebi-slot" id="gebiSlot">
+          <div class="gebi-title">ገቢ</div>
+        </div>
+
+      </div>
+
+      <!-- Table Melds Display (ጠረጴዛ ላይ የወረዱ ካርታዎች) -->
+      <div class="table-melds-area" id="tableMeldsArea" style="display: none;">
+        <div class="table-melds-row">
+          <div class="table-melds-player" id="opponentMeldsBox" style="display: none;">
+            <div class="melds-player-name" id="opponentMeldsLabel">የተቃራኒ የወረዱ ካርታዎች</div>
+            <div class="melds-cards-row" id="opponentMeldsContainer"></div>
+          </div>
+          <div class="table-melds-player" id="myMeldsBox" style="display: none;">
+            <div class="melds-player-name" id="myMeldsLabel">የወረዱ ካርታዎችህ</div>
+            <div class="melds-cards-row" id="myMeldsContainer"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Player Hand Area -->
+      <div class="player-hand-container">
+        
+        <!-- Status Bar -->
+        <div class="hand-status-bar">
+          <div>
+            <span><strong id="turnIndicator" style="color: var(--primary-gold);">ተራ...</strong></span>
+          </div>
+          <div>
+            <span>ነጥብ: <strong id="pointsDisplay">0</strong> / 41</span>
+          </div>
+        </div>
+
+        <!-- Ground 41 Meld Interactive Action Bar -->
+        <div id="groundMeldBar" class="ground-meld-bar" style="display: none;">
+          <div class="ground-meld-header">
+            <span class="ground-meld-title">📥 ከመሬት ለማንሳት 41 ማውረድ አለብህ</span>
+            <span class="ground-meld-card-badge" id="groundTargetCardBadge">ካርታ: [ ? ]</span>
+          </div>
+          
+          <div class="ground-meld-body">
+            <div class="ground-meld-points-info">
+              የተመረጡ ሜልዶች: <strong id="groundMeldPointsVal" style="color: #f5b041; font-size: 18px;">0</strong> / 41 ነጥብ
+              <span id="groundMeldHintText" style="color: #f87171; font-size: 13px; margin-left: 8px;">⚠️ 41 አልሞላም! ሌላ ትሪስ ጨምር!</span>
+            </div>
+
+            <div class="ground-meld-actions">
+              <button class="btn-primary" id="confirmGroundMeldBtn" style="background: linear-gradient(135deg, #10b981, #059669); border: 1px solid #34d399; font-weight: bold; padding: 7px 16px; font-size: 13px;" disabled>
+                ✅ 41 ሞልቷል - አውርድና አንሳ
+              </button>
+              <button class="btn-primary" id="autoSelect41Btn" style="background: linear-gradient(135deg, #0ea5e9, #0284c7); border: 1px solid #38bdf8; font-weight: bold; padding: 7px 14px; font-size: 13px;">
+                ✨ 41 የሚሞሉትን ምረጥልኝ
+              </button>
+              <button class="btn-primary" id="forfeitGroundBtn" style="background: #dc2626; border: 1px solid #ef4444; padding: 7px 12px; font-size: 12px;">
+                ❌ 41 የለኝም (እጅ ሰጥቻለሁ)
+              </button>
+              <button class="btn-primary" id="cancelGroundMeldBtn" style="background: #334155; border: 1px solid #475569; padding: 7px 12px; font-size: 12px;">
+                ✕ ሰርዝ
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Cards Hand -->
+        <div class="player-cards" id="playerCardsContainer">
+          <!-- Player cards generated by JS -->
+        </div>
+
+        <!-- Hand Controls -->
+        <div class="hand-controls">
+          <button class="move-btn" id="moveLeftBtn" title="Move selected card left">⬅️ ወደግራ</button>
+          <button class="move-btn" id="moveRightBtn" title="Move selected card right">ወደቀኝ ➡️</button>
+          <button class="ctrl-btn" id="smartSortBtn" style="background: linear-gradient(135deg, #0ea5e9, #0284c7); color: #fff; font-weight: bold; border-color: #38bdf8;">✨ ደርድር</button>
+          <button class="ctrl-btn" id="groupMeldsBtn" style="border-color: #38bdf8;">🗂️ በግሩፕ እይ</button>
+          <button class="ctrl-btn discard-btn" id="discardBtn">መሬት ጣል</button>
+          <button class="ctrl-btn" id="conquerBtn" style="background: var(--primary-gold); color: #000; font-weight: bold;">👑 ኮንከር!</button>
+          <button class="ctrl-btn" id="leaveGameBtn">ውጣ</button>
+        </div>
+
+        <!-- Optional Melds Groups View Container -->
+        <div id="meldGroupsContainer" class="meld-groups-container" style="display: none;"></div>
+
+      </div>
+
+    </div>
+  </div>
+
+  <!-- CUT JOKER MODAL (Rule 2) — High / Low Selection -->
+  <div id="cutJokerModal" class="modal-overlay" style="display: none;">
+    <div class="modal-content" style="max-width: 500px;">
+      <div class="modal-title">⭐ 28ኛዋ ካርታ ተገለጸች! ከፍ ወይም ዝቅ ምረጥ!</div>
+      <p style="color: #cbd5e1; font-size: 14px; margin-bottom: 6px;">
+        Cards have been dealt (14 for Creator, 13 for you). The 28th card is revealed below.
+      </p>
+      <p style="color: #94a3b8; font-size: 13px; margin-bottom: 16px;">
+        Choose <strong style="color: #4ade80;">High (ከፍ)</strong> to make the NEXT rank + same color the main Jokers,<br>
+        or <strong style="color: #f97316;">Low (ዝቅ)</strong> to make the PREVIOUS rank + same color the main Jokers.
+      </p>
+
+      <!-- Revealed 28th Card -->
+      <div style="display: flex; justify-content: center; margin-bottom: 20px;">
+        <div id="revealedBaseCard" style="transform: scale(1.4);">
+          <!-- Populated by JS with the actual 28th card -->
+        </div>
+      </div>
+
+      <!-- Joker Preview Info -->
+      <div id="jokerPreviewInfo" style="font-size: 13px; color: #cbd5e1; margin-bottom: 20px; text-align: center;">
+        <!-- Populated by JS: "High → 6♣ 6♠ become Jokers | Low → 4♣ 4♠ become Jokers" -->
+      </div>
+
+      <!-- High / Low Buttons -->
+      <div style="display: flex; gap: 16px; justify-content: center;">
+        <button class="btn-primary" id="cutHighBtn" style="flex: 1; padding: 16px; font-size: 18px; background: linear-gradient(135deg, #10b981, #059669); border: 2px solid #34d399;">
+          ⬆️ ከፍ (High)
+        </button>
+        <button class="btn-primary" id="cutLowBtn" style="flex: 1; padding: 16px; font-size: 18px; background: linear-gradient(135deg, #f97316, #ea580c); border: 2px solid #fb923c;">
+          ⬇️ ዝቅ (Low)
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- VICTORY / DEFEAT MODAL -->
+  <div id="gameResultModal" class="modal-overlay" style="display: none;">
+    <div class="modal-content">
+      <div class="modal-title" id="resultModalTitle">🏆 CONQUER WIN!</div>
+      <p id="resultModalDesc" style="color: #cbd5e1; font-size: 15px; margin: 16px 0;">
+        Player won the pot!
+      </p>
+      <button class="btn-primary" id="returnToLobbyBtn">Back to Lobby</button>
+    </div>
+  </div>
+
+  <!-- Socket.io & App Script -->
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="app.js?v=21"></script>
+</body>
+</html>
+

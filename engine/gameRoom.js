@@ -1,0 +1,455 @@
+// engine/gameRoom.js
+const { createConquerDeck, shuffleDeck, getNextRank, getPrevRank } = require('./cardTypes');
+const {
+  calculateHandPoints,
+  canDrawFromGround,
+  validateConquerHand,
+  findHandTris
+} = require('./conquerRules');
+const walletManager = require('./walletManager');
+
+class GameRoom {
+  constructor(roomId, creator, stakeAmount = 100) {
+    this.roomId = roomId;
+    this.creator = creator; // { id, name, socketId }
+    this.joiner = null;     // { id, name, socketId }
+    this.stakeAmount = stakeAmount;
+    this.pot = 0;
+    this.status = 'WAITING'; // WAITING, CUTTING_JOKER, PLAYING, FINISHED
+
+    this.deck = [];
+    this.discardPile = [];
+    this.jokerCard = null;
+    this.jokerRank = null;
+
+    this.creatorHand = [];
+    this.joinerHand = [];
+
+    // Table melds laid down by players: { creator: [groups], joiner: [groups] }
+    this.tableMelds = {
+      [creator.id]: [],
+      joiner: []
+    };
+
+    this.currentTurnPlayerId = null;
+    this.turnState = null; // 'AWAITING_DRAW', 'AWAITING_DISCARD'
+    this.isFirstDiscard = true; // Rule 1: Starter's first discard protected
+
+    this.pokeState = {
+      active: false,
+      pokedBy: null,
+      targetPlayerId: null,
+      secondsLeft: 30,
+      intervalId: null
+    };
+
+    this.winner = null;
+    this.winReason = null;
+    this.logs = [];
+  }
+
+  log(message) {
+    const time = new Date().toLocaleTimeString();
+    this.logs.unshift(`[${time}] ${message}`);
+    if (this.logs.length > 50) this.logs.pop();
+  }
+
+  join(player) {
+    if (this.joiner) return { success: false, message: 'Room already full' };
+    this.joiner = player;
+    this.tableMelds[player.id] = [];
+
+    // Lock bets into Escrow
+    const escrowResult = walletManager.lockEscrow(this.roomId, this.creator.id, this.joiner.id, this.stakeAmount);
+    if (!escrowResult.success) {
+      this.joiner = null;
+      return { success: false, message: escrowResult.message };
+    }
+    this.pot = escrowResult.pot;
+
+    // 54-Card Deck Setup: Deal 14 to Creator, 13 to Joiner (Total 27)
+    this.deck = shuffleDeck(createConquerDeck(2));
+    this.creatorHand = [];
+    this.joinerHand = [];
+
+    for (let i = 0; i < 13; i++) {
+      this.creatorHand.push(this.deck.pop());
+      this.joinerHand.push(this.deck.pop());
+    }
+    // Creator gets 14th card
+    this.creatorHand.push(this.deck.pop());
+
+    // Reveal the 28th card as the Base Card!
+    this.baseCard = this.deck.pop();
+    this.baseCard.isBase = true;
+    this.jokerCard = this.baseCard;
+
+    // Transition to CUTTING_JOKER (Joiner sees 28th card and chooses High or Low)
+    this.status = 'CUTTING_JOKER';
+    this.log(`${player.name} joined the table. Pot is ${this.pot} ETB.`);
+    this.log(`🃏 27 ካርዶች ተከፋፈሉ (14 ለ${this.creator.name}፣ 13 ለ${player.name})።`);
+    this.log(`⭐ 28ኛዋ ካርታ ተገለጸች፦ ${this.baseCard.rank}${this.baseCard.suit}! ${player.name} ከፍ (High) ወይም ዝቅ (Low) ይሰይማል!`);
+
+    return { success: true };
+  }
+
+  // Joiner chooses "ከፍ" (High) or "ዝቅ" (Low) for the 28th card
+  setJokerHighLow(playerId, choice = 'high') {
+    if (this.status !== 'CUTTING_JOKER') {
+      return { success: false, message: 'Not in cutting phase' };
+    }
+    if (this.joiner.id !== playerId) {
+      return { success: false, message: 'Only the Joiner can call High or Low!' };
+    }
+
+    // Determine target rank based on High or Low
+    const targetRank = choice === 'high' ? getNextRank(this.baseCard.rank) : getPrevRank(this.baseCard.rank);
+    // Matching color group: Black -> ♣ and ♠; Red -> ♥ and ♦
+    const targetSuits = this.baseCard.color === 'black' ? ['♣', '♠'] : ['♥', '♦'];
+
+    this.jokerRank = targetRank;
+    this.jokerSuits = targetSuits;
+    this.jokerChoice = choice;
+
+    // Apply Joker status to hands and deck
+    this.applyJokerStatus();
+
+    // Ground starts empty; Starter discards first card
+    this.discardPile = [];
+    this.isFirstDiscard = true;
+    this.discardsCount = 0;
+
+    // Creator starts in AWAITING_DISCARD
+    this.currentTurnPlayerId = this.creator.id;
+    this.turnState = 'AWAITING_DISCARD';
+    this.status = 'PLAYING';
+
+    const colorName = this.baseCard.color === 'black' ? 'ጥቁር (Black)' : 'ቀይ (Red)';
+    this.log(`⭐ ${this.joiner.name} "${choice === 'high' ? 'ከፍ (High)' : 'ዝቅ (Low)'}" መረጠ!`);
+    this.log(`👑 ዋና ጆከሮች፦ ${targetRank}${targetSuits[0]} እና ${targetRank}${targetSuits[1]} (${colorName})! 2ቱ ፕሪንትድ ጆከሮች ደግሞ ፎልስ ጆከር (False Joker) ናቸው!`);
+    this.log(`👉 ${this.creator.name} 14 ካርታ ስላለው የመጀመሪያውን ካርታ በመጣል ጨዋታውን ይጀምራል!`);
+
+    return { success: true, jokerRank: this.jokerRank, jokerSuits: this.jokerSuits };
+  }
+
+  // Backward compatibility alias for single-click cut
+  cutJoker(playerId) {
+    return this.setJokerHighLow(playerId, 'high');
+  }
+
+  applyJokerStatus() {
+    const mark = (card) => {
+      // 1. Designated main jokers: Same rank AND same color group (e.g. 6♣ and 6♠)
+      if (card.rank === this.jokerRank && this.jokerSuits && this.jokerSuits.includes(card.suit)) {
+        card.isJoker = true;
+        card.isMainJoker = true;
+      }
+      // 2. The 2 printed false jokers are also wild jokers!
+      if (card.isFalseJoker) {
+        card.isJoker = true;
+      }
+    };
+    this.creatorHand.forEach(mark);
+    this.joinerHand.forEach(mark);
+    this.deck.forEach(mark);
+    this.discardPile.forEach(mark);
+  }
+
+  getHand(playerId) {
+    return playerId === this.creator.id ? this.creatorHand : this.joinerHand;
+  }
+
+  getOpponent(playerId) {
+    return playerId === this.creator.id ? this.joiner : this.creator;
+  }
+
+  // Draw card: source = 'deck' | 'ground'
+  drawCard(playerId, source) {
+    if (this.status !== 'PLAYING') return { success: false, message: 'Game not in progress' };
+    if (this.currentTurnPlayerId !== playerId) return { success: false, message: 'Not your turn' };
+    if (this.turnState !== 'AWAITING_DRAW') return { success: false, message: 'Already drew a card' };
+
+    const hand = this.getHand(playerId);
+    let drawnCard = null;
+
+    if (source === 'deck') {
+      this.checkAndReshuffleIfNeeded();
+      drawnCard = this.deck.pop();
+      hand.push(drawnCard);
+      this.turnState = 'AWAITING_DISCARD';
+      this.resetPoke();
+      this.log(`${this.getPlayerName(playerId)} drew a card from the deck.`);
+      return { success: true, card: drawnCard, from: 'deck' };
+    }
+
+    if (source === 'ground') {
+      if (this.isFirstDiscard) return { success: false, message: 'የመጀመሪያው ካርታ አይነሳም!' };
+      if (this.discardPile.length === 0) return { success: false, message: 'Ground is empty' };
+
+      drawnCard = this.discardPile.pop();
+      hand.push(drawnCard);
+      this.turnState = 'AWAITING_DISCARD';
+      this.resetPoke();
+      this.log(`${this.getPlayerName(playerId)} picked ${drawnCard.rank}${drawnCard.suit} from the ground.`);
+      return { success: true, card: drawnCard, from: 'ground' };
+    }
+
+    return { success: false, message: 'Invalid draw source' };
+  }
+
+  // Discard card: toGebi = boolean
+  discardCard(playerId, cardId, toGebi = false, melds = null) {
+    if (this.status !== 'PLAYING') return { success: false, message: 'Game not in progress' };
+    if (this.currentTurnPlayerId !== playerId) return { success: false, message: 'Not your turn' };
+    if (this.turnState !== 'AWAITING_DISCARD') return { success: false, message: 'You must draw first' };
+
+    const hand = this.getHand(playerId);
+    const cardIndex = hand.findIndex(c => c.id === cardId);
+    if (cardIndex === -1) return { success: false, message: 'Card not in your hand' };
+
+    const [discardedCard] = hand.splice(cardIndex, 1);
+
+    // Rule 5: Finishing via "Gebi" (Conquer declare)
+    if (toGebi) {
+      const winValidation = validateConquerHand(melds, discardedCard, this.jokerRank, this.jokerCard);
+      if (!winValidation.valid) {
+        // Return card to hand if invalid
+        hand.push(discardedCard);
+        return { success: false, message: `Cannot Gebi: ${winValidation.message}` };
+      }
+
+      // Valid Conquer!
+      this.status = 'FINISHED';
+      this.winner = playerId;
+      this.winReason = `CONQUER! ${this.getPlayerName(playerId)} placed ${discardedCard.rank}${discardedCard.suit} into GEBI and won!`;
+      this.log(`🏆 ${this.winReason}`);
+
+      const payout = walletManager.payoutWinner(this.roomId, playerId);
+      this.resetPoke();
+      return { success: true, isWin: true, winner: playerId, payout };
+    }
+
+    // Normal discard to Ground
+    this.discardPile.push(discardedCard);
+    this.discardsCount = (this.discardsCount || 0) + 1;
+    this.log(`${this.getPlayerName(playerId)} discarded ${discardedCard.rank}${discardedCard.suit} to the ground.`);
+
+    // First discard by the starter CANNOT be picked up
+    if (this.discardsCount <= 1) {
+      this.isFirstDiscard = true;
+    } else {
+      this.isFirstDiscard = false;
+    }
+
+    // Pass turn to opponent
+    this.currentTurnPlayerId = this.getOpponent(playerId).id;
+    this.turnState = 'AWAITING_DRAW';
+    this.resetPoke();
+
+    return { success: true, isWin: false, nextTurnPlayerId: this.currentTurnPlayerId };
+  }
+
+  // Draw from ground with 41-point table melds
+  drawCardFromGroundWithMelds(playerId, meldsToLayDown) {
+    if (this.status !== 'PLAYING') return { success: false, message: 'Game not in progress' };
+    if (this.currentTurnPlayerId !== playerId) return { success: false, message: 'Not your turn' };
+    if (this.turnState !== 'AWAITING_DRAW') return { success: false, message: 'Already drew card' };
+
+    if (this.isFirstDiscard) {
+      return { success: false, message: 'የመጀመሪያው ካርታ አይነሳም!' };
+    }
+
+    if (this.discardPile.length === 0) return { success: false, message: 'Ground is empty' };
+    const groundCard = this.discardPile[this.discardPile.length - 1];
+
+    let meldPoints = 0;
+    const hand = this.getHand(playerId);
+
+    if (meldsToLayDown && meldsToLayDown.length > 0) {
+      for (const group of meldsToLayDown) {
+        for (const c of group) {
+          meldPoints += c.pointValue || 0;
+        }
+      }
+    }
+
+    // If cards laid down are less than 41 -> IMMEDIATE FORFEIT! Player touched ground without 41!
+    if (!meldsToLayDown || meldsToLayDown.length === 0 || meldPoints < 41) {
+      return this.forfeitFromFailedGround(playerId);
+    }
+
+    // 41 Reached! Lay down the cards from hand onto table
+    for (const group of meldsToLayDown) {
+      for (const card of group) {
+        const idx = hand.findIndex(c => c.id === card.id);
+        if (idx !== -1) hand.splice(idx, 1);
+      }
+      this.tableMelds[playerId].push(group);
+    }
+
+    // Pick ground card into hand
+    const drawnCard = this.discardPile.pop();
+    hand.push(drawnCard);
+    this.turnState = 'AWAITING_DISCARD';
+    this.resetPoke();
+
+    this.log(`✅ ${this.getPlayerName(playerId)} melded ${meldPoints} points on the table and picked ${drawnCard.rank}${drawnCard.suit} from the ground!`);
+    return { success: true, card: drawnCard, meldPoints };
+  }
+
+  // Penalty: Player touched ground but cannot reach 41 -> IMMEDIATE FORFEIT!
+  forfeitFromFailedGround(playerId) {
+    if (this.status !== 'PLAYING') return;
+    const opponent = this.getOpponent(playerId);
+    this.status = 'FINISHED';
+    this.winner = opponent.id;
+    this.winReason = `❌ ${this.getPlayerName(playerId)} 41 ሳይሞላ ከመሬት ስላነሳ ተሸንፏል! ${opponent.name} አሸናፊ ሆኗል!`;
+    this.log(`🏆 ${this.winReason}`);
+
+    const payout = walletManager.payoutWinner(this.roomId, opponent.id);
+    this.resetPoke();
+    return { winner: opponent.id, winReason: this.winReason, payout };
+  }
+
+  // Rule 7: Reshuffle when deck empties (No Draw/Tie)
+  checkAndReshuffleIfNeeded() {
+    if (this.deck.length === 0) {
+      if (this.discardPile.length <= 1) return;
+      const topGround = this.discardPile.pop();
+      this.deck = shuffleDeck(this.discardPile);
+      this.discardPile = [topGround];
+      this.log('🔄 Rule 7: Stock deck ran out! Reshuffled the ground cards to continue the game.');
+    }
+  }
+
+  // Rule 8: Poke & 30-Second Forfeit
+  triggerPoke(pokerId, onTimeoutCallback) {
+    if (this.status !== 'PLAYING') return { success: false, message: 'Game is not active' };
+    if (this.currentTurnPlayerId === pokerId) return { success: false, message: 'Cannot poke yourself!' };
+    if (this.pokeState.active) return { success: false, message: 'Poke timer is already active!' };
+
+    const target = this.getOpponent(pokerId);
+    this.pokeState.active = true;
+    this.pokeState.pokedBy = pokerId;
+    this.pokeState.targetPlayerId = target.id;
+    this.pokeState.secondsLeft = 30;
+
+    this.log(`⚠️ ${this.getPlayerName(pokerId)} POKED ${target.name}! 30 seconds to play or forfeit!`);
+
+    this.pokeState.intervalId = setInterval(() => {
+      this.pokeState.secondsLeft--;
+      if (this.pokeState.secondsLeft <= 0) {
+        // Player timed out! Poker wins automatically!
+        clearInterval(this.pokeState.intervalId);
+        this.status = 'FINISHED';
+        this.winner = pokerId;
+        this.winReason = `TIMEOUT WIN! ${target.name} did not play within 30 seconds after Poke.`;
+        this.log(`🏆 ${this.winReason}`);
+        const payout = walletManager.payoutWinner(this.roomId, pokerId);
+        if (onTimeoutCallback) onTimeoutCallback(this.winner, this.winReason, payout);
+      }
+    }, 1000);
+
+    return { success: true, secondsLeft: 30 };
+  }
+
+  resetPoke() {
+    if (this.pokeState.intervalId) {
+      clearInterval(this.pokeState.intervalId);
+    }
+    this.pokeState.active = false;
+    this.pokeState.pokedBy = null;
+    this.pokeState.targetPlayerId = null;
+    this.pokeState.secondsLeft = 30;
+    this.pokeState.intervalId = null;
+  }
+
+  // Rule 9 & 13: Joker Swap / Steal from a table meld
+  swapJoker(playerId, targetPlayerMeldOwnerId, meldIndex, naturalCardId) {
+    if (this.status !== 'PLAYING') return { success: false, message: 'Game not active' };
+    if (this.currentTurnPlayerId !== playerId) return { success: false, message: 'Can only swap on your turn' };
+
+    const playerHand = this.getHand(playerId);
+    const naturalCardIndex = playerHand.findIndex(c => c.id === naturalCardId);
+    if (naturalCardIndex === -1) return { success: false, message: 'Natural card not in hand' };
+    const naturalCard = playerHand[naturalCardIndex];
+
+    const melds = this.tableMelds[targetPlayerMeldOwnerId];
+    if (!melds || !melds[meldIndex]) return { success: false, message: 'Meld not found' };
+
+    const targetMeld = melds[meldIndex];
+    const jokerIndex = targetMeld.findIndex(c => c.isJoker || c.rank === this.jokerRank);
+    if (jokerIndex === -1) return { success: false, message: 'No Joker in this meld' };
+
+    // Swap
+    const stolenJoker = targetMeld[jokerIndex];
+    targetMeld[jokerIndex] = naturalCard;
+    playerHand.splice(naturalCardIndex, 1);
+    playerHand.push(stolenJoker);
+
+    this.log(`🔄 ${this.getPlayerName(playerId)} swapped a Joker from table meld with ${naturalCard.rank}${naturalCard.suit}!`);
+    return { success: true, stolenJoker };
+  }
+
+  getPlayerName(playerId) {
+    if (this.creator && this.creator.id === playerId) return this.creator.name;
+    if (this.joiner && this.joiner.id === playerId) return this.joiner.name;
+    return 'Player';
+  }
+
+  // Returns safe sanitized state for a specific player (anti-cheat: hide opponent's hand and deck)
+  getClientState(playerId) {
+    const isCreator = this.creator && this.creator.id === playerId;
+    const myHand = isCreator ? this.creatorHand : this.joinerHand;
+    const opponent = isCreator ? this.joiner : this.creator;
+    const opponentHandCount = (isCreator ? this.joinerHand : this.creatorHand).length;
+
+    const pointsInfo = calculateHandPoints(myHand);
+    const trisList = findHandTris(myHand, this.jokerRank);
+    const groundCard = this.discardPile.length > 0 ? this.discardPile[this.discardPile.length - 1] : null;
+
+    let groundEligibility = { canDraw: false, reason: 'Wait for game start' };
+    if (this.status === 'PLAYING') {
+      groundEligibility = canDrawFromGround(myHand, groundCard, this.isFirstDiscard, this.jokerRank);
+    }
+
+    return {
+      roomId: this.roomId,
+      status: this.status,
+      stakeAmount: this.stakeAmount,
+      pot: this.pot,
+      creator: { id: this.creator.id, name: this.creator.name },
+      joiner: this.joiner ? { id: this.joiner.id, name: this.joiner.name } : null,
+      baseCard: this.baseCard,
+      jokerCard: this.jokerCard,
+      jokerRank: this.jokerRank,
+      jokerSuits: this.jokerSuits,
+      topGroundCard: groundCard,
+      groundCardCount: this.discardPile.length,
+      deckCardCount: this.deck.length,
+      isFirstDiscard: this.isFirstDiscard,
+      currentTurnPlayerId: this.currentTurnPlayerId,
+      turnState: this.turnState,
+      myHand: myHand,
+      opponentHandCount: opponentHandCount,
+      opponent: opponent ? { id: opponent.id, name: opponent.name } : null,
+      tableMelds: this.tableMelds,
+      points: pointsInfo.total,
+      hasSpecial41: pointsInfo.hasSpecial41,
+      specialReason: pointsInfo.specialReason,
+      trisCount: trisList.length,
+      groundEligibility,
+      pokeState: {
+        active: this.pokeState.active,
+        pokedBy: this.pokeState.pokedBy,
+        secondsLeft: this.pokeState.secondsLeft
+      },
+      winner: this.winner,
+      winReason: this.winReason,
+      logs: this.logs
+    };
+  }
+}
+
+module.exports = GameRoom;
+
