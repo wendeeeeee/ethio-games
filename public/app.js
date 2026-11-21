@@ -486,22 +486,29 @@ const createSekaRoomBtn = document.getElementById('createSekaRoomBtn');
 const playSekaBotBtn = document.getElementById('playSekaBotBtn');
 
 if (tabConquerBtn && tabSekaBtn) {
-  tabConquerBtn.addEventListener('click', () => {
-    tabConquerBtn.classList.add('active');
-    tabSekaBtn.classList.remove('active');
-    if (conquerLobbySection) conquerLobbySection.style.display = 'block';
-    if (sekaLobbySection) sekaLobbySection.style.display = 'none';
-    playCardSound();
-  });
+  function selectGameMode(mode) {
+    const isConquer = mode === 'conquer';
+    tabConquerBtn.classList.toggle('active', isConquer);
+    tabSekaBtn.classList.toggle('active', !isConquer);
 
-  tabSekaBtn.addEventListener('click', () => {
-    tabSekaBtn.classList.add('active');
-    tabConquerBtn.classList.remove('active');
-    if (sekaLobbySection) sekaLobbySection.style.display = 'block';
-    if (conquerLobbySection) conquerLobbySection.style.display = 'none';
-    refreshSekaRoomsList();
+    const conquerSelectText = tabConquerBtn.querySelector('.select-btn-text');
+    const sekaSelectText = tabSekaBtn.querySelector('.select-btn-text');
+    if (conquerSelectText) conquerSelectText.textContent = isConquer ? '✓ ተመርጧል (Selected)' : 'ለመጫወት ይምረጡ (Select)';
+    if (sekaSelectText) sekaSelectText.textContent = !isConquer ? '✓ ተመርጧል (Selected)' : 'ለመጫወት ይምረጡ (Select)';
+
+    if (conquerLobbySection) conquerLobbySection.style.display = isConquer ? 'block' : 'none';
+    if (sekaLobbySection) sekaLobbySection.style.display = !isConquer ? 'block' : 'none';
+
+    if (!isConquer) {
+      refreshSekaRoomsList();
+    } else {
+      refreshRoomsList();
+    }
     playCardSound();
-  });
+  }
+
+  tabConquerBtn.addEventListener('click', () => selectGameMode('conquer'));
+  tabSekaBtn.addEventListener('click', () => selectGameMode('seka'));
 }
 
 // Create Seka Room

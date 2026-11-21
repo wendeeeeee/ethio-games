@@ -34,16 +34,45 @@
   <!-- LOBBY VIEW -->
   <div id="lobbyView" class="view-container lobby-container">
 
-    <!-- Game Selector Tabs: ኮንከር vs ሴካ -->
-    <div class="game-selector-bar">
-      <button class="game-tab-btn active" id="tabConquerBtn">
-        <span class="game-tab-icon">👑</span>
-        <span class="game-tab-text">ኮንከር (Conquer)</span>
-      </button>
-      <button class="game-tab-btn" id="tabSekaBtn">
-        <span class="game-tab-icon">🃏</span>
-        <span class="game-tab-text">ሴካ (Seka)</span>
-      </button>
+    <!-- Game Mode Selection Headline -->
+    <div class="game-selection-header">
+      <h2 class="game-selection-title">🎮 መጫወት የሚፈልጉትን ጨዋታ ይምረጡ (Select Game)</h2>
+      <p class="game-selection-subtitle">የኢትዮጵያ ባህላዊ ካርታ ውርርድ — ኮንከር (Conquer) ወይም ሴካ (Seka)</p>
+    </div>
+
+    <!-- 2 PROMINENT GAME BOXES: CONQUER & SEKA -->
+    <div class="game-mode-boxes">
+      <!-- BOX 1: CONQUER -->
+      <div class="game-mode-card active" id="tabConquerBtn" role="button" tabindex="0">
+        <div class="game-mode-badge-top">🔥 ተወዳጅ (Popular)</div>
+        <div class="game-mode-icon-wrap">👑</div>
+        <div class="game-mode-title">ኮንከር (Conquer)</div>
+        <div class="game-mode-sub">ክላሲክ የኢትዮጵያ 14 ህግ የካርታ ውርርድ ጨዋታ</div>
+        <div class="game-mode-tags">
+          <span class="mode-tag">41 ነጥብ መውረጃ</span>
+          <span class="mode-tag">ጆከር መቁረጥ</span>
+          <span class="mode-tag">ተጣይ (Winning Discard)</span>
+        </div>
+        <div class="game-mode-select-btn">
+          <span class="select-btn-text">✓ ተመርጧል (Selected)</span>
+        </div>
+      </div>
+
+      <!-- BOX 2: SEKA -->
+      <div class="game-mode-card" id="tabSekaBtn" role="button" tabindex="0">
+        <div class="game-mode-badge-top seka-badge">⚡ ፈጣን (Fast-Paced)</div>
+        <div class="game-mode-icon-wrap">🃏</div>
+        <div class="game-mode-title">ሴካ (Seka)</div>
+        <div class="game-mode-sub">ባህላዊ የ10 እና 11 ካርታ የሴካ ውርርድ</div>
+        <div class="game-mode-tags">
+          <span class="mode-tag">ጦር ብቻ (Suited Runs)</span>
+          <span class="mode-tag">2 ዋይልድ ጆከሮች</span>
+          <span class="mode-tag">ነፃ ከመሬት ማንሳት</span>
+        </div>
+        <div class="game-mode-select-btn">
+          <span class="select-btn-text">ለመጫወት ይምረጡ (Select)</span>
+        </div>
+      </div>
     </div>
 
     <!-- CONQUER SECTION -->

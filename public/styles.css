@@ -133,13 +133,157 @@ body {
   overflow-y: auto;
 }
 
-/* Game Selection Bar (ኮንከር vs ሴካ) */
-.game-selector-bar {
+/* ============================================================
+   GAME SELECTION BOXES (ኮንከር vs ሴካ 2 BOXES)
+   ============================================================ */
+.game-selection-header {
+  text-align: center;
+  margin: 6px 0 16px 0;
+}
+
+.game-selection-title {
+  font-size: 20px;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: 0.5px;
+  margin: 0;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.6);
+}
+
+.game-selection-subtitle {
+  font-size: 13px;
+  color: #94a3b8;
+  margin: 4px 0 0 0;
+}
+
+.game-mode-boxes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  max-width: 840px;
+  margin: 0 auto 22px auto;
+  user-select: none;
+}
+
+.game-mode-card {
+  background: linear-gradient(150deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.85));
+  border: 2px solid rgba(212, 175, 55, 0.35);
+  border-radius: 20px;
+  padding: 24px 20px;
+  cursor: pointer;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.55);
   display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.game-mode-card:hover {
+  border-color: var(--primary-gold);
+  transform: translateY(-4px);
+  box-shadow: 0 12px 32px rgba(245, 176, 65, 0.28), 0 8px 20px rgba(0, 0, 0, 0.6);
+}
+
+.game-mode-card.active {
+  background: linear-gradient(150deg, rgba(30, 41, 59, 0.98), rgba(15, 23, 42, 0.98));
+  border: 2.5px solid var(--primary-gold);
+  box-shadow: 0 0 32px rgba(245, 176, 65, 0.4), 0 12px 30px rgba(0, 0, 0, 0.7), inset 0 0 18px rgba(245, 176, 65, 0.12);
+  transform: scale(1.02);
+}
+
+.game-mode-badge-top {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  padding: 3px 9px;
+  border-radius: 20px;
+  background: rgba(245, 158, 11, 0.2);
+  border: 1px solid #f59e0b;
+  color: #fcd34d;
+}
+
+.game-mode-badge-top.seka-badge {
+  background: rgba(59, 130, 246, 0.2);
+  border: 1px solid #3b82f6;
+  color: #93c5fd;
+}
+
+.game-mode-icon-wrap {
+  font-size: 46px;
+  margin: 4px 0 10px 0;
+  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.5));
+  transition: transform 0.25s ease;
+}
+
+.game-mode-card:hover .game-mode-icon-wrap {
+  transform: scale(1.12);
+}
+
+.game-mode-title {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--primary-gold);
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+}
+
+.game-mode-sub {
+  font-size: 13px;
+  color: #cbd5e1;
+  line-height: 1.45;
+  margin-bottom: 14px;
+  max-width: 290px;
+}
+
+.game-mode-tags {
+  display: flex;
+  gap: 6px;
   justify-content: center;
-  gap: 16px;
-  margin: 12px auto 16px auto;
-  max-width: 580px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+
+.mode-tag {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #94a3b8;
+}
+
+.game-mode-select-btn {
+  width: 100%;
+  padding: 11px 16px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #cbd5e1;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+}
+
+.game-mode-card.active .game-mode-select-btn {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  border: 1.5px solid #fbbf24;
+  color: #ffffff;
+  font-weight: 800;
+  box-shadow: 0 4px 16px rgba(245, 158, 11, 0.4);
+}
+
+/* Backward compatibility for small tab bar if needed */
+.game-selector-bar {
+  display: none;
 }
 
 .game-tab-btn {
@@ -156,27 +300,6 @@ body {
   font-size: 16px;
   font-weight: 800;
   cursor: pointer;
-  transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
-}
-
-.game-tab-btn:hover {
-  border-color: var(--primary-gold);
-  color: #fff;
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(245, 176, 65, 0.3);
-}
-
-.game-tab-btn.active {
-  background: linear-gradient(135deg, #d97706, #b45309);
-  border-color: var(--primary-gold);
-  color: #ffffff;
-  box-shadow: 0 0 25px rgba(245, 176, 65, 0.5), 0 8px 25px rgba(0, 0, 0, 0.6);
-  transform: scale(1.02);
-}
-
-.game-tab-icon {
-  font-size: 20px;
 }
 
 .lobby-grid {
@@ -1374,6 +1497,7 @@ select:focus {
   .lobby-container {
     max-width: 1200px !important;
   }
+
   .fan .card {
     width: 68px !important;
     height: 98px !important;
@@ -1386,25 +1510,31 @@ select:focus {
   .center-field {
     gap: 24px;
   }
+
   .deck-stack-wrapper {
     width: 90px;
     height: 100px;
   }
+
   .stock-deck-top {
     width: 66px !important;
     height: 95px !important;
   }
+
   .card {
     width: 66px;
     height: 95px;
     padding: 4px 6px;
   }
+
   .card-center-suit {
     font-size: 26px;
   }
+
   .corner-rank {
     font-size: 15px;
   }
+
   .corner-suit {
     font-size: 13px;
   }
@@ -1417,21 +1547,26 @@ select:focus {
     flex-wrap: wrap;
     gap: 4px;
   }
+
   .logo-icon {
     font-size: 22px;
   }
+
   .logo-title {
     font-size: 16px;
   }
+
   .logo-title span {
     font-size: 10px !important;
   }
+
   .wallet-badge {
     padding: 4px 10px;
     gap: 6px;
     font-size: 12px;
     border-radius: 20px;
   }
+
   .deposit-btn {
     padding: 3px 8px;
     font-size: 10px;
@@ -1441,21 +1576,73 @@ select:focus {
     padding: 0 10px !important;
     margin: 6px auto 20px auto !important;
   }
+
   .game-selector-bar {
     gap: 8px;
     margin: 8px auto 10px auto;
   }
+
   .game-tab-btn {
     padding: 10px 14px;
     font-size: 13px;
     gap: 6px;
   }
+
   .game-tab-icon {
     font-size: 16px;
   }
+
+  .game-selection-title {
+    font-size: 17px;
+  }
+
+  .game-selection-subtitle {
+    font-size: 12px;
+  }
+
+  .game-mode-boxes {
+    grid-template-columns: 1fr;
+    gap: 14px;
+    margin-bottom: 16px;
+  }
+
+  .game-mode-card {
+    padding: 16px 14px;
+    border-radius: 16px;
+  }
+
+  .game-mode-icon-wrap {
+    font-size: 36px;
+    margin: 2px 0 6px 0;
+  }
+
+  .game-mode-title {
+    font-size: 19px;
+  }
+
+  .game-mode-sub {
+    font-size: 12px;
+    margin-bottom: 10px;
+  }
+
+  .game-mode-tags {
+    margin-bottom: 12px;
+  }
+
+  .mode-tag {
+    font-size: 10px;
+    padding: 2px 7px;
+  }
+
+  .game-mode-select-btn {
+    padding: 9px 12px;
+    font-size: 12px;
+  }
+
   .lobby-card {
     padding: 16px;
   }
+
   .card-title {
     font-size: 15px;
   }
@@ -1465,6 +1652,7 @@ select:focus {
     padding: 4px 6px;
     height: calc(100vh - 38px);
   }
+
   .table-top-bar {
     padding: 5px 10px;
     border-radius: 16px;
@@ -1472,15 +1660,18 @@ select:focus {
     gap: 6px;
     justify-content: center;
   }
+
   .pot-badge {
     font-size: 14px;
     padding: 4px 10px;
   }
+
   .poke-btn {
     padding: 5px 12px;
     font-size: 12px;
     gap: 4px;
   }
+
   #gameModeBadge {
     font-size: 11px !important;
     padding: 3px 7px !important;
@@ -1490,11 +1681,13 @@ select:focus {
   .opponent-area {
     margin-bottom: 8px;
   }
+
   .opponent-badge {
     font-size: 11px;
     padding: 3px 10px;
     margin-bottom: 4px;
   }
+
   .card-back {
     width: 36px;
     height: 52px;
@@ -1507,33 +1700,41 @@ select:focus {
     gap: 16px;
     flex: 0 1 auto;
   }
+
   .deck-stack-wrapper {
     width: 72px;
     height: 85px;
   }
+
   .stock-deck-top {
     width: 56px !important;
     height: 80px !important;
   }
+
   .base-joker-underneath {
     transform: rotate(-14deg) translateX(-10px);
   }
+
   .base-joker-underneath .card {
     width: 56px !important;
     height: 80px !important;
   }
+
   .slot-label {
     font-size: 10px;
     margin-top: 3px;
   }
+
   .draw-action-btn {
     font-size: 10px;
     padding: 4px 8px;
   }
+
   .deck-joker-call-badge {
     font-size: 9px;
     padding: 2px 5px;
   }
+
   #groundCardContainer .card {
     width: 56px !important;
     height: 80px !important;
@@ -1547,28 +1748,35 @@ select:focus {
     padding: 3px 4px;
     border-radius: 6px;
   }
+
   .card-center-suit {
     font-size: 22px;
   }
+
   .corner-rank {
     font-size: 13px;
   }
+
   .corner-suit {
     font-size: 11px;
     margin-top: 1px;
   }
+
   .card-corner {
     width: 14px;
   }
+
   .card-joker-star {
     font-size: 12px;
     top: 2px;
     right: 2px;
   }
+
   .card-false-badge {
     font-size: 6px;
     padding: 1px 3px;
   }
+
   .card-tetay-badge {
     font-size: 8px;
     padding: 1px 5px;
@@ -1581,9 +1789,11 @@ select:focus {
     height: 140px;
     margin: 0 0 25px 0;
   }
+
   .fan {
     bottom: 50px;
   }
+
   .fan .card {
     width: 48px !important;
     height: 70px !important;
@@ -1591,12 +1801,15 @@ select:focus {
     padding: 2px 3px;
     transform-origin: center 130px !important;
   }
+
   .fan .card .corner-rank {
     font-size: 11px;
   }
+
   .fan .card .corner-suit {
     font-size: 10px;
   }
+
   .fan .card .card-center-suit {
     font-size: 18px;
   }
@@ -1609,12 +1822,14 @@ select:focus {
     flex-wrap: wrap;
     justify-content: center;
   }
+
   .ctrl-btn {
     padding: 6px 10px;
     font-size: 11px;
     border-radius: 6px;
     min-width: auto !important;
   }
+
   .hand-status-bar {
     margin-bottom: 10px;
     padding: 3px 14px;
@@ -1626,22 +1841,28 @@ select:focus {
     padding: 8px 10px;
     max-width: 100%;
   }
+
   .ground-meld-title {
     font-size: 12px;
   }
+
   .ground-meld-card-badge {
     font-size: 11px;
   }
+
   .ground-meld-body {
     flex-direction: column;
     align-items: flex-start;
   }
+
   .ground-meld-points-info {
     font-size: 12px;
   }
+
   .ground-meld-actions {
     width: 100%;
   }
+
   .ground-meld-actions .btn-primary {
     padding: 6px 10px !important;
     font-size: 11px !important;
@@ -1652,12 +1873,15 @@ select:focus {
     margin: 4px 8px;
     padding: 6px 10px;
   }
+
   .table-melds-row {
     gap: 10px;
   }
+
   .table-melds-player {
     min-width: 150px;
   }
+
   .mini-card {
     width: 28px;
     height: 40px;
@@ -1668,10 +1892,12 @@ select:focus {
   .meld-groups-container {
     gap: 8px;
   }
+
   .meld-group-box {
     padding: 4px 6px;
     min-height: 75px;
   }
+
   .meld-group-label {
     font-size: 9px;
   }
@@ -1683,6 +1909,7 @@ select:focus {
     max-width: calc(100vw - 24px) !important;
     border-radius: 16px;
   }
+
   .modal-title {
     font-size: 17px;
   }
@@ -1717,21 +1944,26 @@ select:focus {
     height: 38px;
     flex-shrink: 0;
   }
+
   .logo-icon {
     font-size: 18px;
   }
+
   .logo-title {
     font-size: 15px;
   }
+
   .wallet-badge {
     padding: 3px 8px;
     gap: 5px;
     font-size: 11px;
   }
+
   .deposit-btn {
     padding: 3px 7px;
     font-size: 10px;
   }
+
   .sound-toggle-btn {
     width: 26px;
     height: 26px;
@@ -1755,10 +1987,12 @@ select:focus {
     gap: 4px;
     flex-shrink: 0;
   }
+
   .pot-badge {
     font-size: 13px;
     padding: 3px 10px;
   }
+
   .poke-btn {
     padding: 4px 10px;
     font-size: 11px;
@@ -1769,14 +2003,17 @@ select:focus {
     margin-bottom: 2px;
     flex-shrink: 0;
   }
+
   .opponent-badge {
     font-size: 10px;
     padding: 2px 8px;
     margin-bottom: 2px;
   }
+
   .opponent-cards {
     max-width: 95vw;
   }
+
   .card-back {
     width: 32px;
     height: 46px;
@@ -1792,36 +2029,44 @@ select:focus {
     margin: 0;
     align-items: center;
   }
+
   .deck-stack-wrapper {
     width: 65px;
     height: 78px;
   }
+
   .stock-deck-top {
     width: 52px !important;
     height: 74px !important;
   }
+
   .base-joker-underneath {
     transform: rotate(-12deg) translateX(-10px);
   }
+
   .base-joker-underneath .card {
     width: 52px !important;
     height: 74px !important;
   }
+
   #groundCardContainer .card {
     width: 52px !important;
     height: 74px !important;
     padding: 3px 4px;
   }
+
   .slot-label {
     font-size: 10px;
     margin-top: 2px;
   }
+
   .draw-action-btn {
     font-size: 10px;
     padding: 3px 8px;
     border-radius: 12px;
     margin-top: 3px;
   }
+
   .deck-joker-call-badge {
     font-size: 9px;
     padding: 2px 6px;
@@ -1850,11 +2095,13 @@ select:focus {
     width: 100%;
     overflow: visible;
   }
+
   .fan {
     position: absolute;
     left: 50%;
     bottom: 10px;
   }
+
   .fan .card {
     width: 48px !important;
     height: 70px !important;
@@ -1864,29 +2111,36 @@ select:focus {
     transform-origin: center 130px !important;
     box-shadow: 0 3px 8px rgba(0, 0, 0, 0.45) !important;
   }
+
   .fan .card .corner-rank {
     font-size: 13px !important;
     font-weight: 900 !important;
     line-height: 1 !important;
   }
+
   .fan .card .corner-suit {
     font-size: 11px !important;
     margin-top: 1px !important;
   }
+
   .fan .card .card-center-suit {
     font-size: 20px !important;
   }
+
   .fan .card .card-corner {
     width: 14px !important;
   }
+
   .fan .card .card-joker-star {
     font-size: 10px !important;
     top: 2px !important;
     right: 2px !important;
   }
+
   .fan .card.selected {
     transform: translateX(var(--offset, 0px)) translateY(-22px) rotate(var(--angle, 0deg)) !important;
   }
+
   .fan .card.dragging {
     transform: translateX(var(--offset, 0px)) translateY(-32px) scale(1.1) rotate(var(--angle, 0deg)) !important;
   }
@@ -1899,6 +2153,7 @@ select:focus {
     flex-wrap: wrap;
     justify-content: center;
   }
+
   .ctrl-btn {
     padding: 6px 10px;
     font-size: 11px;
@@ -1914,15 +2169,18 @@ select:focus {
     max-height: 90dvh !important;
     overflow-y: auto;
   }
+
   .cut-deck-card {
     width: 70px;
     height: 100px;
     font-size: 26px;
   }
+
   #cutJokerModal .modal-content div[style*="grid"] {
     grid-template-columns: 1fr 1fr !important;
     gap: 8px !important;
   }
+
   #cutJokerModal .btn-primary {
     padding: 10px !important;
     font-size: 12px !important;
@@ -1934,9 +2192,18 @@ select:focus {
     height: 64px !important;
     padding: 2px 3px;
   }
-  #winningHandDisplay .corner-rank { font-size: 11px; }
-  #winningHandDisplay .corner-suit { font-size: 10px; }
-  #winningHandDisplay .card-center-suit { font-size: 18px; }
+
+  #winningHandDisplay .corner-rank {
+    font-size: 11px;
+  }
+
+  #winningHandDisplay .corner-suit {
+    font-size: 10px;
+  }
+
+  #winningHandDisplay .card-center-suit {
+    font-size: 18px;
+  }
 
   .sort-toast {
     bottom: 50px;
@@ -1950,6 +2217,7 @@ select:focus {
     padding: 6px 8px;
     margin-bottom: 4px;
   }
+
   .ground-meld-header {
     flex-direction: column;
     align-items: flex-start;
@@ -1957,12 +2225,15 @@ select:focus {
     padding-bottom: 4px;
     margin-bottom: 4px;
   }
+
   .ground-meld-title {
     font-size: 11px;
   }
+
   .ground-meld-actions {
     gap: 4px;
   }
+
   .ground-meld-actions .btn-primary {
     padding: 5px 8px !important;
     font-size: 10px !important;
@@ -1975,71 +2246,97 @@ select:focus {
     height: 30px;
     padding: 2px 8px;
   }
+
   .logo-title {
     font-size: 13px;
   }
+
   .wallet-badge {
     padding: 2px 6px;
     font-size: 10px;
   }
+
   .game-table {
     height: calc(100dvh - 30px);
     padding: 2px 6px;
   }
+
   .table-top-bar {
     padding: 2px 8px;
   }
+
   .opponent-area {
     margin-bottom: 0;
   }
+
   .opponent-badge {
     font-size: 9px;
     padding: 1px 6px;
     margin-bottom: 1px;
   }
+
   .card-back {
     width: 26px;
     height: 38px;
     margin-left: -12px;
   }
+
   .center-field {
     gap: 16px;
   }
+
   .deck-stack-wrapper {
     width: 52px;
     height: 64px;
   }
+
   .stock-deck-top,
   .base-joker-underneath .card,
   #groundCardContainer .card {
     width: 42px !important;
     height: 60px !important;
   }
+
   .fan-container {
     height: 82px;
   }
+
   .fan {
     bottom: 6px;
   }
+
   .fan .card {
     width: 40px !important;
     height: 58px !important;
     left: -20px !important;
     transform-origin: center 95px !important;
   }
-  .fan .card .corner-rank { font-size: 10px !important; }
-  .fan .card .corner-suit { font-size: 9px !important; }
-  .fan .card .card-center-suit { font-size: 16px !important; }
+
+  .fan .card .corner-rank {
+    font-size: 10px !important;
+  }
+
+  .fan .card .corner-suit {
+    font-size: 9px !important;
+  }
+
+  .fan .card .card-center-suit {
+    font-size: 16px !important;
+  }
+
   .hand-controls {
     margin: 2px 0 max(10px, env(safe-area-inset-bottom, 10px)) 0;
   }
+
   .ctrl-btn {
     padding: 4px 8px;
     font-size: 10px;
   }
+
   .hand-status-bar {
     display: none;
   }
+
   .sort-toast {
     bottom: 25px;
   }
@@ -2104,6 +2401,7 @@ select:focus {
     opacity: 0;
     transform: scale(0.92);
   }
+
   to {
     opacity: 1;
     transform: scale(1);
