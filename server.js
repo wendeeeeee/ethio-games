@@ -39,6 +39,9 @@ app.post('/api/wallet/deposit', (req, res) => {
   res.json(wallet);
 });
 
+// Fast favicon response to prevent 404
+app.get('/favicon.ico', (req, res) => res.status(204).end());
+
 // REST API for User Registration & Profile
 app.post('/api/user/register', (req, res) => {
   const { userId, name, phone } = req.body;
@@ -78,6 +81,8 @@ app.get('/api/seka/rooms', (req, res) => {
         roomId: room.roomId,
         creatorName: room.creator.name,
         stakeAmount: room.stakeAmount,
+        maxPlayers: room.maxPlayers || 2,
+        playersCount: room.players ? room.players.length : 1,
         expiresIn
       });
     }
@@ -292,9 +297,10 @@ io.on('connection', (socket) => {
   // ==========================================
 
   // Create Seka Table
-  socket.on('create_seka_room', ({ userId, name, stakeAmount }) => {
+  socket.on('create_seka_room', ({ userId, name, stakeAmount, maxPlayers }) => {
     const roomId = `seka_${Math.floor(1000 + Math.random() * 9000)}`;
-    const room = new SekaGameRoom(roomId, { id: userId, name, socketId: socket.id }, Number(stakeAmount) || 100);
+    const numPlayers = Number(maxPlayers) === 3 ? 3 : 2;
+    const room = new SekaGameRoom(roomId, { id: userId, name, socketId: socket.id }, Number(stakeAmount) || 100, numPlayers);
     room.createdAt = Date.now();
     room.expiresAt = Date.now() + 60 * 1000; // 1-minute expiration if no opponent joins
     room.expireTimeout = setTimeout(() => {
@@ -323,19 +329,20 @@ io.on('connection', (socket) => {
     const room = sekaRooms.get(roomId);
     if (!room || room.status === 'EXPIRED') return socket.emit('error_msg', 'Seka room expired or not found');
 
-    if (room.expireTimeout) {
+    const result = room.join({ id: userId, name, socketId: socket.id });
+    if (!result.success) return socket.emit('error_msg', result.message);
+
+    if (room.status === 'PLAYING' && room.expireTimeout) {
       clearTimeout(room.expireTimeout);
       room.expireTimeout = null;
     }
 
-    const result = room.join({ id: userId, name, socketId: socket.id });
-    if (!result.success) return socket.emit('error_msg', result.message);
-
     socketPlayerMap.set(socket.id, { userId, name, roomId, gameType: 'SEKA' });
     socket.join(roomId);
 
-    broadcastWallet(room.creator.id);
-    broadcastWallet(room.joiner.id);
+    for (const p of room.players) {
+      if (p.id) broadcastWallet(p.id);
+    }
     broadcastSekaRoomUpdate(room);
   });
 
@@ -429,15 +436,16 @@ function broadcastRoomUpdate(room) {
 }
 
 function broadcastSekaRoomUpdate(room) {
-  if (room.creator && room.creator.socketId) {
-    io.to(room.creator.socketId).emit('seka_game_state', room.getPublicState(room.creator.id));
-  }
-  if (room.joiner && room.joiner.socketId) {
-    io.to(room.joiner.socketId).emit('seka_game_state', room.getPublicState(room.joiner.id));
+  const players = room.players || [room.creator, room.joiner].filter(Boolean);
+  for (const p of players) {
+    if (p && p.socketId) {
+      io.to(p.socketId).emit('seka_game_state', room.getPublicState(p.id));
+    }
   }
   if (room.status === 'FINISHED') {
-    if (room.creator) broadcastWallet(room.creator.id);
-    if (room.joiner) broadcastWallet(room.joiner.id);
+    for (const p of players) {
+      if (p && p.id) broadcastWallet(p.id);
+    }
   }
 }
 

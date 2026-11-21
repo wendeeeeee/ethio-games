@@ -57,29 +57,37 @@ class WalletManager {
   }
 
   lockEscrow(roomId, player1Id, player2Id, stakeAmount) {
-    const w1 = this.getWallet(player1Id);
-    const w2 = this.getWallet(player2Id);
-
-    if (w1.balance < stakeAmount) {
-      return { success: false, message: `${w1.name} has insufficient balance for ${stakeAmount} ETB stake` };
+    let playerIds = [];
+    let stake = stakeAmount;
+    if (Array.isArray(player1Id)) {
+      playerIds = player1Id;
+      stake = player2Id;
+    } else if (Array.isArray(player2Id)) {
+      playerIds = [player1Id, ...player2Id];
+    } else {
+      playerIds = [player1Id, player2Id];
     }
-    if (w2.balance < stakeAmount) {
-      return { success: false, message: `${w2.name} has insufficient balance for ${stakeAmount} ETB stake` };
+
+    const wallets = playerIds.map(id => this.getWallet(id));
+    for (const w of wallets) {
+      if (w.balance < stake) {
+        return { success: false, message: `${w.name} has insufficient balance for ${stake} ETB stake` };
+      }
     }
 
-    w1.balance -= stakeAmount;
-    w1.locked += stakeAmount;
+    for (const w of wallets) {
+      w.balance -= stake;
+      w.locked += stake;
+    }
 
-    w2.balance -= stakeAmount;
-    w2.locked += stakeAmount;
-
-    const pot = stakeAmount * 2;
+    const pot = stake * playerIds.length;
     this.escrows.set(roomId, {
       roomId,
-      stakeAmount,
+      stakeAmount: stake,
       pot,
-      player1Id,
-      player2Id
+      playerIds,
+      player1Id: playerIds[0],
+      player2Id: playerIds[1]
     });
 
     return { success: true, pot };
@@ -90,14 +98,15 @@ class WalletManager {
     if (!escrow) return null;
 
     const winnerWallet = this.getWallet(winnerId);
-    const p1Wallet = this.getWallet(escrow.player1Id);
-    const p2Wallet = this.getWallet(escrow.player2Id);
+    const playerIds = escrow.playerIds || [escrow.player1Id, escrow.player2Id].filter(Boolean);
 
     // Release locked stakes
-    p1Wallet.locked = Math.max(0, p1Wallet.locked - escrow.stakeAmount);
-    p2Wallet.locked = Math.max(0, p2Wallet.locked - escrow.stakeAmount);
+    for (const pid of playerIds) {
+      const pWallet = this.getWallet(pid);
+      pWallet.locked = Math.max(0, pWallet.locked - escrow.stakeAmount);
+    }
 
-    // Credit full pot to winner (can deduct a 5% platform fee if desired)
+    // Credit full pot to winner (5% platform fee)
     const platformRake = Math.floor(escrow.pot * 0.05); // 5% house rake
     const netWin = escrow.pot - platformRake;
 
@@ -119,14 +128,12 @@ class WalletManager {
     const escrow = this.escrows.get(roomId);
     if (!escrow) return;
 
-    const p1Wallet = this.getWallet(escrow.player1Id);
-    const p2Wallet = this.getWallet(escrow.player2Id);
-
-    p1Wallet.balance += escrow.stakeAmount;
-    p1Wallet.locked -= escrow.stakeAmount;
-
-    p2Wallet.balance += escrow.stakeAmount;
-    p2Wallet.locked -= escrow.stakeAmount;
+    const playerIds = escrow.playerIds || [escrow.player1Id, escrow.player2Id].filter(Boolean);
+    for (const pid of playerIds) {
+      const pWallet = this.getWallet(pid);
+      pWallet.balance += escrow.stakeAmount;
+      pWallet.locked = Math.max(0, pWallet.locked - escrow.stakeAmount);
+    }
 
     this.escrows.delete(roomId);
   }

@@ -10,8 +10,10 @@ const { RANK_ORDER } = require('./cardTypes');
 const walletManager = require('./walletManager');
 
 class SekaGameRoom {
-  constructor(roomId, creator, stakeAmount = 100) {
+  constructor(roomId, creator, stakeAmount = 100, maxPlayers = 2) {
     this.roomId = roomId;
+    this.maxPlayers = Number(maxPlayers) === 3 ? 3 : 2;
+    this.players = [creator];
     this.creator = creator; // { id, name, socketId, isBot }
     this.joiner = null;     // { id, name, socketId, isBot }
     this.stakeAmount = stakeAmount;
@@ -22,6 +24,7 @@ class SekaGameRoom {
     this.deck = [];
     this.discardPile = [];
 
+    this.hands = { [creator.id]: [] };
     this.creatorHand = [];
     this.joinerHand = [];
 
@@ -41,53 +44,66 @@ class SekaGameRoom {
   }
 
   join(player) {
-    if (this.joiner) return { success: false, message: 'Room already full' };
-    this.joiner = player;
+    if (this.players.length >= this.maxPlayers) return { success: false, message: 'Room already full' };
+    this.players.push(player);
+    this.hands[player.id] = [];
+    if (!this.joiner) this.joiner = player;
 
-    // Lock bets into Escrow
-    const escrowResult = walletManager.lockEscrow(this.roomId, this.creator.id, this.joiner.id, this.stakeAmount);
-    if (!escrowResult.success) {
-      this.joiner = null;
-      return { success: false, message: escrowResult.message };
+    if (this.players.length === this.maxPlayers) {
+      // Lock bets into Escrow
+      const escrowResult = walletManager.lockEscrow(this.roomId, this.players.map(p => p.id), this.stakeAmount);
+      if (!escrowResult.success) {
+        this.players.pop();
+        if (this.joiner && this.joiner.id === player.id) this.joiner = null;
+        return { success: false, message: escrowResult.message };
+      }
+      this.pot = escrowResult.pot;
+
+      // Start Seka Game immediately (no cutting joker in Seka)
+      this.startGame();
+      return { success: true, started: true };
     }
-    this.pot = escrowResult.pot;
 
-    // Start Seka Game immediately (no cutting joker in Seka)
-    this.startGame();
-    return { success: true };
+    return { success: true, started: false, waitingFor: this.maxPlayers - this.players.length };
   }
 
   startGame() {
     this.deck = shuffleDeck(createSekaDeck());
     this.discardPile = [];
-    this.creatorHand = [];
-    this.joinerHand = [];
+    this.players.forEach(p => {
+      this.hands[p.id] = [];
+    });
 
-    // Deal: 11 cards to Creator (Starter / አጫዋች), 10 cards to Joiner
+    // Deal: 10 cards to each player
     for (let i = 0; i < 10; i++) {
-      this.creatorHand.push(this.deck.pop());
-      this.joinerHand.push(this.deck.pop());
+      for (const p of this.players) {
+        this.hands[p.id].push(this.deck.pop());
+      }
     }
-    // Creator gets 11th card
-    this.creatorHand.push(this.deck.pop());
+    // Creator gets 11th card (Starter / አጫዋች)
+    this.hands[this.creator.id].push(this.deck.pop());
+
+    this.creatorHand = this.hands[this.creator.id];
+    this.joinerHand = this.players[1] ? this.hands[this.players[1].id] : [];
 
     this.status = 'PLAYING';
     // Creator starts in AWAITING_DISCARD because they already have 11 cards
     this.currentTurnPlayerId = this.creator.id;
     this.turnState = 'AWAITING_DISCARD';
 
-    this.log(`🎮 ሴካ ጨዋታ ተጀመረ! ፖት: ${this.pot} ETB።`);
+    this.log(`🎮 ሴካ ጨዋታ ተጀመረ! ፖት: ${this.pot} ETB (${this.players.length} ተጫዋቾች)።`);
     this.log(`🃏 አጫዋች ${this.creator.name} 11 ካርታ ተሰጥቶታል፤ 1 ካርታ ወደ መሬት በመጣል ጨዋታውን ይጀምራል!`);
-    this.log(`🃏 ${this.joiner.name} 10 ካርታ ተሰጥቶታል።`);
+    for (let i = 1; i < this.players.length; i++) {
+      this.log(`🃏 ${this.players[i].name} 10 ካርታ ተሰጥቶታል።`);
+    }
   }
 
   getHand(playerId) {
-    if (playerId === this.creator.id) return this.creatorHand;
-    if (this.joiner && playerId === this.joiner.id) return this.joinerHand;
-    return null;
+    return this.hands[playerId] || null;
   }
 
   setHand(playerId, newHand) {
+    this.hands[playerId] = newHand;
     if (playerId === this.creator.id) this.creatorHand = newHand;
     else if (this.joiner && playerId === this.joiner.id) this.joinerHand = newHand;
   }
@@ -130,7 +146,8 @@ class SekaGameRoom {
     hand.push(drawnCard);
 
     this.turnState = 'AWAITING_DISCARD';
-    const playerName = playerId === this.creator.id ? this.creator.name : this.joiner.name;
+    const playerObj = this.players.find(p => p.id === playerId);
+    const playerName = playerObj ? playerObj.name : 'Player';
     this.log(`📥 ${playerName} ከ${source === 'ground' ? 'መሬት' : 'መደብ'} [ ${drawnCard.suit} ${drawnCard.rank} ] አነሳ።`);
 
     return { success: true, card: drawnCard, from: source };
@@ -165,7 +182,7 @@ class SekaGameRoom {
       this.discardPile.push(cardToDiscard);
 
       this.status = 'FINISHED';
-      this.winner = playerId === this.creator.id ? this.creator : this.joiner;
+      this.winner = this.players.find(p => p.id === playerId) || this.creator;
       this.winReason = 'SEKA_WIN';
       this.winningMelds = winCheck.melds;
       this.winningDiscard = cardToDiscard;
@@ -183,15 +200,18 @@ class SekaGameRoom {
       };
     }
 
-    // Normal Discard (passes turn)
+    // Normal Discard (passes turn to next player in circular order)
     hand.splice(cardIndex, 1);
     this.discardPile.push(cardToDiscard);
 
-    const playerName = playerId === this.creator.id ? this.creator.name : this.joiner.name;
+    const playerObj = this.players.find(p => p.id === playerId);
+    const playerName = playerObj ? playerObj.name : 'Player';
     this.log(`📤 ${playerName} [ ${cardToDiscard.suit} ${cardToDiscard.rank} ] ወደ መሬት ጣለ።`);
 
     // Switch Turn
-    this.currentTurnPlayerId = (playerId === this.creator.id) ? this.joiner.id : this.creator.id;
+    const currIdx = this.players.findIndex(p => p.id === playerId);
+    const nextIdx = (currIdx + 1) % this.players.length;
+    this.currentTurnPlayerId = this.players[nextIdx].id;
     this.turnState = 'AWAITING_DRAW';
 
     return {
@@ -240,7 +260,7 @@ class SekaGameRoom {
     this.discardPile.push(tetay);
 
     this.status = 'FINISHED';
-    this.winner = playerId === this.creator.id ? this.creator : this.joiner;
+    this.winner = this.players.find(p => p.id === playerId) || this.creator;
     this.winReason = 'SEKA_WIN';
     this.winningMelds = winCheck.melds;
     this.winningDiscard = tetay;
@@ -259,9 +279,17 @@ class SekaGameRoom {
   }
 
   getPublicState(forPlayerId) {
-    const isCreator = forPlayerId === this.creator.id;
-    const myHand = isCreator ? this.creatorHand : (this.joinerHand || []);
-    const oppHand = isCreator ? (this.joinerHand || []) : this.creatorHand;
+    const myHand = this.hands[forPlayerId] || [];
+    const opponents = this.players
+      .filter(p => p.id !== forPlayerId)
+      .map(p => ({
+        id: p.id,
+        name: p.name,
+        cardCount: (this.hands[p.id] || []).length,
+        hand: this.status === 'FINISHED' ? (this.hands[p.id] || []) : undefined
+      }));
+
+    const mainOpponent = opponents[0] || null;
 
     const topDiscard = this.discardPile.length > 0
       ? this.discardPile[this.discardPile.length - 1]
@@ -273,11 +301,16 @@ class SekaGameRoom {
       status: this.status,
       stakeAmount: this.stakeAmount,
       pot: this.pot,
+      maxPlayers: this.maxPlayers,
+      playersCount: this.players.length,
       creator: { id: this.creator.id, name: this.creator.name },
       joiner: this.joiner ? { id: this.joiner.id, name: this.joiner.name } : null,
+      players: this.players.map(p => ({ id: p.id, name: p.name })),
+      opponents: opponents,
+      opponentName: opponents.map(o => o.name).join(' & '),
       myHand: myHand,
-      opponentCardCount: oppHand.length,
-      opponentHand: this.status === 'FINISHED' ? oppHand : undefined,
+      opponentCardCount: mainOpponent ? mainOpponent.cardCount : 0,
+      opponentHand: (this.status === 'FINISHED' && mainOpponent) ? mainOpponent.hand : undefined,
       topDiscard: topDiscard,
       deckCount: this.deck.length,
       currentTurnPlayerId: this.currentTurnPlayerId,

@@ -16,6 +16,8 @@ let currentGameState = null;
 let selectedCardId = null;
 let selectedCardsSet = new Set();
 let playerOrderedCardIds = [];
+let draggedCardId = null;
+let dragJustEndedTime = 0;
 
 // -------------------------------------------------------------
 // AUDIO ENGINE (Web Audio API - Realistic Card & Casino Sound Design)
@@ -550,10 +552,12 @@ if (createSekaRoomBtn) {
   createSekaRoomBtn.addEventListener('click', () => {
     const sekaNameInput = document.getElementById('sekaPlayerNameInput');
     const sekaStakeSelect = document.getElementById('sekaStakeSelect');
+    const sekaPlayersSelect = document.getElementById('sekaPlayersSelect');
     const sName = sekaNameInput && sekaNameInput.value ? sekaNameInput.value : playerName;
     const stakeAmount = sekaStakeSelect ? Number(sekaStakeSelect.value) : 100;
+    const maxPlayers = sekaPlayersSelect ? (Number(sekaPlayersSelect.value) === 3 ? 3 : 2) : 2;
     playCardSound();
-    socket.emit('create_seka_room', { userId, name: sName, stakeAmount });
+    socket.emit('create_seka_room', { userId, name: sName, stakeAmount, maxPlayers });
   });
 }
 
@@ -570,28 +574,34 @@ if (playSekaBotBtn) {
 }
 
 // Deposit Button
-depositBtn.addEventListener('click', async () => {
-  await fetch('/api/wallet/deposit', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ userId, amount: 500 })
+if (depositBtn) {
+  depositBtn.addEventListener('click', async () => {
+    await fetch('/api/wallet/deposit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId, amount: 500 })
+    });
+    playCardSound();
+    socket.emit('register_user', { userId, name: playerName, phone: userPhone });
   });
-  playCardSound();
-  socket.emit('register_user', { userId, name: playerName, phone: userPhone });
-});
+}
 
-// Create Room
-createRoomBtn.addEventListener('click', () => {
-  const stakeAmount = Number(stakeSelect.value) || 100;
-  socket.emit('create_room', { userId, name: playerName, stakeAmount });
-});
+// Create Room (Conquer)
+if (createRoomBtn) {
+  createRoomBtn.addEventListener('click', () => {
+    const stakeAmount = Number(stakeSelect?.value) || 100;
+    socket.emit('create_room', { userId, name: playerName, stakeAmount });
+  });
+}
 
-// Play Against Bot
-playBotBtn.addEventListener('click', () => {
-  const stakeAmount = Number(stakeSelect.value) || 100;
-  socket.emit('play_vs_bot', { userId, name: playerName, stakeAmount });
-  switchToGameView();
-});
+// Play Against Bot (Conquer)
+if (playBotBtn) {
+  playBotBtn.addEventListener('click', () => {
+    const stakeAmount = Number(stakeSelect?.value) || 100;
+    socket.emit('play_vs_bot', { userId, name: playerName, stakeAmount });
+    switchToGameView();
+  });
+}
 
 // Fetch Active Rooms
 async function refreshRoomsList() {
@@ -629,7 +639,7 @@ async function refreshSekaRoomsList() {
       <div class="room-list-item">
         <div>
           <strong style="color: #f59e0b;">🃏 ${r.creatorName}'s Seka Table</strong>
-          <div style="font-size: 12px; color: #94a3b8;">Stake: ${r.stakeAmount} ETB ${r.expiresIn ? `| <span style="color: #f59e0b;">⏳ ${r.expiresIn}s ይቀራል</span>` : ''}</div>
+          <div style="font-size: 12px; color: #94a3b8;">Stake: ${r.stakeAmount} ETB | ${r.playersCount || 1}/${r.maxPlayers || 2} ተጫዋቾች ${r.expiresIn ? `| <span style="color: #f59e0b;">⏳ ${r.expiresIn}s ይቀራል</span>` : ''}</div>
         </div>
         <button class="btn-primary" style="width: auto; padding: 6px 14px; font-size: 12px; background: linear-gradient(135deg, #f59e0b, #d97706); border-color: #fbbf24;" onclick="joinSekaRoom('${r.roomId}')">ጠረጴዛ ተቀላቀል</button>
       </div>
@@ -2577,9 +2587,6 @@ function renderOpponentCards(count, isInitialDeal = false, isFinished = false, w
   }
   opponentCardsContainer.innerHTML = html;
 }
-
-let draggedCardId = null;
-let dragJustEndedTime = 0;
 
 function getResponsiveFanGeometry(totalCards) {
   const w = window.innerWidth || document.documentElement.clientWidth || 375;
