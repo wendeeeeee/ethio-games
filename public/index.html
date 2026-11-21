@@ -6,7 +6,7 @@
   <meta name="viewport"
     content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>CONQUER - Ethiopian Card Betting Game</title>
-  <link rel="stylesheet" href="styles.css?v=25">
+  <link rel="stylesheet" href="styles.css?v=26">
 </head>
 
 <body>
@@ -31,6 +31,18 @@
       <button class="deposit-btn" id="depositBtn" style="display: none;">+ Deposit</button>
     </div>
   </header>
+
+  <!-- Active Game Return Banner (Visible when user leaves active table to lobby) -->
+  <div id="activeGameReturnBanner" class="active-game-return-banner" style="display: none;">
+    <div class="return-banner-content">
+      <span class="return-banner-icon">⚠️</span>
+      <div class="return-banner-text">
+        በሴካ ጨዋታ ላይ ነዎት! <strong>ጠረጴዛ <span id="returnBannerTableId">#---</span></strong>
+        <span class="return-banner-timer">⏳ <strong id="returnBannerCountdown">60s</strong> ውስጥ ካልተመለሱ ይሸነፋሉ!</span>
+      </div>
+      <button id="returnToGameBtn" class="btn-return-game">↩️ ወደ ጨዋታው ተመለስ (Return)</button>
+    </div>
+  </div>
 
   <!-- LOBBY VIEW -->
   <div id="lobbyView" class="view-container lobby-container">
@@ -149,8 +161,10 @@
           POT: 200 ETB
         </div>
         <div style="display: flex; align-items: center; gap: 8px;">
+          <div class="turn-timer-badge" id="turnTimerBadge" title="የካርታ መጣያ ቀሪ ጊዜ">⏳ <span id="turnSecondsVal">60</span>s</div>
           <button class="sound-toggle-btn" id="soundToggleBtnTable" title="Toggle Sound (ድምፅ)">🔊</button>
-          <button class="poke-btn" id="pokeBtn">
+          <button class="leave-game-btn" id="leaveGameBtn" title="ከጠረጴዛ ውጣ (Leave Table)">🚪 ውጣ</button>
+          <button class="poke-btn" id="pokeBtn" style="display: none;">
             <span>⏰</span> POKE (30s)
           </button>
         </div>
@@ -476,7 +490,7 @@
 
   <!-- Socket.io & App Script -->
   <script src="/socket.io/socket.io.js"></script>
-  <script src="app.js?v=31"></script>
+  <script src="app.js?v=32"></script>
 </body>
 
 </html>

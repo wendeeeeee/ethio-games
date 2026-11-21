@@ -308,6 +308,7 @@ io.on('connection', (socket) => {
     const roomId = `seka_${Math.floor(1000 + Math.random() * 9000)}`;
     const numPlayers = Number(maxPlayers) === 3 ? 3 : 2;
     const room = new SekaGameRoom(roomId, { id: userId, name, socketId: socket.id }, Number(stakeAmount) || 100, numPlayers);
+    attachSekaRoomCallbacks(room);
     room.createdAt = Date.now();
     room.expiresAt = Date.now() + 60 * 1000; // 1-minute expiration if no opponent joins
     room.expireTimeout = setTimeout(() => {
@@ -358,6 +359,7 @@ io.on('connection', (socket) => {
   socket.on('play_seka_bot', ({ userId, name, stakeAmount }) => {
     const roomId = `seka_bot_${Math.floor(1000 + Math.random() * 9000)}`;
     const room = new SekaGameRoom(roomId, { id: userId, name, socketId: socket.id }, Number(stakeAmount) || 100);
+    attachSekaRoomCallbacks(room);
     sekaRooms.set(roomId, room);
     socketPlayerMap.set(socket.id, { userId, name, roomId, gameType: 'SEKA' });
     socket.join(roomId);
@@ -418,6 +420,23 @@ io.on('connection', (socket) => {
     }
   });
 
+  // Player temporarily leaves playing Seka table (1-minute return window)
+  socket.on('leave_seka_table_temp', ({ roomId, userId }) => {
+    const room = sekaRooms.get(roomId);
+    if (!room || room.status !== 'PLAYING') return;
+    room.playerLeaveTemp(userId, room.onLeaveTimeoutCallback);
+    broadcastSekaRoomUpdate(room);
+  });
+
+  // Player returns to Seka table within 1-minute window
+  socket.on('return_to_seka_table', ({ roomId, userId }) => {
+    const room = sekaRooms.get(roomId);
+    if (!room) return;
+    room.playerReturn(userId);
+    socket.join(roomId);
+    broadcastSekaRoomUpdate(room);
+  });
+
   socket.on('disconnect', () => {
     const playerInfo = socketPlayerMap.get(socket.id);
     if (playerInfo && playerInfo.roomId) {
@@ -430,11 +449,39 @@ io.on('connection', (socket) => {
       if (sRoom && sRoom.status === 'WAITING') {
         walletManager.refundEscrow(sRoom.roomId);
         sekaRooms.delete(playerInfo.roomId);
+      } else if (sRoom && sRoom.status === 'PLAYING') {
+        sRoom.playerLeaveTemp(playerInfo.userId, sRoom.onLeaveTimeoutCallback);
+        broadcastSekaRoomUpdate(sRoom);
       }
     }
     socketPlayerMap.delete(socket.id);
   });
 });
+
+function attachSekaRoomCallbacks(room) {
+  room.onTurnTimeoutCallback = (r, winner, loser) => {
+    for (const p of r.players) {
+      if (p && p.id) broadcastWallet(p.id);
+    }
+    broadcastSekaRoomUpdate(r);
+    io.to(r.roomId).emit('player_timed_out', {
+      winnerName: winner ? winner.name : 'Opponent',
+      loserName: loser ? loser.name : 'Player',
+      message: `⏰ ${loser ? loser.name : 'ተጫዋች'} በ1 ደቂቃ ውስጥ ካርታ ስላልጣለ ተሸንፏል! ${winner ? winner.name : 'ተጋጣሚ'} አሸነፈ!`
+    });
+  };
+  room.onLeaveTimeoutCallback = (r, winner, loser) => {
+    for (const p of r.players) {
+      if (p && p.id) broadcastWallet(p.id);
+    }
+    broadcastSekaRoomUpdate(r);
+    io.to(r.roomId).emit('player_abandoned', {
+      winnerName: winner ? winner.name : 'Opponent',
+      loserName: loser ? loser.name : 'Player',
+      message: `❌ ${loser ? loser.name : 'ተጫዋች'} በ1 ደቂቃ ውስጥ ስላልተመለሰ ተሸንፏል! ${winner ? winner.name : 'ተጋጣሚ'} አሸነፈ!`
+    });
+  };
+}
 
 // Broadcast room state individually to players (hiding opponent's cards)
 function broadcastRoomUpdate(room) {

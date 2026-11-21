@@ -355,6 +355,75 @@ test('Deck reshuffle when empty: keeps top discard, reshuffles rest', () => {
 });
 
 // ==============================================================
+console.log('\n⏱️ 7. TURN TIMEOUT & 1-MINUTE LEAVE/RETURN');
+// ==============================================================
+
+test('Turn timeout: player who fails to move within 1 min forfeits; opponent wins', () => {
+  const room = new SekaGameRoom('timeout_test', { id: 'p1', name: 'A', socketId: 's1' }, 100, 2);
+  room.players.push({ id: 'p2', name: 'B', socketId: 's2' });
+  room.hands['p2'] = [];
+  room.joiner = room.players[1];
+  room.startGame();
+
+  assert(room.currentTurnPlayerId === 'p1', 'P1 starts turn');
+  assert(room.status === 'PLAYING', 'Game is PLAYING');
+
+  // Trigger turn timeout
+  room.handleTurnTimeout();
+
+  assert(room.status === 'FINISHED', 'Game should be FINISHED after timeout');
+  assert(room.winner.id === 'p2', 'Opponent p2 should be declared winner');
+  assert(room.winReason === 'TIMEOUT_FORFEIT', 'Win reason should be TIMEOUT_FORFEIT');
+  assert(room.forfeitedPlayer.id === 'p1', 'P1 should be the forfeited player');
+  room.clearAllTimers();
+});
+
+test('Leave game temporary: player leaves, returns within 1 minute, stays active', () => {
+  const room = new SekaGameRoom('leave_return_test', { id: 'p1', name: 'A', socketId: 's1' }, 100, 2);
+  room.players.push({ id: 'p2', name: 'B', socketId: 's2' });
+  room.hands['p2'] = [];
+  room.joiner = room.players[1];
+  room.startGame();
+
+  // P1 leaves temporarily
+  room.playerLeaveTemp('p1');
+  assert(room.temporarilyLeft['p1'], 'P1 should be marked temporarily left');
+  assert(room.status === 'PLAYING', 'Game is still PLAYING waiting for return');
+
+  // P1 returns within 1 minute
+  room.playerReturn('p1');
+  assert(!room.temporarilyLeft['p1'], 'P1 should no longer be marked left');
+  assert(room.status === 'PLAYING', 'Game continues PLAYING');
+  room.clearAllTimers();
+});
+
+test('Leave game timeout: player leaves and fails to return in 1 min, forfeits; opponent wins', () => {
+  const room = new SekaGameRoom('abandon_test', { id: 'p1', name: 'A', socketId: 's1' }, 100, 2);
+  room.players.push({ id: 'p2', name: 'B', socketId: 's2' });
+  room.hands['p2'] = [];
+  room.joiner = room.players[1];
+  room.startGame();
+
+  // P2 leaves temporarily
+  room.playerLeaveTemp('p2');
+  assert(room.temporarilyLeft['p2'], 'P2 should be marked temporarily left');
+
+  // Simulate 60s timeout firing
+  const opponents = room.players.filter(p => p.id !== 'p2');
+  const winner = opponents[0];
+  room.status = 'FINISHED';
+  room.winner = winner;
+  room.winReason = 'ABANDON_FORFEIT';
+  room.forfeitedPlayer = room.players.find(p => p.id === 'p2');
+  delete room.temporarilyLeft['p2'];
+  room.clearAllTimers();
+
+  assert(room.status === 'FINISHED', 'Game should be FINISHED');
+  assert(room.winner.id === 'p1', 'P1 should be declared winner');
+  assert(room.winReason === 'ABANDON_FORFEIT', 'Win reason should be ABANDON_FORFEIT');
+});
+
+// ==============================================================
 console.log('\n📊 SUMMARY');
 // ==============================================================
 

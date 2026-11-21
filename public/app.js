@@ -277,6 +277,83 @@ const cancelGroundMeldBtn = document.getElementById('cancelGroundMeldBtn');
 const weredBtn = document.getElementById('weredBtn');
 let currentMeldBarMode = 'ground'; // 'ground' or 'wered'
 
+// Leave Game & 1-Minute Return Window Elements
+const activeGameReturnBanner = document.getElementById('activeGameReturnBanner');
+const returnBannerTableId = document.getElementById('returnBannerTableId');
+const returnBannerCountdown = document.getElementById('returnBannerCountdown');
+const returnToGameBtn = document.getElementById('returnToGameBtn');
+const turnTimerBadge = document.getElementById('turnTimerBadge');
+const turnSecondsVal = document.getElementById('turnSecondsVal');
+let activeGameReturnRoomId = null;
+let returnBannerTimer = null;
+
+function showActiveGameReturnBanner(roomId, deadline) {
+  activeGameReturnRoomId = roomId;
+  if (!activeGameReturnBanner) return;
+  if (returnBannerTableId) returnBannerTableId.textContent = '#' + roomId.replace(/^seka_/, '');
+  activeGameReturnBanner.style.display = 'block';
+
+  if (returnBannerTimer) clearInterval(returnBannerTimer);
+  const targetEnd = deadline || (Date.now() + 60 * 1000);
+
+  function update() {
+    const left = Math.max(0, Math.round((targetEnd - Date.now()) / 1000));
+    if (returnBannerCountdown) returnBannerCountdown.textContent = left + 's';
+    if (left <= 0) {
+      clearInterval(returnBannerTimer);
+      returnBannerTimer = null;
+    }
+  }
+  update();
+  returnBannerTimer = setInterval(update, 1000);
+}
+
+function hideActiveGameReturnBanner() {
+  if (returnBannerTimer) {
+    clearInterval(returnBannerTimer);
+    returnBannerTimer = null;
+  }
+  activeGameReturnRoomId = null;
+  if (activeGameReturnBanner) activeGameReturnBanner.style.display = 'none';
+}
+
+if (leaveGameBtn) {
+  leaveGameBtn.addEventListener('click', () => {
+    if (!currentRoomId || !currentGameState || currentGameState.status !== 'PLAYING') {
+      switchToLobbyView();
+      return;
+    }
+    const ok = confirm('ከጠረጴዛው መውጣት ይፈልጋሉ? በ 1 ደቂቃ (60s) ውስጥ ካልተመለሱ በነባሪ ይሸነፋሉ!');
+    if (!ok) return;
+
+    socket.emit('leave_seka_table_temp', { roomId: currentRoomId, userId });
+    showActiveGameReturnBanner(currentRoomId, Date.now() + 60 * 1000);
+    switchToLobbyView();
+  });
+}
+
+if (returnToGameBtn) {
+  returnToGameBtn.addEventListener('click', () => {
+    if (activeGameReturnRoomId) {
+      socket.emit('return_to_seka_table', { roomId: activeGameReturnRoomId, userId });
+      hideActiveGameReturnBanner();
+      switchToGameView();
+    }
+  });
+}
+
+// Local 1-second interval to keep the turn timer ticking down smoothly
+setInterval(() => {
+  if (currentGameState && currentGameState.status === 'PLAYING' && currentGameState.turnDeadline && turnSecondsVal) {
+    const sLeft = Math.max(0, Math.round((currentGameState.turnDeadline - Date.now()) / 1000));
+    turnSecondsVal.textContent = sLeft;
+    if (turnTimerBadge) {
+      if (sLeft <= 15) turnTimerBadge.classList.add('urgent');
+      else turnTimerBadge.classList.remove('urgent');
+    }
+  }
+}, 1000);
+
 // Initial setup
 if (playerNameInput) playerNameInput.value = playerName;
 if (walletUserDisplay) walletUserDisplay.textContent = playerName;
@@ -457,6 +534,16 @@ socket.on('room_expired', ({ roomId, message }) => {
 socket.on('rooms_updated', () => {
   refreshRoomsList();
   refreshSekaRoomsList();
+});
+
+socket.on('player_timed_out', ({ winnerName, loserName, message }) => {
+  hideActiveGameReturnBanner();
+  showSortToast(message || '⏰ ተጫዋች በ 1 ደቂቃ ውስጥ ካርታ ስላልጣለ ተሸንፏል!');
+});
+
+socket.on('player_abandoned', ({ winnerName, loserName, message }) => {
+  hideActiveGameReturnBanner();
+  showSortToast(message || '❌ ተጫዋች በ 1 ደቂቃ ውስጥ ስላልተመለሰ ተሸንፏል!');
 });
 
 socket.on('room_created', ({ roomId }) => {
@@ -827,12 +914,6 @@ function switchToLobbyView() {
   refreshSekaRoomsList();
 }
 
-leaveGameBtn.addEventListener('click', () => {
-  if (currentGameState && currentGameState.gameType === 'SEKA') {
-    socket.emit('leave_seka_room', { roomId: currentRoomId, userId });
-  }
-  switchToLobbyView();
-});
 
 // Rule 2: Blind Cut Joker Selection (Joiner calls before dealing)
 cutHighBtn.addEventListener('click', () => {
@@ -2600,13 +2681,48 @@ function renderGame(state) {
     }
   }
 
+  // Turn Timer Badge
+  if (turnTimerBadge && turnSecondsVal) {
+    if (state.status === 'PLAYING') {
+      turnTimerBadge.style.display = 'inline-flex';
+      const sLeft = state.turnSecondsLeft !== undefined ? state.turnSecondsLeft : 60;
+      turnSecondsVal.textContent = sLeft;
+      if (sLeft <= 15) {
+        turnTimerBadge.classList.add('urgent');
+      } else {
+        turnTimerBadge.classList.remove('urgent');
+      }
+    } else {
+      turnTimerBadge.style.display = 'none';
+    }
+  }
+
+  // Manage return banner
+  if (state.status === 'FINISHED') {
+    hideActiveGameReturnBanner();
+  } else if (state.status === 'PLAYING' && gameView && gameView.style.display !== 'none') {
+    hideActiveGameReturnBanner();
+  }
+
   // Game Result Modal
   if (state.status === 'FINISHED') {
+    if (turnTimerBadge) turnTimerBadge.style.display = 'none';
     if (groundMeldBar) groundMeldBar.style.display = 'none';
     const iWon = state.winner === userId || (state.winner && state.winner.id === userId);
     resultModalTitle.textContent = iWon ? '🏆 YOU WON!' : '❌ DEFEAT!';
     resultModalTitle.style.color = iWon ? '#4ade80' : '#ef4444';
-    if (isSeka) {
+
+    if (state.winReason === 'TIMEOUT_FORFEIT') {
+      resultModalTitle.textContent = iWon ? '🏆 በጊዜ ገደብ አሸነፍክ!' : '⏰ የጊዜ ገደብ አለቀ (ተሸንፈሃል)!';
+      resultModalDesc.textContent = iWon
+        ? `ተጋጣሚ በ 1 ደቂቃ ውስጥ ካርታ ስላልጣለ በነባሪ ${state.pot} ETB አሸንፈሃል!`
+        : `በ 1 ደቂቃ ውስጥ ካርታ ባለመጣልህ ምክንያት ተሸንፈሃል!`;
+    } else if (state.winReason === 'ABANDON_FORFEIT') {
+      resultModalTitle.textContent = iWon ? '🚪 በነባሪ አሸነፍክ!' : '❌ ከጠረጴዛ ወጥተህ አልተመለስክም!';
+      resultModalDesc.textContent = iWon
+        ? `ተጋጣሚ ከጠረጴዛው ወጥቶ በ 1 ደቂቃ ውስጥ ስላልተመለሰ በነባሪ ${state.pot} ETB አሸንፈሃል!`
+        : `ከጠረጴዛው ወጥተህ በ 1 ደቂቃ ውስጥ ባለመመለስህ ተሸንፈሃል!`;
+    } else if (isSeka) {
       resultModalDesc.textContent = iWon
         ? `እንኳን ደስ አለህ! በ 2 ትሪስ + 1 ኳትሪስ ሴካ ጨርሰህ ${state.pot} ETB አሸንፈሃል!`
         : `${state.winner ? state.winner.name : 'ተጋጣሚህ'} በሴካ አሸንፏል!`;
