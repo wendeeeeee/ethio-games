@@ -1854,7 +1854,6 @@ smartSortBtn.addEventListener('click', () => {
     const sekaArranged = arrangeSekaHandOptimal(currentGameState.myHand);
     currentGameState.myHand = sekaArranged.arrangedCards;
     playerOrderedCardIds = sekaArranged.arrangedCards.map(c => c.id);
-    showSortToast('✨ የሴካ ካርታዎችህ ተደርድረዋል (ጆከር የሚገባበት ቦታ ገብቷል)');
     renderPlayerHand(currentGameState.myHand);
     return;
   }
