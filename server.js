@@ -79,7 +79,8 @@ app.get('/api/seka/rooms', (req, res) => {
       const expiresIn = room.expiresAt ? Math.max(0, Math.round((room.expiresAt - Date.now()) / 1000)) : 60;
       list.push({
         roomId: room.roomId,
-        creatorName: room.creator.name,
+        creatorId: room.creator ? room.creator.id : null,
+        creatorName: room.creator ? room.creator.name : 'Host',
         stakeAmount: room.stakeAmount,
         maxPlayers: room.maxPlayers || 2,
         playersCount: room.players ? room.players.length : 1,

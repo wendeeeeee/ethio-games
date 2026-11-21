@@ -444,9 +444,11 @@ socket.on('error_msg', (msg) => {
   alert(`⚠️ ${msg}`);
 });
 
-socket.on('room_expired', ({ message }) => {
+socket.on('room_expired', ({ roomId, message }) => {
   closeWaitingForOpponentModal();
-  alert(message || '⏳ ጨዋታው በ1 ደቂቃ ውስጥ ተጋጣሚ ስላልገባ ፈርሷል (Game expired)');
+  currentWaitingRoomId = null;
+  if (currentRoomId === roomId) currentRoomId = null;
+  showSortToast(message || '⏳ ጨዋታው በ1 ደቂቃ ውስጥ ተጋጣሚ ስላልገባ ፈርሷል');
   switchToLobbyView();
   refreshRoomsList();
   refreshSekaRoomsList();
@@ -536,10 +538,10 @@ socket.on('seka_room_created', ({ roomId, expiresAt, isBot, stakeAmount }) => {
   if (isBot) {
     switchToGameView();
   } else {
-    // Creator waits in lobby until another player joins (game MUST NOT start until opponent arrives)
-    const sekaStakeSelect = document.getElementById('sekaStakeSelect');
-    const stake = stakeAmount || (sekaStakeSelect ? Number(sekaStakeSelect.value) : 100);
-    showWaitingForOpponentModal(roomId, expiresAt, stake);
+    // Creator stays on lobby and sees their game in the "Active Games" list
+    currentWaitingRoomId = roomId;
+    playCardSound();
+    showSortToast('🎉 ጨዋታው ተፈጥሯል! አሁን Active Games ላይ ይታያል፤ ተጋጣሚ ሲገባ ወዲያውኑ ይጀምራል።');
     refreshSekaRoomsList();
   }
 });
@@ -703,19 +705,66 @@ async function refreshSekaRoomsList() {
     const sekaContainer = document.getElementById('sekaRoomsListContainer');
     if (!sekaContainer) return;
     if (rooms.length === 0) {
-      sekaContainer.innerHTML = `<p style="color: #64748b; font-size: 14px;">በአሁኑ ሰዓት ክፍት የሴካ ጠረጴዛ የለም። አዲስ ጠረጴዛ ይፍጠሩ ወይም ከAI Bot ጋር ይጫወቱ!</p>`;
+      sekaContainer.innerHTML = `<p style="color: #64748b; font-size: 14px;">በአሁኑ ሰዓት ክፍት የሴካ ጨዋታ የለም። አዲስ ጨዋታ ለመፍጠር "Create Game" የሚለውን ይጫኑ ወይም ከ AI Bot ጋር ይጫወቱ!</p>`;
       return;
     }
-    sekaContainer.innerHTML = rooms.map(r => `
-      <div class="room-list-item">
-        <div>
-          <strong style="color: #f59e0b;">🃏 ${r.creatorName}'s Seka Table</strong>
-          <div style="font-size: 12px; color: #94a3b8;">Stake: ${r.stakeAmount} ETB | ${r.playersCount || 1}/${r.maxPlayers || 2} ተጫዋቾች ${r.expiresIn ? `| <span style="color: #f59e0b;">⏳ ${r.expiresIn}s ይቀራል</span>` : ''}</div>
-        </div>
-        <button class="btn-primary" style="width: auto; padding: 6px 14px; font-size: 12px; background: linear-gradient(135deg, #f59e0b, #d97706); border-color: #fbbf24;" onclick="joinSekaRoom('${r.roomId}')">ጠረጴዛ ተቀላቀል</button>
-      </div>
-    `).join('');
+    sekaContainer.innerHTML = rooms.map(r => {
+      const isMyRoom = (r.creatorId && r.creatorId === userId) || (r.roomId === currentWaitingRoomId);
+      if (isMyRoom) {
+        return `
+          <div class="room-list-item" style="background: linear-gradient(135deg, rgba(245, 158, 11, 0.12), rgba(217, 119, 6, 0.08)); border: 1.5px solid #f59e0b; border-radius: 12px; padding: 12px 16px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.12);">
+            <div>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <strong style="color: #b45309; font-size: 14px;">🃏 የእርስዎ ጨዋታ (${r.creatorName})</strong>
+                <span style="background: #fef3c7; color: #92400e; font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 12px; border: 1px solid #fde68a;">ተጫዋች በመጠበቅ ላይ...</span>
+              </div>
+              <div style="font-size: 12px; color: #475569; margin-top: 4px;">
+                ውርርድ: <strong>${r.stakeAmount} ETB</strong> | ${r.playersCount || 1}/${r.maxPlayers || 2} ተጫዋቾች 
+                ${r.expiresIn !== undefined ? `| <span style="color: #d97706; font-weight: 800;">⏳ ${r.expiresIn}s ይቀራል</span>` : ''}
+              </div>
+            </div>
+            <button class="btn-cancel-room" style="background: #fee2e2; color: #dc2626; border: 1.5px solid #fca5a5; border-radius: 8px; padding: 7px 14px; font-size: 12px; font-weight: 800; cursor: pointer;" onclick="cancelCreatedRoom('${r.roomId}')">
+              ✕ ሰርዝ (Cancel)
+            </button>
+          </div>
+        `;
+      } else {
+        return `
+          <div class="room-list-item" style="border-radius: 12px; padding: 12px 16px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between;">
+            <div>
+              <strong style="color: #0f172a; font-size: 14px;">🃏 ${r.creatorName}'s Table</strong>
+              <div style="font-size: 12px; color: #64748b; margin-top: 4px;">
+                ውርርድ: <strong>${r.stakeAmount} ETB</strong> | ${r.playersCount || 1}/${r.maxPlayers || 2} ተጫዋቾች 
+                ${r.expiresIn !== undefined ? `| <span style="color: #d97706; font-weight: 700;">⏳ ${r.expiresIn}s ይቀራል</span>` : ''}
+              </div>
+            </div>
+            <button class="btn-primary" style="width: auto; padding: 8px 16px; font-size: 13px; font-weight: 700; background: linear-gradient(135deg, #10b981, #059669); border-color: #34d399;" onclick="joinSekaRoom('${r.roomId}')">
+              ተቀላቀል (Join) →
+            </button>
+          </div>
+        `;
+      }
+    }).join('');
   } catch (e) { }
+}
+
+window.cancelCreatedRoom = function (roomId) {
+  socket.emit('leave_seka_room', { roomId, userId });
+  currentWaitingRoomId = null;
+  currentRoomId = null;
+  playCardSound();
+  showSortToast('ጠረጴዛው ተሰርዟል፤ ውርርድዎ ተመልሷል');
+  refreshSekaRoomsList();
+};
+
+if (!window.sekaRoomsAutoRefresh) {
+  window.sekaRoomsAutoRefresh = setInterval(() => {
+    const sSec = document.getElementById('sekaLobbySection');
+    const lView = document.getElementById('lobbyView');
+    if (lView && lView.style.display !== 'none' && sSec && sSec.style.display !== 'none') {
+      refreshSekaRoomsList();
+    }
+  }, 2500);
 }
 
 window.joinRoom = function (roomId) {

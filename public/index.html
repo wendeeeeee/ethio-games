@@ -74,17 +74,17 @@
         <!-- 1. Active Seka Rooms List (Shown FIRST at the top so players immediately see & join!) -->
         <div class="lobby-card">
           <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
-            <div class="card-title" style="margin-bottom: 0;">🟢 ንቁ የሴካ ጠረጴዛዎች (Active Seka Tables)</div>
+            <div class="card-title" style="margin-bottom: 0;">🟢 Active Games (ንቁ ጨዋታዎች)</div>
             <span style="font-size: 11px; background: rgba(34, 197, 94, 0.15); color: #15803d; border: 1px solid #86efac; padding: 2px 8px; border-radius: 12px; font-weight: 800;">ክፍት ጠረጴዛዎች</span>
           </div>
           <div id="sekaRoomsListContainer">
-            <p style="color: #64748b; font-size: 14px;">በአሁኑ ሰዓት ክፍት የሴካ ጠረጴዛ የለም። አዲስ ጠረጴዛ ይፍጠሩ ወይም ከ AI Bot ጋር ይጫወቱ!</p>
+            <p style="color: #64748b; font-size: 14px;">በአሁኑ ሰዓት ክፍት የሴካ ጨዋታ የለም። አዲስ ጨዋታ ለመፍጠር "Create Game" የሚለውን ይጫኑ ወይም ከ AI Bot ጋር ይጫወቱ!</p>
           </div>
         </div>
 
         <!-- 2. Create Seka Room / Play Bot -->
         <div class="lobby-card">
-          <div class="card-title">🃏 የሴካ ጠረጴዛ ፍጠር (Create Seka Table)</div>
+          <div class="card-title">🃏 Create Game (ጨዋታ ፍጠር)</div>
           <div class="form-group">
             <label>የተጫዋች ስም</label>
             <input type="text" id="sekaPlayerNameInput" value="Player 1" placeholder="ስምህን አስገባ">
@@ -105,7 +105,7 @@
               <option value="3">3 ተጫዋቾች (3 Players)</option>
             </select>
           </div>
-          <button class="btn-primary" id="createSekaRoomBtn">🃏 የሴካ ጠረጴዛ ክፈት</button>
+          <button class="btn-primary" id="createSekaRoomBtn">🃏 Create Game</button>
           <button class="btn-primary btn-bot" id="playSekaBotBtn">🤖 ከሴካ AI Bot ጋር ተጫወት</button>
         </div>
       </div>
@@ -484,7 +484,7 @@
 
   <!-- Socket.io & App Script -->
   <script src="/socket.io/socket.io.js"></script>
-  <script src="app.js?v=29"></script>
+  <script src="app.js?v=30"></script>
 </body>
 
 </html>
