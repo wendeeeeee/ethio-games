@@ -2663,6 +2663,7 @@ function arrangeHandOptimal(hand, state) {
 // Main Game Renderer
 function renderGame(state) {
   const isSeka = state.gameType === 'SEKA';
+  const isMyTurn = state.isMyTurn !== undefined ? state.isMyTurn : (state.currentTurnPlayerId === userId);
   const gameModeBadge = document.getElementById('gameModeBadge');
   if (gameModeBadge) {
     gameModeBadge.textContent = isSeka ? '🃏 ሴካ (SEKA)' : '👑 ኮንከር (CONQUER)';
