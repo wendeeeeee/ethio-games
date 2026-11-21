@@ -493,8 +493,8 @@ if (tabConquerBtn && tabSekaBtn) {
 
     const conquerSelectText = tabConquerBtn.querySelector('.select-btn-text');
     const sekaSelectText = tabSekaBtn.querySelector('.select-btn-text');
-    if (conquerSelectText) conquerSelectText.textContent = isConquer ? '✓ ተመርጧል (Selected)' : 'ለመጫወት ይምረጡ (Select)';
-    if (sekaSelectText) sekaSelectText.textContent = !isConquer ? '✓ ተመርጧል (Selected)' : 'ለመጫወት ይምረጡ (Select)';
+    if (conquerSelectText) conquerSelectText.textContent = isConquer ? '✓ ተመርጧል' : 'ይምረጡ';
+    if (sekaSelectText) sekaSelectText.textContent = !isConquer ? '✓ ተመርጧል' : 'ይምረጡ';
 
     if (conquerLobbySection) conquerLobbySection.style.display = isConquer ? 'block' : 'none';
     if (sekaLobbySection) sekaLobbySection.style.display = !isConquer ? 'block' : 'none';

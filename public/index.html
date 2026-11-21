@@ -3,7 +3,8 @@
 
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="viewport"
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>CONQUER - Ethiopian Card Betting Game</title>
   <link rel="stylesheet" href="styles.css?v=25">
 </head>
@@ -34,44 +35,20 @@
   <!-- LOBBY VIEW -->
   <div id="lobbyView" class="view-container lobby-container">
 
-    <!-- Game Mode Selection Headline -->
-    <div class="game-selection-header">
-      <h2 class="game-selection-title">🎮 መጫወት የሚፈልጉትን ጨዋታ ይምረጡ (Select Game)</h2>
-      <p class="game-selection-subtitle">የኢትዮጵያ ባህላዊ ካርታ ውርርድ — ኮንከር (Conquer) ወይም ሴካ (Seka)</p>
-    </div>
-
-    <!-- 2 PROMINENT GAME BOXES: CONQUER & SEKA -->
+    <!-- 2 CLEAN GAME SELECTION BOXES -->
     <div class="game-mode-boxes">
-      <!-- BOX 1: CONQUER -->
       <div class="game-mode-card active" id="tabConquerBtn" role="button" tabindex="0">
-        <div class="game-mode-badge-top">🔥 ተወዳጅ (Popular)</div>
-        <div class="game-mode-icon-wrap">👑</div>
+        <div class="game-mode-icon">👑</div>
         <div class="game-mode-title">ኮንከር (Conquer)</div>
-        <div class="game-mode-sub">ክላሲክ የኢትዮጵያ 14 ህግ የካርታ ውርርድ ጨዋታ</div>
-        <div class="game-mode-tags">
-          <span class="mode-tag">41 ነጥብ መውረጃ</span>
-          <span class="mode-tag">ጆከር መቁረጥ</span>
-          <span class="mode-tag">ተጣይ (Winning Discard)</span>
-        </div>
-        <div class="game-mode-select-btn">
-          <span class="select-btn-text">✓ ተመርጧል (Selected)</span>
-        </div>
+        <div class="game-mode-desc">14ቱ ህጎች • 41 ነጥብ • ጆከር መቁረጥ</div>
+        <div class="game-mode-status"><span class="select-btn-text">✓ ተመርጧል</span></div>
       </div>
 
-      <!-- BOX 2: SEKA -->
       <div class="game-mode-card" id="tabSekaBtn" role="button" tabindex="0">
-        <div class="game-mode-badge-top seka-badge">⚡ ፈጣን (Fast-Paced)</div>
-        <div class="game-mode-icon-wrap">🃏</div>
+        <div class="game-mode-icon">🃏</div>
         <div class="game-mode-title">ሴካ (Seka)</div>
-        <div class="game-mode-sub">ባህላዊ የ10 እና 11 ካርታ የሴካ ውርርድ</div>
-        <div class="game-mode-tags">
-          <span class="mode-tag">ጦር ብቻ (Suited Runs)</span>
-          <span class="mode-tag">2 ዋይልድ ጆከሮች</span>
-          <span class="mode-tag">ነፃ ከመሬት ማንሳት</span>
-        </div>
-        <div class="game-mode-select-btn">
-          <span class="select-btn-text">ለመጫወት ይምረጡ (Select)</span>
-        </div>
+        <div class="game-mode-desc">10/11 ካርታ • ጦር ብቻ • ፈጣን ጨዋታ</div>
+        <div class="game-mode-status"><span class="select-btn-text">ይምረጡ</span></div>
       </div>
     </div>
 
@@ -80,61 +57,55 @@
       <div class="lobby-grid">
         <!-- Create Room / Play Bot -->
         <div class="lobby-card">
-          <div class="card-title">🎲 Create a Game Table</div>
+          <div class="card-title">🎲 አዲስ ጠረጴዛ ፍጠር (Create Table)</div>
           <div class="form-group">
-            <label>Your Name</label>
-            <input type="text" id="playerNameInput" value="Player 1" placeholder="Enter your name">
+            <label>የተጫዋች ስም</label>
+            <input type="text" id="playerNameInput" value="Player 1" placeholder="ስምህን አስገባ">
           </div>
           <div class="form-group">
-            <label>Table Stake (Bet Amount)</label>
+            <label>የውርርድ መጠን</label>
             <select id="stakeSelect">
-              <option value="50">50 ETB (Low Stakes)</option>
-              <option value="100" selected>100 ETB (Standard Table)</option>
-              <option value="250">250 ETB (High Roller)</option>
-              <option value="500">500 ETB (VIP Lounge)</option>
+              <option value="50">50 ETB</option>
+              <option value="100" selected>100 ETB</option>
+              <option value="250">250 ETB</option>
+              <option value="500">500 ETB</option>
             </select>
           </div>
-          <button class="btn-primary" id="createRoomBtn">Create Multiplayer Table</button>
-          <button class="btn-primary btn-bot" id="playBotBtn">🤖 Play Immediately vs AI Bot</button>
+          <button class="btn-primary" id="createRoomBtn">ጠረጴዛ ፍጠር (Multiplayer)</button>
+          <button class="btn-primary btn-bot" id="playBotBtn">🤖 ከ AI Bot ጋር ወዲያውኑ ተጫወት</button>
         </div>
 
         <!-- Active Rooms List -->
         <div class="lobby-card">
-          <div class="card-title">🟢 Active Tables to Join</div>
+          <div class="card-title">🟢 ንቁ ጠረጴዛዎች (Active Tables)</div>
           <div id="roomsListContainer">
-            <p style="color: #64748b; font-size: 14px;">No active tables currently waiting. Create one or play against
-              the
-              AI Bot!</p>
+            <p style="color: #64748b; font-size: 14px;">በአሁኑ ሰዓት ክፍት ጠረጴዛ የለም። አዲስ ጠረጴዛ ይፍጠሩ ወይም ከ AI Bot ጋር ይጫወቱ!</p>
           </div>
         </div>
       </div>
 
-      <!-- 14 Rules Accordion -->
-      <div class="lobby-card" style="margin-top: 24px;">
-        <div class="card-title">📜 The 14 Authentic Ethiopian Conquer Rules (የኮንከር 14ቱ ህጎች)</div>
-        <div style="font-size: 13px; line-height: 1.8; color: #cbd5e1;">
-          <ol style="padding-left: 20px;">
-            <li><strong>Yemejemeria ye meret:</strong> Starter's first ground discard cannot be drawn even with 41
-              points.
-            </li>
+      <!-- Collapsible Rules (Clean & Compact) -->
+      <details class="rules-accordion">
+        <summary class="rules-summary">📜 የኮንከር 14ቱ ህጎች (Conquer Rules)</summary>
+        <div class="rules-content">
+          <ol style="padding-left: 20px; line-height: 1.8;">
+            <li><strong>Yemejemeria ye meret:</strong> Starter's first ground discard cannot be drawn even with 41 points.</li>
             <li><strong>Joker Naming:</strong> The player who joins cuts/names the round's Joker.</li>
             <li><strong>Golden Star (⭐):</strong> Designated Jokers display a gold star badge.</li>
-            <li><strong>41 + Tris:</strong> Need $\ge 41$ points AND at least 1 valid Tris to pick from the ground.</li>
-            <li><strong>ተጣይ (Winning Discard):</strong> Discard the 14th card to ground (መሬት) after melding 13 cards to
-              conquer.</li>
-            <li><strong>Joker Drop:</strong> If a Joker is accidentally discarded, the opponent can pick it up.</li>
-            <li><strong>Endless Deck:</strong> Reshuffle ground cards when deck empties (no draws/ties).</li>
-            <li><strong>Poke & 30s Forfeit:</strong> Poke the opponent—if they don't play in 30s, you win automatically.
-            </li>
-            <li><strong>Joker Swap:</strong> Real cards can replace table Jokers to take the Joker back into hand.</li>
+            <li><strong>41 + Tris:</strong> Need &ge; 41 points AND at least 1 valid Tris to pick from the ground.</li>
+            <li><strong>ተጣይ:</strong> Discard 14th card to ground after melding 13 cards to conquer.</li>
+            <li><strong>Joker Drop:</strong> If a Joker is accidentally discarded, opponent can pick it up.</li>
+            <li><strong>Endless Deck:</strong> Reshuffle ground cards when deck empties.</li>
+            <li><strong>Poke & 30s:</strong> Poke opponent—if they don't play in 30s, you win.</li>
+            <li><strong>Joker Swap:</strong> Real cards can replace table Jokers to take Joker back into hand.</li>
             <li><strong>4 Aces:</strong> Quatris of Aces equals 41 points and unlocks ground draw.</li>
             <li><strong>J-Q-K-A:</strong> Consecutive J-Q-K-A suited counts as 41 points.</li>
-            <li><strong>Base Card Win:</strong> Using the Base card allows winning without revealing early melds.</li>
+            <li><strong>Base Card Win:</strong> Using Base card allows winning without revealing early melds.</li>
             <li><strong>Joker Steal:</strong> Replace table Joker to complete your conquer.</li>
-            <li><strong>1 Joker Limit:</strong> Maximum 1 Joker per Tris or Quatris (never 2 together).</li>
+            <li><strong>1 Joker Limit:</strong> Maximum 1 Joker per Tris or Quatris.</li>
           </ol>
         </div>
-      </div>
+      </details>
     </div>
 
     <!-- SEKA SECTION -->
@@ -144,29 +115,28 @@
         <div class="lobby-card">
           <div class="card-title">🃏 የሴካ ጠረጴዛ ፍጠር (Create Seka Table)</div>
           <div class="form-group">
-            <label>ስምህ (Player Name)</label>
-            <input type="text" id="sekaPlayerNameInput" value="Player 1" placeholder="Enter your name">
+            <label>የተጫዋች ስም</label>
+            <input type="text" id="sekaPlayerNameInput" value="Player 1" placeholder="ስምህን አስገባ">
           </div>
           <div class="form-group">
-            <label>ውርርድ መጠን (Seka Stake)</label>
+            <label>የውርርድ መጠን</label>
             <select id="sekaStakeSelect">
-              <option value="50">50 ETB (መደበኛ)</option>
-              <option value="100" selected>100 ETB (ስታንዳርድ)</option>
-              <option value="250">250 ETB (ከፍተኛ)</option>
-              <option value="500">500 ETB (VIP Lounge)</option>
+              <option value="50">50 ETB</option>
+              <option value="100" selected>100 ETB</option>
+              <option value="250">250 ETB</option>
+              <option value="500">500 ETB</option>
             </select>
           </div>
           <div class="form-group">
-            <label>የተጫዋች ብዛት (Max Players)</label>
+            <label>የተጫዋች ብዛት</label>
             <select id="sekaPlayersSelect">
               <option value="2" selected>2 ተጫዋቾች (Head to Head)</option>
               <option value="3">3 ተጫዋቾች</option>
               <option value="4">4 ተጫዋቾች</option>
-              <option value="6">6 ተጫዋቾች (Full Table)</option>
+              <option value="6">6 ተጫዋቾች</option>
             </select>
           </div>
-          <button class="btn-primary" id="createSekaRoomBtn"
-            style="background: linear-gradient(135deg, #d97706, #b45309);">🃏 የሴካ ጠረጴዛ ክፈት</button>
+          <button class="btn-primary" id="createSekaRoomBtn">🃏 የሴካ ጠረጴዛ ክፈት</button>
           <button class="btn-primary btn-bot" id="playSekaBotBtn">🤖 ከሴካ AI Bot ጋር ተጫወት</button>
         </div>
 
@@ -174,36 +144,25 @@
         <div class="lobby-card">
           <div class="card-title">🟢 ንቁ የሴካ ጠረጴዛዎች (Active Seka Tables)</div>
           <div id="sekaRoomsListContainer">
-            <p style="color: #64748b; font-size: 14px;">በአሁኑ ሰዓት ክፍት የሴካ ጠረጴዛ የለም። አዲስ ጠረጴዛ ይፍጠሩ ወይም ከAI Bot ጋር ይጫወቱ!
-            </p>
+            <p style="color: #64748b; font-size: 14px;">በአሁኑ ሰዓት ክፍት የሴካ ጠረጴዛ የለም። አዲስ ጠረጴዛ ይፍጠሩ ወይም ከ AI Bot ጋር ይጫወቱ!</p>
           </div>
         </div>
       </div>
 
-      <!-- Seka Rules Accordion -->
-      <div class="lobby-card" style="margin-top: 24px;">
-        <div class="card-title">📜 የኢትዮጵያ ባህላዊ የሴካ (Seka) ህጎች</div>
-        <div style="font-size: 13px; line-height: 1.8; color: #cbd5e1;">
-          <ol style="padding-left: 20px;">
-            <li><strong>ካርታ አደል፦</strong> ለተቀባይ 10 ካርታ፣ ለአጫዋች (Starter) 11 ካርታ ይታደላል። አጫዋቹ 1 ካርታ መሬት ላይ በመጣል ይጀምራል (ሁለቱም
-              10 ካርታ ይዘው ይቀጥላሉ)።</li>
-            <li><strong>ሳብ እና ጣል፦</strong> በተራህ ወቅት 1 ካርታ ከመደብ ወይም ከመሬት እንደፈለግክ በነፃነት ታነሳለህ (ምንም የ 41 ገደብ የለም)፤ ከዚያ 1
-              ካርታ መሬት ትጥላለህ።</li>
-            <li><strong>ጆከር፦</strong> የታተሙት ጆከሮች (Printed Jokers) የተፈጥሮ ዋይልድ ጆከር ናቸው። ምንም የጆከር ስያሜ ወይም መቁረጥ የለም።</li>
-            <li><strong>ትሪስ እና ኳትሪስ (ጦር ብቻ)፦</strong>
-              <ul style="padding-left: 18px; margin-top: 4px;">
-                <li><strong>ትሪስ (3 ካርታ)፦</strong> ተከታታይ ተመሳሳይ ከለር/ምልክት (ጦር) ብቻ (ለምሳሌ 5♥ 6♥ 7♥ ወይም 5♥ 🃏 7♥)።</li>
-                <li><strong>ኳትሪስ (4 ካርታ)፦</strong> 4 ተከታታይ ተመሳሳይ ምልክት (ጦር) ብቻ (ለምሳሌ 7♦ 8♦ 9♦ 10♦ ወይም J♠ Q♠ 🃏 A♠)።</li>
-                <li><span style="color: #ef4444; font-weight: bold;">ተከታታይ ጆከር አይቻልም፦</span> በአንድ መደዳ/ሜልድ ውስጥ ተከታታይ ጆከሮችን መጠቀም ወይም በአንድ ሜልድ ውስጥ ከአንድ ጆከር በላይ ማድረግ ፈጽሞ አይፈቀድም (ቢበዛ 1 ጆከር ብቻ)!</li>
-                <li><span style="color: #ef4444; font-weight: bold;">ማሳሰቢያ፦</span> ተመሳሳይ ቁጥሮች (ለምሳሌ 7-7-7 ወይም 8-8-8-8)
-                  በሴካ ጨዋታ ፈጽሞ አይፈቀዱም!</li>
-              </ul>
-            </li>
-            <li><strong>ማሸነፍ (ሴካ)፦</strong> እጅህ ላይ ያሉት ካርታዎች <strong>2 ትሪስ (3+3=6) + 1 ኳትሪስ (4) = 10 ካርታዎች በጦር
-                ተከታታይ</strong> ሆነው ሲሟሉ፣ 11ኛዋን ካርታ (ተጣይ) መሬት ላይ በመጣል ጨዋታውን ታሸንፋለህ!</li>
+      <!-- Collapsible Seka Rules (Clean & Compact) -->
+      <details class="rules-accordion">
+        <summary class="rules-summary">📜 የሴካ ህጎች (Seka Rules)</summary>
+        <div class="rules-content">
+          <ol style="padding-left: 20px; line-height: 1.8;">
+            <li><strong>ካርታ አደል፦</strong> ለተቀባይ 10፣ ለአጫዋች 11 ካርታ ይታደላል። አጫዋቹ 1 ካርታ መሬት በመጣል ይጀምራል።</li>
+            <li><strong>ሳብ እና ጣል፦</strong> በተራህ ወቅት 1 ካርታ ከመደብ ወይም ከመሬት በነፃነት ታነሳለህ (የ 41 ገደብ የለም)፤ ከዚያ 1 ካርታ ትጥላለህ።</li>
+            <li><strong>ጆከሮች፦</strong> 2ቱ የታተሙ ጆከሮች ዋይልድ ናቸው። ምንም የጆከር ስያሜ የለም።</li>
+            <li><strong>ትሪስ እና ኳትሪስ፦</strong> ተከታታይ ተመሳሳይ ከለር/ምልክት (ጦር) ብቻ። ተመሳሳይ ቁጥሮች (ለምሳሌ 7-7-7) አይፈቀዱም።</li>
+            <li><strong>ተከታታይ ጆከር አይቻልም፦</strong> በአንድ ሜልድ ውስጥ ከአንድ ጆከር በላይ ማድረግ ፈጽሞ አይፈቀድም።</li>
+            <li><strong>ማሸነፍ፦</strong> 2 ትሪስ (3+3) + 1 ኳትሪስ (4) = 10 ካርታዎች ሲሟሉ 11ኛዋን ካርታ (ተጣይ) መሬት በመጣል ታሸንፋለህ።</li>
           </ol>
         </div>
-      </div>
+      </details>
     </div>
 
   </div>
@@ -457,7 +416,8 @@
         <span class="payment-pill bonus">🎁 1,000 ETB ቦነስ</span>
       </div>
 
-      <form id="registerForm" onsubmit="return false;" style="display: flex; flex-direction: column; gap: 14px; margin-top: 14px;">
+      <form id="registerForm" onsubmit="return false;"
+        style="display: flex; flex-direction: column; gap: 14px; margin-top: 14px;">
         <div class="form-group" style="text-align: left;">
           <label style="font-size: 13px; font-weight: bold; color: #e2e8f0; display: block; margin-bottom: 6px;">
             👤 ሙሉ ስም ወይም ቅጽል ስም (Full Name / Username) <span style="color: #ef4444;">*</span>
@@ -470,14 +430,17 @@
           <label style="font-size: 13px; font-weight: bold; color: #e2e8f0; display: block; margin-bottom: 6px;">
             📱 የስልክ ቁጥር (Phone Number for Telebirr / CBE Birr) <span style="color: #ef4444;">*</span>
           </label>
-          <input type="tel" id="regPhoneInput" placeholder="09... ወይም 07... (उदा. 0912345678)" required autocomplete="tel"
+          <input type="tel" id="regPhoneInput" placeholder="09... ወይም 07... (उदा. 0912345678)" required
+            autocomplete="tel"
             style="width: 100%; padding: 11px 14px; background: rgba(15, 23, 42, 0.9); border: 1.5px solid rgba(245, 176, 65, 0.4); border-radius: 10px; color: #fff; font-size: 14px; box-sizing: border-box;">
           <div style="font-size: 11px; color: #94a3b8; margin-top: 4px;">
             💡 አሸናፊ ሲሆኑ ውርርድ የሚከፈልበት የቴሌብር ወይም የCBE Birr ቁጥር
           </div>
         </div>
 
-        <div id="regErrorMsg" style="display: none; color: #f87171; font-size: 12px; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 8px; padding: 8px 12px; text-align: left;"></div>
+        <div id="regErrorMsg"
+          style="display: none; color: #f87171; font-size: 12px; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 8px; padding: 8px 12px; text-align: left;">
+        </div>
 
         <button type="submit" class="btn-primary" id="submitRegBtn"
           style="padding: 13px; font-size: 15px; font-weight: bold; background: linear-gradient(135deg, #f59e0b, #d97706); border: 2px solid #fbbf24; border-radius: 12px; cursor: pointer; box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3); margin-top: 4px;">
