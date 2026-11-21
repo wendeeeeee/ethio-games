@@ -1908,12 +1908,12 @@ select:focus {
 
   /* Fan */
   .fan-container {
-    height: 140px;
-    margin: 0 0 25px 0;
+    height: 155px;
+    margin: 0 0 30px 0;
   }
 
   .fan {
-    bottom: 50px;
+    bottom: 65px;
   }
 
   .fan .card {
@@ -2200,18 +2200,19 @@ select:focus {
     flex-shrink: 0;
     width: 100%;
     margin-top: auto;
+    margin-bottom: 6px;
   }
 
   .hand-status-bar {
-    margin-bottom: 4px;
-    padding: 2px 12px;
-    font-size: 11px;
+    margin-bottom: 8px;
+    padding: 3px 14px;
+    font-size: 12px;
     min-width: 140px;
   }
 
-  /* Cards in Hand Fan - Perfectly calibrated for iPhone Mini */
+  /* Cards in Hand Fan - Elevated comfortably up from bottom for phone screens */
   .fan-container {
-    height: 108px;
+    height: 128px;
     margin: 0;
     padding: 0;
     position: relative;
@@ -2222,7 +2223,7 @@ select:focus {
   .fan {
     position: absolute;
     left: 50%;
-    bottom: 10px;
+    bottom: 28px;
   }
 
   .fan .card {
@@ -2423,11 +2424,11 @@ select:focus {
   }
 
   .fan-container {
-    height: 82px;
+    height: 98px;
   }
 
   .fan {
-    bottom: 6px;
+    bottom: 22px;
   }
 
   .fan .card {
