@@ -286,6 +286,7 @@ const turnTimerBadge = document.getElementById('turnTimerBadge');
 const turnSecondsVal = document.getElementById('turnSecondsVal');
 let activeGameReturnRoomId = null;
 let returnBannerTimer = null;
+let isTemporarilyOut = false;
 
 function showActiveGameReturnBanner(roomId, deadline) {
   activeGameReturnRoomId = roomId;
@@ -314,43 +315,74 @@ function hideActiveGameReturnBanner() {
     returnBannerTimer = null;
   }
   activeGameReturnRoomId = null;
+  isTemporarilyOut = false;
   if (activeGameReturnBanner) activeGameReturnBanner.style.display = 'none';
 }
 
 if (leaveGameBtn) {
-  leaveGameBtn.addEventListener('click', () => {
+  leaveGameBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
     if (!currentRoomId || !currentGameState || currentGameState.status !== 'PLAYING') {
       switchToLobbyView();
       return;
     }
-    const ok = confirm('ከጠረጴዛው መውጣት ይፈልጋሉ? በ 1 ደቂቃ (60s) ውስጥ ካልተመለሱ በነባሪ ይሸነፋሉ!');
-    if (!ok) return;
 
+    isTemporarilyOut = true;
+    activeGameReturnRoomId = currentRoomId;
     socket.emit('leave_seka_table_temp', { roomId: currentRoomId, userId });
     showActiveGameReturnBanner(currentRoomId, Date.now() + 60 * 1000);
     switchToLobbyView();
+    playCardSound();
+    showSortToast('🚪 ከጠረጴዛው ወጥተዋል! በ 60s ውስጥ ካልተመለሱ በነባሪ ይሸነፋሉ');
   });
 }
 
 if (returnToGameBtn) {
-  returnToGameBtn.addEventListener('click', () => {
+  returnToGameBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
     if (activeGameReturnRoomId) {
+      isTemporarilyOut = false;
       socket.emit('return_to_seka_table', { roomId: activeGameReturnRoomId, userId });
       hideActiveGameReturnBanner();
       switchToGameView();
+      playCardSound();
+      showSortToast('👋 ወደ ጨዋታው ተመልሰዋል!');
     }
   });
 }
 
-// Local 1-second interval to keep the turn timer ticking down smoothly
+function updateTurnDisplay(state) {
+  const s = state || currentGameState;
+  if (!s || !turnIndicator) return;
+  if (s.status !== 'PLAYING') {
+    turnIndicator.textContent = s.status === 'FINISHED' ? 'የጨዋታ ውጤት' : 'ተራ...';
+    return;
+  }
+  const isMyTurn = s.isMyTurn !== undefined ? s.isMyTurn : (s.currentTurnPlayerId === userId);
+  const oppName = s.opponentName || (s.creator && s.creator.id !== userId ? s.creator.name : (s.joiner && s.joiner.id !== userId ? s.joiner.name : 'Opponent'));
+  const sec = s.turnDeadline ? Math.max(0, Math.round((s.turnDeadline - Date.now()) / 1000)) : (s.turnSecondsLeft !== undefined ? s.turnSecondsLeft : 60);
+
+  if (isMyTurn) {
+    turnIndicator.innerHTML = `🔥 YOUR TURN <span style="font-size: 15px; font-weight: 900; color: ${sec <= 15 ? '#ef4444' : '#fef08a'}; margin-left: 6px;">(⏳ ${sec}s)</span>`;
+    turnIndicator.style.color = '#4ade80';
+  } else {
+    turnIndicator.innerHTML = `👤 ${oppName}'s Turn <span style="font-size: 14px; font-weight: 800; color: ${sec <= 15 ? '#ef4444' : '#cbd5e1'}; margin-left: 6px;">(⏳ ${sec}s)</span>`;
+    turnIndicator.style.color = '#f5b041';
+  }
+
+  if (turnTimerBadge && turnSecondsVal) {
+    turnSecondsVal.textContent = sec;
+    if (sec <= 15) turnTimerBadge.classList.add('urgent');
+    else turnTimerBadge.classList.remove('urgent');
+  }
+}
+
+// Local 1-second interval to keep the turn timer and countdown ticking down smoothly
 setInterval(() => {
-  if (currentGameState && currentGameState.status === 'PLAYING' && currentGameState.turnDeadline && turnSecondsVal) {
-    const sLeft = Math.max(0, Math.round((currentGameState.turnDeadline - Date.now()) / 1000));
-    turnSecondsVal.textContent = sLeft;
-    if (turnTimerBadge) {
-      if (sLeft <= 15) turnTimerBadge.classList.add('urgent');
-      else turnTimerBadge.classList.remove('urgent');
-    }
+  if (currentGameState && currentGameState.status === 'PLAYING') {
+    updateTurnDisplay(currentGameState);
   }
 }, 1000);
 
@@ -700,13 +732,33 @@ socket.on('seka_game_state', (state) => {
     playerOrderedCardIds = [];
     currentRoomId = state.roomId;
   }
+
+  // Check if player intentionally left the table temporarily
+  const userIsTemporarilyAway = isTemporarilyOut || 
+                                (activeGameReturnRoomId === state.roomId) ||
+                                (state.temporarilyLeft && state.temporarilyLeft[userId]);
+
   // The game ONLY starts when status becomes PLAYING!
   if (state.status === 'PLAYING') {
     closeWaitingForOpponentModal();
-    if (gameView.style.display === 'none') {
-      switchToGameView();
+    if (userIsTemporarilyAway) {
+      const deadline = state.temporarilyLeft && state.temporarilyLeft[userId] 
+        ? state.temporarilyLeft[userId].deadline 
+        : (Date.now() + 60 * 1000);
+      showActiveGameReturnBanner(state.roomId, deadline);
+    } else {
+      hideActiveGameReturnBanner();
+      if (gameView.style.display === 'none') {
+        switchToGameView();
+      }
     }
   }
+
+  if (state.status === 'FINISHED') {
+    isTemporarilyOut = false;
+    hideActiveGameReturnBanner();
+  }
+
   if (state.status === 'PLAYING' && state.myHand) {
     state.myHand = syncHandPreservingOrder(state.myHand);
   }
@@ -2602,11 +2654,8 @@ function renderGame(state) {
   potDisplay.textContent = `POT: ${state.pot} ETB`;
   deckCount.textContent = state.deckCount !== undefined ? state.deckCount : (state.deckCardCount !== undefined ? state.deckCardCount : 0);
 
-  // Turn status
-  const isMyTurn = state.isMyTurn !== undefined ? state.isMyTurn : (state.currentTurnPlayerId === userId);
-  const oppName = state.opponent ? state.opponent.name : (state.creator && state.creator.id !== userId ? state.creator.name : (state.joiner && state.joiner.id !== userId ? state.joiner.name : 'Waiting...'));
-  turnIndicator.textContent = isMyTurn ? 'YOUR TURN' : `${oppName}'s Turn`;
-  turnIndicator.style.color = isMyTurn ? '#4ade80' : '#f5b041';
+  // Turn status with live countdown
+  updateTurnDisplay(state);
 
   // Rule 2: Blind Cut Joker modal for Joiner; Waiting modal for Creator (Conquer only)
   if (state.status === 'CUTTING_JOKER' && !isSeka) {
