@@ -2482,19 +2482,14 @@ select:focus {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  cursor: pointer;
-  padding: 2px 8px;
+  cursor: default;
+  padding: 3px 10px;
   border-radius: 14px;
   background: rgba(255, 255, 255, 0.08);
   border: 1px solid rgba(245, 176, 65, 0.25);
-  transition: all 0.2s ease;
   user-select: none;
-}
-
-.user-profile-badge:hover {
-  background: rgba(245, 176, 65, 0.2);
-  border-color: var(--primary-gold);
-  transform: translateY(-1px);
+  font-weight: 700;
+  color: #fff;
 }
 
 .profile-edit-icon {

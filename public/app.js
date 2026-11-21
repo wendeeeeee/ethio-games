@@ -501,9 +501,10 @@ function closeRegistrationModal() {
   registerModal.style.display = 'none';
 }
 
-if (openProfileBtn) {
-  openProfileBtn.addEventListener('click', openRegistrationModal);
-}
+// Profile badge is read-only (not clickable to edit)
+// if (openProfileBtn) {
+//   openProfileBtn.addEventListener('click', openRegistrationModal);
+// }
 
 if (closeRegModalBtn) {
   closeRegModalBtn.addEventListener('click', closeRegistrationModal);
