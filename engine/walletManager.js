@@ -8,17 +8,29 @@ class WalletManager {
     this.escrows = new Map();
   }
 
-  getWallet(userId, name = 'Player') {
+  getWallet(userId, name = 'Player', phone = '') {
     if (!this.wallets.has(userId)) {
       this.wallets.set(userId, {
         id: userId,
         name,
+        phone: phone || '',
         balance: 1000, // Starting demo balance (1,000 ETB)
         locked: 0,
         transactions: []
       });
+    } else {
+      const wallet = this.wallets.get(userId);
+      if (name && name !== 'Player') wallet.name = name;
+      if (phone) wallet.phone = phone;
     }
     return this.wallets.get(userId);
+  }
+
+  updateProfile(userId, { name, phone }) {
+    const wallet = this.getWallet(userId, name, phone);
+    if (name) wallet.name = name;
+    if (phone) wallet.phone = phone;
+    return wallet;
   }
 
   deposit(userId, amount) {

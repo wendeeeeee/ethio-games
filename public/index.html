@@ -1,95 +1,202 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>CONQUER - Ethiopian Card Betting Game</title>
-  <link rel="stylesheet" href="styles.css?v=21">
+  <link rel="stylesheet" href="styles.css?v=25">
 </head>
+
 <body>
 
   <!-- App Header -->
   <header class="app-header">
     <div class="logo-area">
       <div class="logo-icon">👑</div>
-      <div class="logo-title">CONQUER <span style="font-size: 13px; color: #cbd5e1; font-weight: normal;">(ኮንከር)</span></div>
+      <div class="logo-title">CONQUER <span style="font-size: 13px; color: #cbd5e1; font-weight: normal;">(ኮንከር)</span>
+      </div>
     </div>
     <div class="wallet-badge">
-      <span>💰 <span id="walletUserDisplay">Player</span>:</span>
-      <span id="walletBalanceDisplay">1,000 ETB</span>
+      <button class="sound-toggle-btn" id="soundToggleBtn" title="Toggle Sound (ድምፅ)">🔊</button>
+      <div class="user-profile-badge" id="openProfileBtn" title="የተጫዋች መረጃ ለመቀየር ይጫኑ (Click to edit profile)">
+        <span>👤 <span id="walletUserDisplay">Player</span></span>
+        <span class="profile-edit-icon">✏️</span>
+      </div>
+      <div class="wallet-balance-wrap">
+        <span>💰</span>
+        <span id="walletBalanceDisplay">1,000 ETB</span>
+      </div>
       <button class="deposit-btn" id="depositBtn">+ Deposit</button>
     </div>
   </header>
 
   <!-- LOBBY VIEW -->
-  <div id="lobbyView" class="view-container">
-    <div class="lobby-grid">
-      <!-- Create Room / Play Bot -->
-      <div class="lobby-card">
-        <div class="card-title">🎲 Create a Game Table</div>
-        <div class="form-group">
-          <label>Your Name</label>
-          <input type="text" id="playerNameInput" value="Player 1" placeholder="Enter your name">
+  <div id="lobbyView" class="view-container lobby-container">
+
+    <!-- Game Selector Tabs: ኮንከር vs ሴካ -->
+    <div class="game-selector-bar">
+      <button class="game-tab-btn active" id="tabConquerBtn">
+        <span class="game-tab-icon">👑</span>
+        <span class="game-tab-text">ኮንከር (Conquer)</span>
+      </button>
+      <button class="game-tab-btn" id="tabSekaBtn">
+        <span class="game-tab-icon">🃏</span>
+        <span class="game-tab-text">ሴካ (Seka)</span>
+      </button>
+    </div>
+
+    <!-- CONQUER SECTION -->
+    <div id="conquerLobbySection">
+      <div class="lobby-grid">
+        <!-- Create Room / Play Bot -->
+        <div class="lobby-card">
+          <div class="card-title">🎲 Create a Game Table</div>
+          <div class="form-group">
+            <label>Your Name</label>
+            <input type="text" id="playerNameInput" value="Player 1" placeholder="Enter your name">
+          </div>
+          <div class="form-group">
+            <label>Table Stake (Bet Amount)</label>
+            <select id="stakeSelect">
+              <option value="50">50 ETB (Low Stakes)</option>
+              <option value="100" selected>100 ETB (Standard Table)</option>
+              <option value="250">250 ETB (High Roller)</option>
+              <option value="500">500 ETB (VIP Lounge)</option>
+            </select>
+          </div>
+          <button class="btn-primary" id="createRoomBtn">Create Multiplayer Table</button>
+          <button class="btn-primary btn-bot" id="playBotBtn">🤖 Play Immediately vs AI Bot</button>
         </div>
-        <div class="form-group">
-          <label>Table Stake (Bet Amount)</label>
-          <select id="stakeSelect">
-            <option value="50">50 ETB (Low Stakes)</option>
-            <option value="100" selected>100 ETB (Standard Table)</option>
-            <option value="250">250 ETB (High Roller)</option>
-            <option value="500">500 ETB (VIP Lounge)</option>
-          </select>
+
+        <!-- Active Rooms List -->
+        <div class="lobby-card">
+          <div class="card-title">🟢 Active Tables to Join</div>
+          <div id="roomsListContainer">
+            <p style="color: #64748b; font-size: 14px;">No active tables currently waiting. Create one or play against
+              the
+              AI Bot!</p>
+          </div>
         </div>
-        <button class="btn-primary" id="createRoomBtn">Create Multiplayer Table</button>
-        <button class="btn-primary btn-bot" id="playBotBtn">🤖 Play Immediately vs AI Bot</button>
       </div>
 
-      <!-- Active Rooms List -->
-      <div class="lobby-card">
-        <div class="card-title">🟢 Active Tables to Join</div>
-        <div id="roomsListContainer">
-          <p style="color: #64748b; font-size: 14px;">No active tables currently waiting. Create one or play against the AI Bot!</p>
+      <!-- 14 Rules Accordion -->
+      <div class="lobby-card" style="margin-top: 24px;">
+        <div class="card-title">📜 The 14 Authentic Ethiopian Conquer Rules (የኮንከር 14ቱ ህጎች)</div>
+        <div style="font-size: 13px; line-height: 1.8; color: #cbd5e1;">
+          <ol style="padding-left: 20px;">
+            <li><strong>Yemejemeria ye meret:</strong> Starter's first ground discard cannot be drawn even with 41
+              points.
+            </li>
+            <li><strong>Joker Naming:</strong> The player who joins cuts/names the round's Joker.</li>
+            <li><strong>Golden Star (⭐):</strong> Designated Jokers display a gold star badge.</li>
+            <li><strong>41 + Tris:</strong> Need $\ge 41$ points AND at least 1 valid Tris to pick from the ground.</li>
+            <li><strong>ተጣይ (Winning Discard):</strong> Discard the 14th card to ground (መሬት) after melding 13 cards to
+              conquer.</li>
+            <li><strong>Joker Drop:</strong> If a Joker is accidentally discarded, the opponent can pick it up.</li>
+            <li><strong>Endless Deck:</strong> Reshuffle ground cards when deck empties (no draws/ties).</li>
+            <li><strong>Poke & 30s Forfeit:</strong> Poke the opponent—if they don't play in 30s, you win automatically.
+            </li>
+            <li><strong>Joker Swap:</strong> Real cards can replace table Jokers to take the Joker back into hand.</li>
+            <li><strong>4 Aces:</strong> Quatris of Aces equals 41 points and unlocks ground draw.</li>
+            <li><strong>J-Q-K-A:</strong> Consecutive J-Q-K-A suited counts as 41 points.</li>
+            <li><strong>Base Card Win:</strong> Using the Base card allows winning without revealing early melds.</li>
+            <li><strong>Joker Steal:</strong> Replace table Joker to complete your conquer.</li>
+            <li><strong>1 Joker Limit:</strong> Maximum 1 Joker per Tris or Quatris (never 2 together).</li>
+          </ol>
         </div>
       </div>
     </div>
 
-    <!-- 14 Rules Accordion -->
-    <div class="lobby-card" style="margin-top: 24px;">
-      <div class="card-title">📜 The 14 Authentic Ethiopian Conquer Rules (የኮንከር 14ቱ ህጎች)</div>
-      <div style="font-size: 13px; line-height: 1.8; color: #cbd5e1;">
-        <ol style="padding-left: 20px;">
-          <li><strong>Yemejemeria ye meret:</strong> Starter's first ground discard cannot be drawn even with 41 points.</li>
-          <li><strong>Joker Naming:</strong> The player who joins cuts/names the round's Joker.</li>
-          <li><strong>Golden Star (⭐):</strong> Designated Jokers display a gold star badge.</li>
-          <li><strong>41 + Tris:</strong> Need $\ge 41$ points AND at least 1 valid Tris to pick from the ground.</li>
-          <li><strong>Gebi:</strong> Drop the final winning card into the GEBI slot to conquer.</li>
-          <li><strong>Joker Drop:</strong> If a Joker is accidentally discarded, the opponent can pick it up.</li>
-          <li><strong>Endless Deck:</strong> Reshuffle ground cards when deck empties (no draws/ties).</li>
-          <li><strong>Poke & 30s Forfeit:</strong> Poke the opponent—if they don't play in 30s, you win automatically.</li>
-          <li><strong>Joker Swap:</strong> Real cards can replace table Jokers to take the Joker back into hand.</li>
-          <li><strong>4 Aces:</strong> Quatris of Aces equals 41 points and unlocks ground draw.</li>
-          <li><strong>J-Q-K-A:</strong> Consecutive J-Q-K-A suited counts as 41 points.</li>
-          <li><strong>Base Card Win:</strong> Using the Base card allows winning without revealing early melds.</li>
-          <li><strong>Joker Steal:</strong> Replace table Joker to complete your conquer.</li>
-          <li><strong>1 Joker Limit:</strong> Maximum 1 Joker per Tris or Quatris (never 2 together).</li>
-        </ol>
+    <!-- SEKA SECTION -->
+    <div id="sekaLobbySection" style="display: none;">
+      <div class="lobby-grid">
+        <!-- Create Seka Room / Play Bot -->
+        <div class="lobby-card">
+          <div class="card-title">🃏 የሴካ ጠረጴዛ ፍጠር (Create Seka Table)</div>
+          <div class="form-group">
+            <label>ስምህ (Player Name)</label>
+            <input type="text" id="sekaPlayerNameInput" value="Player 1" placeholder="Enter your name">
+          </div>
+          <div class="form-group">
+            <label>ውርርድ መጠን (Seka Stake)</label>
+            <select id="sekaStakeSelect">
+              <option value="50">50 ETB (መደበኛ)</option>
+              <option value="100" selected>100 ETB (ስታንዳርድ)</option>
+              <option value="250">250 ETB (ከፍተኛ)</option>
+              <option value="500">500 ETB (VIP Lounge)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>የተጫዋች ብዛት (Max Players)</label>
+            <select id="sekaPlayersSelect">
+              <option value="2" selected>2 ተጫዋቾች (Head to Head)</option>
+              <option value="3">3 ተጫዋቾች</option>
+              <option value="4">4 ተጫዋቾች</option>
+              <option value="6">6 ተጫዋቾች (Full Table)</option>
+            </select>
+          </div>
+          <button class="btn-primary" id="createSekaRoomBtn"
+            style="background: linear-gradient(135deg, #d97706, #b45309);">🃏 የሴካ ጠረጴዛ ክፈት</button>
+          <button class="btn-primary btn-bot" id="playSekaBotBtn">🤖 ከሴካ AI Bot ጋር ተጫወት</button>
+        </div>
+
+        <!-- Active Seka Rooms List -->
+        <div class="lobby-card">
+          <div class="card-title">🟢 ንቁ የሴካ ጠረጴዛዎች (Active Seka Tables)</div>
+          <div id="sekaRoomsListContainer">
+            <p style="color: #64748b; font-size: 14px;">በአሁኑ ሰዓት ክፍት የሴካ ጠረጴዛ የለም። አዲስ ጠረጴዛ ይፍጠሩ ወይም ከAI Bot ጋር ይጫወቱ!
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Seka Rules Accordion -->
+      <div class="lobby-card" style="margin-top: 24px;">
+        <div class="card-title">📜 የኢትዮጵያ ባህላዊ የሴካ (Seka) ህጎች</div>
+        <div style="font-size: 13px; line-height: 1.8; color: #cbd5e1;">
+          <ol style="padding-left: 20px;">
+            <li><strong>ካርታ አደል፦</strong> ለተቀባይ 10 ካርታ፣ ለአጫዋች (Starter) 11 ካርታ ይታደላል። አጫዋቹ 1 ካርታ መሬት ላይ በመጣል ይጀምራል (ሁለቱም
+              10 ካርታ ይዘው ይቀጥላሉ)።</li>
+            <li><strong>ሳብ እና ጣል፦</strong> በተራህ ወቅት 1 ካርታ ከመደብ ወይም ከመሬት እንደፈለግክ በነፃነት ታነሳለህ (ምንም የ 41 ገደብ የለም)፤ ከዚያ 1
+              ካርታ መሬት ትጥላለህ።</li>
+            <li><strong>ጆከር፦</strong> የታተሙት ጆከሮች (Printed Jokers) የተፈጥሮ ዋይልድ ጆከር ናቸው። ምንም የጆከር ስያሜ ወይም መቁረጥ የለም።</li>
+            <li><strong>ትሪስ እና ኳትሪስ (ጦር ብቻ)፦</strong>
+              <ul style="padding-left: 18px; margin-top: 4px;">
+                <li><strong>ትሪስ (3 ካርታ)፦</strong> ተከታታይ ተመሳሳይ ከለር/ምልክት (ጦር) ብቻ (ለምሳሌ 5♥ 6♥ 7♥ ወይም 5♥ 🃏 7♥)።</li>
+                <li><strong>ኳትሪስ (4 ካርታ)፦</strong> 4 ተከታታይ ተመሳሳይ ምልክት (ጦር) ብቻ (ለምሳሌ 7♦ 8♦ 9♦ 10♦ ወይም J♠ Q♠ 🃏 A♠)።</li>
+                <li><span style="color: #ef4444; font-weight: bold;">ተከታታይ ጆከር አይቻልም፦</span> በአንድ መደዳ/ሜልድ ውስጥ ተከታታይ ጆከሮችን መጠቀም ወይም በአንድ ሜልድ ውስጥ ከአንድ ጆከር በላይ ማድረግ ፈጽሞ አይፈቀድም (ቢበዛ 1 ጆከር ብቻ)!</li>
+                <li><span style="color: #ef4444; font-weight: bold;">ማሳሰቢያ፦</span> ተመሳሳይ ቁጥሮች (ለምሳሌ 7-7-7 ወይም 8-8-8-8)
+                  በሴካ ጨዋታ ፈጽሞ አይፈቀዱም!</li>
+              </ul>
+            </li>
+            <li><strong>ማሸነፍ (ሴካ)፦</strong> እጅህ ላይ ያሉት ካርታዎች <strong>2 ትሪስ (3+3=6) + 1 ኳትሪስ (4) = 10 ካርታዎች በጦር
+                ተከታታይ</strong> ሆነው ሲሟሉ፣ 11ኛዋን ካርታ (ተጣይ) መሬት ላይ በመጣል ጨዋታውን ታሸንፋለህ!</li>
+          </ol>
+        </div>
       </div>
     </div>
+
   </div>
 
   <!-- GAME TABLE VIEW -->
   <div id="gameView" class="view-container" style="display: none;">
     <div class="game-table">
-      
+
       <!-- Top Bar: Room ID, Stakes, Pot, Poke Button -->
       <div class="table-top-bar">
-        <div>
-          <span style="font-size: 13px; color: #94a3b8;">TABLE: <strong id="tableIdDisplay" style="color:#fff;">#1234</strong></span>
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <span id="gameModeBadge" class="game-mode-badge"
+            style="background: rgba(234, 179, 8, 0.2); border: 1px solid var(--primary-gold); padding: 4px 10px; border-radius: 8px; font-weight: bold; font-size: 13px; color: var(--primary-gold);">👑
+            ኮንከር</span>
+          <span style="font-size: 13px; color: #94a3b8;">TABLE: <strong id="tableIdDisplay"
+              style="color:#fff;">#1234</strong></span>
         </div>
         <div class="pot-badge" id="potDisplay">
           POT: 200 ETB
         </div>
-        <div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <button class="sound-toggle-btn" id="soundToggleBtnTable" title="Toggle Sound (ድምፅ)">🔊</button>
           <button class="poke-btn" id="pokeBtn">
             <span>⏰</span> POKE (30s)
           </button>
@@ -113,33 +220,30 @@
 
       <!-- Center Field: Combined Deck on Open Joker, Discard (Meret), GEBI -->
       <div class="center-field">
-        
+
         <!-- Stock Deck Placed Directly On Top of the Open Joker Card -->
         <div class="deck-slot" id="stockDeckSlot" style="cursor: pointer;">
           <div class="deck-stack-wrapper">
-            <!-- Open Base Joker Card Underneath -->
-            <div id="baseJokerCardContainer" class="base-joker-underneath">
-              <div class="card" style="border: 2px dashed var(--primary-gold); display: flex; align-items: center; justify-content: center; color: var(--primary-gold); font-size: 11px;">Joker</div>
-            </div>
+            <!-- Open Base Joker Card Underneath (Revealed ONLY after 27 cards are dealt!) -->
+            <div id="baseJokerCardContainer" class="base-joker-underneath" style="display: none;"></div>
             <!-- Closed Draw Deck on Top -->
             <div class="card-back stock-deck-top" style="width: 76px; height: 110px; margin: 0;"></div>
           </div>
-          <div class="slot-label"><span id="deckCount">25</span></div>
+          <div class="slot-label"><span id="deckCount">25</span> ካርታ</div>
+          <!-- Chosen Joker Display Badge (ሳብ በሚለው ቦታ ላይ) -->
+          <div id="deckJokerCallBadge" class="deck-joker-call-badge" style="display: none;"></div>
           <button class="draw-action-btn" id="drawDeckBtn">ሳብ</button>
         </div>
 
         <!-- Discard Pile (Meret / Ground) -->
         <div class="deck-slot" id="groundDiscardSlot">
           <div id="groundCardContainer">
-            <div class="card" style="border: 2px dashed #94a3b8; display: flex; align-items: center; justify-content: center; color: #94a3b8; font-size: 12px;">ባዶ</div>
+            <div class="card"
+              style="border: 2px dashed #94a3b8; display: flex; align-items: center; justify-content: center; color: #94a3b8; font-size: 12px;">
+              ባዶ</div>
           </div>
           <div class="slot-label">መሬት</div>
           <button class="draw-action-btn ground-btn" id="takeGroundBtn">ከመሬት አንሳ</button>
-        </div>
-
-        <!-- GEBI Box -->
-        <div class="gebi-slot" id="gebiSlot">
-          <div class="gebi-title">ገቢ</div>
         </div>
 
       </div>
@@ -160,60 +264,68 @@
 
       <!-- Player Hand Area -->
       <div class="player-hand-container">
-        
+
         <!-- Status Bar -->
         <div class="hand-status-bar">
           <div>
             <span><strong id="turnIndicator" style="color: var(--primary-gold);">ተራ...</strong></span>
-          </div>
-          <div>
-            <span>ነጥብ: <strong id="pointsDisplay">0</strong> / 41</span>
           </div>
         </div>
 
         <!-- Ground 41 Meld Interactive Action Bar -->
         <div id="groundMeldBar" class="ground-meld-bar" style="display: none;">
           <div class="ground-meld-header">
-            <span class="ground-meld-title">📥 ከመሬት ለማንሳት 41 ማውረድ አለብህ</span>
+            <span class="ground-meld-title" id="groundMeldTitle">📥 ከመሬት ለማንሳት 41 ማውረድ አለብህ</span>
             <span class="ground-meld-card-badge" id="groundTargetCardBadge">ካርታ: [ ? ]</span>
           </div>
-          
+
           <div class="ground-meld-body">
             <div class="ground-meld-points-info">
               የተመረጡ ሜልዶች: <strong id="groundMeldPointsVal" style="color: #f5b041; font-size: 18px;">0</strong> / 41 ነጥብ
-              <span id="groundMeldHintText" style="color: #f87171; font-size: 13px; margin-left: 8px;">⚠️ 41 አልሞላም! ሌላ ትሪስ ጨምር!</span>
+              <span id="groundMeldHintText" style="color: #f87171; font-size: 13px; margin-left: 8px;">⚠️ 41 አልሞላም! ሌላ
+                ትሪስ ጨምር!</span>
             </div>
 
             <div class="ground-meld-actions">
-              <button class="btn-primary" id="confirmGroundMeldBtn" style="background: linear-gradient(135deg, #10b981, #059669); border: 1px solid #34d399; font-weight: bold; padding: 7px 16px; font-size: 13px;" disabled>
+              <button class="btn-primary" id="confirmGroundMeldBtn"
+                style="background: linear-gradient(135deg, #10b981, #059669); border: 1px solid #34d399; font-weight: bold; padding: 7px 16px; font-size: 13px;"
+                disabled>
                 ✅ 41 ሞልቷል - አውርድና አንሳ
               </button>
-              <button class="btn-primary" id="autoSelect41Btn" style="background: linear-gradient(135deg, #0ea5e9, #0284c7); border: 1px solid #38bdf8; font-weight: bold; padding: 7px 14px; font-size: 13px;">
-                ✨ 41 የሚሞሉትን ምረጥልኝ
-              </button>
-              <button class="btn-primary" id="forfeitGroundBtn" style="background: #dc2626; border: 1px solid #ef4444; padding: 7px 12px; font-size: 12px;">
+              <button class="btn-primary" id="forfeitGroundBtn"
+                style="background: #dc2626; border: 1px solid #ef4444; padding: 7px 12px; font-size: 12px;">
                 ❌ 41 የለኝም (እጅ ሰጥቻለሁ)
               </button>
-              <button class="btn-primary" id="cancelGroundMeldBtn" style="background: #334155; border: 1px solid #475569; padding: 7px 12px; font-size: 12px;">
+              <button class="btn-primary" id="cancelGroundMeldBtn"
+                style="background: #334155; border: 1px solid #475569; padding: 7px 12px; font-size: 12px;">
                 ✕ ሰርዝ
               </button>
             </div>
           </div>
         </div>
 
-        <!-- Cards Hand -->
-        <div class="player-cards" id="playerCardsContainer">
-          <!-- Player cards generated by JS -->
+        <!-- Cards Hand (Fan Container) -->
+        <div class="fan-container" id="playerHandFanContainer">
+          <div class="fan player-cards" id="playerCardsContainer">
+            <!-- Player cards generated by JS -->
+          </div>
         </div>
+
+        <!-- Toast notification for arrangement mode -->
+        <div id="sortToast" class="sort-toast"></div>
 
         <!-- Hand Controls -->
         <div class="hand-controls">
-          <button class="move-btn" id="moveLeftBtn" title="Move selected card left">⬅️ ወደግራ</button>
-          <button class="move-btn" id="moveRightBtn" title="Move selected card right">ወደቀኝ ➡️</button>
-          <button class="ctrl-btn" id="smartSortBtn" style="background: linear-gradient(135deg, #0ea5e9, #0284c7); color: #fff; font-weight: bold; border-color: #38bdf8;">✨ ደርድር</button>
-          <button class="ctrl-btn" id="groupMeldsBtn" style="border-color: #38bdf8;">🗂️ በግሩፕ እይ</button>
+          <button class="ctrl-btn" id="smartSortBtn"
+            style="background: linear-gradient(135deg, #0ea5e9, #0284c7); color: #fff; font-weight: bold; border-color: #38bdf8; min-width: 110px;">✨
+            ደርድር</button>
+          <button class="ctrl-btn" id="weredBtn"
+            style="background: linear-gradient(135deg, #10b981, #059669); color: #fff; font-weight: bold; border-color: #34d399; min-width: 95px;">📥
+            ውረድ</button>
+          <button class="ctrl-btn" id="sekaWinBtn"
+            style="display: none; background: linear-gradient(135deg, #f59e0b, #d97706); color: #fff; font-weight: bold; border-color: #fbbf24; min-width: 120px;">🏆
+            ሴካ አሸንፍ</button>
           <button class="ctrl-btn discard-btn" id="discardBtn">መሬት ጣል</button>
-          <button class="ctrl-btn" id="conquerBtn" style="background: var(--primary-gold); color: #000; font-weight: bold;">👑 ኮንከር!</button>
           <button class="ctrl-btn" id="leaveGameBtn">ውጣ</button>
         </div>
 
@@ -225,56 +337,130 @@
     </div>
   </div>
 
-  <!-- CUT JOKER MODAL (Rule 2) — High / Low Selection -->
+  <!-- CUT JOKER MODAL (Blind Cut before dealing) -->
   <div id="cutJokerModal" class="modal-overlay" style="display: none;">
-    <div class="modal-content" style="max-width: 500px;">
-      <div class="modal-title">⭐ 28ኛዋ ካርታ ተገለጸች! ከፍ ወይም ዝቅ ምረጥ!</div>
+    <div class="modal-content" style="max-width: 520px; text-align: center;">
+      <div class="modal-title" style="font-size: 20px; color: var(--primary-gold); margin-bottom: 8px;">
+        🃏 ጆከር ሰይም (በጭፍን / Blind Cut)
+      </div>
       <p style="color: #cbd5e1; font-size: 14px; margin-bottom: 6px;">
-        Cards have been dealt (14 for Creator, 13 for you). The 28th card is revealed below.
-      </p>
-      <p style="color: #94a3b8; font-size: 13px; margin-bottom: 16px;">
-        Choose <strong style="color: #4ade80;">High (ከፍ)</strong> to make the NEXT rank + same color the main Jokers,<br>
-        or <strong style="color: #f97316;">Low (ዝቅ)</strong> to make the PREVIOUS rank + same color the main Jokers.
+        ካርታዎች ከመታደላቸው በፊት 28ኛዋ ካርታ ስትገለበጥ ጆከር የሚሆንበትን መንገድ ምረጥ፦
       </p>
 
-      <!-- Revealed 28th Card -->
-      <div style="display: flex; justify-content: center; margin-bottom: 20px;">
-        <div id="revealedBaseCard" style="transform: scale(1.4);">
-          <!-- Populated by JS with the actual 28th card -->
-        </div>
-      </div>
-
-      <!-- Joker Preview Info -->
-      <div id="jokerPreviewInfo" style="font-size: 13px; color: #cbd5e1; margin-bottom: 20px; text-align: center;">
-        <!-- Populated by JS: "High → 6♣ 6♠ become Jokers | Low → 4♣ 4♠ become Jokers" -->
-      </div>
-
-      <!-- High / Low Buttons -->
-      <div style="display: flex; gap: 16px; justify-content: center;">
-        <button class="btn-primary" id="cutHighBtn" style="flex: 1; padding: 16px; font-size: 18px; background: linear-gradient(135deg, #10b981, #059669); border: 2px solid #34d399;">
-          ⬆️ ከፍ (High)
+      <!-- 4 Selection Buttons Grid -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 18px;">
+        <button class="btn-primary" id="cutHighBtn"
+          style="padding: 14px; font-size: 15px; font-weight: bold; background: linear-gradient(135deg, #10b981, #059669); border: 2px solid #34d399; border-radius: 12px; cursor: pointer;">
+          ⬆️ ከፍ (High)<br>
+          <span style="font-size: 11px; font-weight: normal; opacity: 0.9;">ከ28ኛዋ በላይ + ተመሳሳይ ከለር</span>
         </button>
-        <button class="btn-primary" id="cutLowBtn" style="flex: 1; padding: 16px; font-size: 18px; background: linear-gradient(135deg, #f97316, #ea580c); border: 2px solid #fb923c;">
-          ⬇️ ዝቅ (Low)
+
+        <button class="btn-primary" id="cutLowBtn"
+          style="padding: 14px; font-size: 15px; font-weight: bold; background: linear-gradient(135deg, #f97316, #ea580c); border: 2px solid #fb923c; border-radius: 12px; cursor: pointer;">
+          ⬇️ ዝቅ / ታች (Low)<br>
+          <span style="font-size: 11px; font-weight: normal; opacity: 0.9;">ከ28ኛዋ በታች + ተመሳሳይ ከለር</span>
+        </button>
+
+        <button class="btn-primary" id="cutSameBtn"
+          style="padding: 14px; font-size: 15px; font-weight: bold; background: linear-gradient(135deg, #3b82f6, #1d4ed8); border: 2px solid #60a5fa; border-radius: 12px; cursor: pointer;">
+          🎯 አንድ ላይ (Same)<br>
+          <span style="font-size: 11px; font-weight: normal; opacity: 0.9;">28ኛዋ ካርታ ራሷ + ተመሳሳይ ከለር</span>
+        </button>
+
+        <button class="btn-primary" id="cutGonBtn"
+          style="padding: 14px; font-size: 15px; font-weight: bold; background: linear-gradient(135deg, #8b5cf6, #6d28d9); border: 2px solid #a78bfa; border-radius: 12px; cursor: pointer;">
+          🔄 ጎን (Opposite)<br>
+          <span style="font-size: 11px; font-weight: normal; opacity: 0.9;">28ኛዋ ካርታ ቁጥር + ተቃራኒ ከለር</span>
         </button>
       </div>
+    </div>
+  </div>
+
+  <!-- WAITING FOR JOKER MODAL (For Creator while Joiner chooses) -->
+  <div id="waitingJokerModal" class="modal-overlay" style="display: none;">
+    <div class="modal-content" style="max-width: 420px; text-align: center;">
+      <div style="font-size: 38px; margin-bottom: 12px;">⏳</div>
+      <div class="modal-title" style="font-size: 18px; color: var(--primary-gold); margin-bottom: 8px;">
+        ተጋባዡ ጆከር እየመረጠ ነው...
+      </div>
+      <p style="color: #cbd5e1; font-size: 13px;">
+        ተቀላቅሎ የገባው ተጫዋች ካርታ ከመታደሉ በፊት ጆከሩን በጭፍን እየሰየመ ነው። ምርጫው እንዳበቃ 27ቱ ካርታዎች ታድለው ጨዋታው ይጀምራል!
+      </p>
     </div>
   </div>
 
   <!-- VICTORY / DEFEAT MODAL -->
   <div id="gameResultModal" class="modal-overlay" style="display: none;">
-    <div class="modal-content">
+    <div class="modal-content" style="max-width: 600px; max-height: 85vh; overflow-y: auto;">
       <div class="modal-title" id="resultModalTitle">🏆 CONQUER WIN!</div>
-      <p id="resultModalDesc" style="color: #cbd5e1; font-size: 15px; margin: 16px 0;">
+      <p id="resultModalDesc" style="color: #cbd5e1; font-size: 15px; margin: 12px 0;">
         Player won the pot!
       </p>
+      <!-- Display face-up winning hand and melds (በተለይ ቦት ሲያሸንፍ ካርታውን ወርዶ ማየት እንድትችል) -->
+      <div id="winningHandDisplay"
+        style="margin: 16px 0; display: none; background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(245, 158, 11, 0.4); border-radius: 12px; padding: 14px;">
+        <div style="font-weight: bold; font-size: 14px; color: #f59e0b; margin-bottom: 10px;">
+          🎴 የወረዱት አሸናፊ ካርታዎች (Winning Hand Melds)፦
+        </div>
+        <div id="winningMeldsList" style="display: flex; flex-direction: column; gap: 12px; align-items: center;"></div>
+      </div>
       <button class="btn-primary" id="returnToLobbyBtn">Back to Lobby</button>
+    </div>
+  </div>
+
+  <!-- USER REGISTRATION & PROFILE MODAL -->
+  <div id="registerModal" class="modal-overlay" style="display: none;">
+    <div class="modal-content reg-modal-content">
+      <button class="modal-close-btn" id="closeRegModalBtn" title="ዝጋ (Close)">✕</button>
+      <div class="reg-modal-header">
+        <div class="reg-icon">👑</div>
+        <div class="modal-title" style="font-size: 20px; color: var(--primary-gold); margin-bottom: 4px;">
+          የተጫዋች ምዝገባ (Player Registration)
+        </div>
+        <p style="font-size: 12px; color: #94a3b8; margin: 0; line-height: 1.5;">
+          ለኢትዮጵያ ካርታ ውርርድ (Conquer &amp; Seka) እና ለቴሌብር / CBE Birr ክፍያ
+        </p>
+      </div>
+
+      <div class="reg-payment-badges">
+        <span class="payment-pill telebirr">📱 Telebirr</span>
+        <span class="payment-pill cbebirr">🏦 CBE Birr</span>
+        <span class="payment-pill bonus">🎁 1,000 ETB ቦነስ</span>
+      </div>
+
+      <form id="registerForm" onsubmit="return false;" style="display: flex; flex-direction: column; gap: 14px; margin-top: 14px;">
+        <div class="form-group" style="text-align: left;">
+          <label style="font-size: 13px; font-weight: bold; color: #e2e8f0; display: block; margin-bottom: 6px;">
+            👤 ሙሉ ስም ወይም ቅጽል ስም (Full Name / Username) <span style="color: #ef4444;">*</span>
+          </label>
+          <input type="text" id="regNameInput" placeholder="उदा. አበበ ተሾመ / Dawit" required autocomplete="name"
+            style="width: 100%; padding: 11px 14px; background: rgba(15, 23, 42, 0.9); border: 1.5px solid rgba(245, 176, 65, 0.4); border-radius: 10px; color: #fff; font-size: 14px; box-sizing: border-box;">
+        </div>
+
+        <div class="form-group" style="text-align: left;">
+          <label style="font-size: 13px; font-weight: bold; color: #e2e8f0; display: block; margin-bottom: 6px;">
+            📱 የስልክ ቁጥር (Phone Number for Telebirr / CBE Birr) <span style="color: #ef4444;">*</span>
+          </label>
+          <input type="tel" id="regPhoneInput" placeholder="09... ወይም 07... (उदा. 0912345678)" required autocomplete="tel"
+            style="width: 100%; padding: 11px 14px; background: rgba(15, 23, 42, 0.9); border: 1.5px solid rgba(245, 176, 65, 0.4); border-radius: 10px; color: #fff; font-size: 14px; box-sizing: border-box;">
+          <div style="font-size: 11px; color: #94a3b8; margin-top: 4px;">
+            💡 አሸናፊ ሲሆኑ ውርርድ የሚከፈልበት የቴሌብር ወይም የCBE Birr ቁጥር
+          </div>
+        </div>
+
+        <div id="regErrorMsg" style="display: none; color: #f87171; font-size: 12px; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 8px; padding: 8px 12px; text-align: left;"></div>
+
+        <button type="submit" class="btn-primary" id="submitRegBtn"
+          style="padding: 13px; font-size: 15px; font-weight: bold; background: linear-gradient(135deg, #f59e0b, #d97706); border: 2px solid #fbbf24; border-radius: 12px; cursor: pointer; box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3); margin-top: 4px;">
+          ✅ ተመዝገብና ጀምር (Register &amp; Play)
+        </button>
+      </form>
     </div>
   </div>
 
   <!-- Socket.io & App Script -->
   <script src="/socket.io/socket.io.js"></script>
-  <script src="app.js?v=21"></script>
+  <script src="app.js?v=25"></script>
 </body>
-</html>
 
+</html>

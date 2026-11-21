@@ -14,7 +14,8 @@ function isCardJoker(card, state) {
   return card.isJoker || false;
 }
 
-const match = appJs.match(/function arrangeHandOptimal[\s\S]*?return finalHand;\s*\}/);
+const { isValidTris, isValidQuatris } = require('./engine/conquerRules');
+const match = appJs.match(/function findSingleBestArrangement[\s\S]*?function arrangeHandOptimal[\s\S]*?return best \? best\.arrangedCards : \(hand \|\| \[\]\);\s*\}/);
 eval(match[0]);
 
 // A realistic 14-card hand

@@ -8,36 +8,188 @@ if (!userId) {
 }
 
 let playerName = localStorage.getItem('conquer_user_name') || 'Player ' + userId.slice(-4);
+let userPhone = localStorage.getItem('conquer_user_phone') || '';
+let isUserRegistered = localStorage.getItem('conquer_user_registered') === 'true';
 let socket = io();
 let currentRoomId = null;
 let currentGameState = null;
 let selectedCardId = null;
 let selectedCardsSet = new Set();
+let playerOrderedCardIds = [];
 
-// Audio Synthesizer using Web Audio API (No external sound files required)
-const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-function playBeep(freq, type = 'sine', duration = 0.1) {
+// -------------------------------------------------------------
+// AUDIO ENGINE (Web Audio API - Realistic Card & Casino Sound Design)
+// -------------------------------------------------------------
+let soundEnabled = localStorage.getItem('conquer_sound_enabled') !== 'false';
+let audioCtx = null;
+
+function getAudioContext() {
+  if (!audioCtx) {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  if (audioCtx.state === 'suspended') {
+    audioCtx.resume();
+  }
+  return audioCtx;
+}
+
+function updateSoundButtons() {
+  const btns = [document.getElementById('soundToggleBtn'), document.getElementById('soundToggleBtnTable')];
+  btns.forEach(btn => {
+    if (btn) {
+      btn.textContent = soundEnabled ? '🔊' : '🔇';
+      btn.setAttribute('title', soundEnabled ? 'Mute Sound (ድምፅ አጥፋ)' : 'Unmute Sound (ድምፅ አብራ)');
+      btn.classList.toggle('muted', !soundEnabled);
+    }
+  });
+}
+
+function toggleSound() {
+  soundEnabled = !soundEnabled;
+  localStorage.setItem('conquer_sound_enabled', soundEnabled);
+  updateSoundButtons();
+  if (soundEnabled) {
+    playCardSound();
+  }
+}
+
+// 1. Realistic Tactile Card Snap / Placement on Felt Table
+function playCardSound() {
+  if (!soundEnabled) return;
   try {
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
-    osc.type = type;
-    osc.frequency.value = freq;
-    gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
-    osc.connect(gain);
-    gain.connect(audioCtx.destination);
-    osc.start();
-    osc.stop(audioCtx.currentTime + duration);
+    const ctx = getAudioContext();
+    const now = ctx.currentTime;
+
+    // Filtered noise burst for paper friction and snap
+    const bufferSize = Math.floor(ctx.sampleRate * 0.045);
+    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufferSize * 0.25));
+    }
+    const noise = ctx.createBufferSource();
+    noise.buffer = buffer;
+
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.setValueAtTime(1400, now);
+    filter.Q.setValueAtTime(1.8, now);
+
+    const noiseGain = ctx.createGain();
+    noiseGain.gain.setValueAtTime(0.12, now);
+    noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.045);
+
+    noise.connect(filter);
+    filter.connect(noiseGain);
+    noiseGain.connect(ctx.destination);
+    noise.start(now);
+
+    // Subtle table-thud body tone
+    const osc = ctx.createOscillator();
+    const oscGain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(140, now);
+    osc.frequency.exponentialRampToValueAtTime(50, now + 0.035);
+    oscGain.gain.setValueAtTime(0.08, now);
+    oscGain.gain.exponentialRampToValueAtTime(0.001, now + 0.035);
+
+    osc.connect(oscGain);
+    oscGain.connect(ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.035);
   } catch (e) { }
 }
 
-function playCardSound() { playBeep(440, 'triangle', 0.08); }
-function playPokeSound() { playBeep(880, 'square', 0.2); }
-function playWinSound() {
-  playBeep(523.25, 'sine', 0.15);
-  setTimeout(() => playBeep(659.25, 'sine', 0.15), 150);
-  setTimeout(() => playBeep(783.99, 'sine', 0.3), 300);
+// 2. Card Draw / Slide Sound (Soft card sliding from deck)
+function playDrawSound() {
+  if (!soundEnabled) return;
+  try {
+    const ctx = getAudioContext();
+    const now = ctx.currentTime;
+    const dur = 0.07;
+    const bufferSize = Math.floor(ctx.sampleRate * dur);
+    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = (Math.random() * 2 - 1) * Math.sin((i / bufferSize) * Math.PI);
+    }
+    const noise = ctx.createBufferSource();
+    noise.buffer = buffer;
+
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(1600, now);
+    filter.frequency.linearRampToValueAtTime(800, now + dur);
+
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.1, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + dur);
+
+    noise.connect(filter);
+    filter.connect(gain);
+    gain.connect(ctx.destination);
+    noise.start(now);
+  } catch (e) { }
 }
+
+// 3. Gentle Wooden Bell / Marimba Tap for Poke & Turn alert
+function playPokeSound() {
+  if (!soundEnabled) return;
+  try {
+    const ctx = getAudioContext();
+    const now = ctx.currentTime;
+
+    // Double chime tap (warm 587Hz D5 and 880Hz A5)
+    [
+      { f: 587.33, t: 0, dur: 0.12, vol: 0.15 },
+      { f: 880.00, t: 0.09, dur: 0.18, vol: 0.18 }
+    ].forEach(note => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(note.f, now + note.t);
+      gain.gain.setValueAtTime(note.vol, now + note.t);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + note.t + note.dur);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now + note.t);
+      osc.stop(now + note.t + note.dur);
+    });
+  } catch (e) { }
+}
+
+// 4. Celebratory Triumphant Winner Chime (Warm C-Major chord cascade)
+function playWinSound() {
+  if (!soundEnabled) return;
+  try {
+    const ctx = getAudioContext();
+    const now = ctx.currentTime;
+    const notes = [
+      { f: 523.25, t: 0, dur: 0.3, vol: 0.15 },     // C5
+      { f: 659.25, t: 0.12, dur: 0.35, vol: 0.15 },  // E5
+      { f: 783.99, t: 0.24, dur: 0.4, vol: 0.18 },   // G5
+      { f: 1046.50, t: 0.36, dur: 0.6, vol: 0.22 }  // C6
+    ];
+    notes.forEach(note => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(note.f, now + note.t);
+      gain.gain.setValueAtTime(note.vol, now + note.t);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + note.t + note.dur);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now + note.t);
+      osc.stop(now + note.t + note.dur);
+    });
+  } catch (e) { }
+}
+
+const soundToggleBtn = document.getElementById('soundToggleBtn');
+const soundToggleBtnTable = document.getElementById('soundToggleBtnTable');
+if (soundToggleBtn) soundToggleBtn.addEventListener('click', toggleSound);
+if (soundToggleBtnTable) soundToggleBtnTable.addEventListener('click', toggleSound);
+updateSoundButtons();
 
 // UI Elements
 const lobbyView = document.getElementById('lobbyView');
@@ -67,6 +219,7 @@ const groundDiscardSlot = document.getElementById('groundDiscardSlot');
 const groundCardContainer = document.getElementById('groundCardContainer');
 const takeGroundBtn = document.getElementById('takeGroundBtn');
 const baseJokerCardContainer = document.getElementById('baseJokerCardContainer');
+const deckJokerCallBadge = document.getElementById('deckJokerCallBadge');
 const gebiSlot = document.getElementById('gebiSlot');
 
 const turnIndicator = document.getElementById('turnIndicator');
@@ -93,6 +246,9 @@ const gameLogsContainer = document.getElementById('gameLogsContainer');
 const cutJokerModal = document.getElementById('cutJokerModal');
 const cutHighBtn = document.getElementById('cutHighBtn');
 const cutLowBtn = document.getElementById('cutLowBtn');
+const cutSameBtn = document.getElementById('cutSameBtn');
+const cutGonBtn = document.getElementById('cutGonBtn');
+const waitingJokerModal = document.getElementById('waitingJokerModal');
 const revealedBaseCard = document.getElementById('revealedBaseCard');
 const jokerPreviewInfo = document.getElementById('jokerPreviewInfo');
 const jokerInfoBar = document.getElementById('jokerInfoBar');
@@ -107,30 +263,157 @@ const resultModalTitle = document.getElementById('resultModalTitle');
 const resultModalDesc = document.getElementById('resultModalDesc');
 const returnToLobbyBtn = document.getElementById('returnToLobbyBtn');
 
-// Ground 41 Meld Bar Elements
+// Ground 41 Meld Bar & Wered Elements
 const groundMeldBar = document.getElementById('groundMeldBar');
+const groundMeldTitle = document.getElementById('groundMeldTitle');
 const groundTargetCardBadge = document.getElementById('groundTargetCardBadge');
 const groundMeldPointsVal = document.getElementById('groundMeldPointsVal');
 const groundMeldHintText = document.getElementById('groundMeldHintText');
 const confirmGroundMeldBtn = document.getElementById('confirmGroundMeldBtn');
-const autoSelect41Btn = document.getElementById('autoSelect41Btn');
 const forfeitGroundBtn = document.getElementById('forfeitGroundBtn');
 const cancelGroundMeldBtn = document.getElementById('cancelGroundMeldBtn');
+const weredBtn = document.getElementById('weredBtn');
+let currentMeldBarMode = 'ground'; // 'ground' or 'wered'
 
 // Initial setup
 playerNameInput.value = playerName;
 walletUserDisplay.textContent = playerName;
+const initialSekaNameInput = document.getElementById('sekaPlayerNameInput');
+if (initialSekaNameInput) initialSekaNameInput.value = playerName;
+
+// -------------------------------------------------------------
+// USER REGISTRATION & PROFILE MODAL LOGIC
+// -------------------------------------------------------------
+const registerModal = document.getElementById('registerModal');
+const openProfileBtn = document.getElementById('openProfileBtn');
+const closeRegModalBtn = document.getElementById('closeRegModalBtn');
+const registerForm = document.getElementById('registerForm');
+const regNameInput = document.getElementById('regNameInput');
+const regPhoneInput = document.getElementById('regPhoneInput');
+const regErrorMsg = document.getElementById('regErrorMsg');
+const submitRegBtn = document.getElementById('submitRegBtn');
+
+function openRegistrationModal() {
+  if (!registerModal) return;
+  regNameInput.value = (playerName && !playerName.startsWith('Player user_')) ? playerName : '';
+  regPhoneInput.value = userPhone || '';
+  if (regErrorMsg) {
+    regErrorMsg.style.display = 'none';
+    regErrorMsg.textContent = '';
+  }
+  registerModal.style.display = 'flex';
+  setTimeout(() => {
+    if (!regNameInput.value) {
+      regNameInput.focus();
+    } else if (regPhoneInput) {
+      regPhoneInput.focus();
+    }
+  }, 100);
+}
+
+function closeRegistrationModal() {
+  if (!registerModal) return;
+  registerModal.style.display = 'none';
+}
+
+if (openProfileBtn) {
+  openProfileBtn.addEventListener('click', openRegistrationModal);
+}
+
+if (closeRegModalBtn) {
+  closeRegModalBtn.addEventListener('click', closeRegistrationModal);
+}
+
+if (registerModal) {
+  registerModal.addEventListener('click', (e) => {
+    if (e.target === registerModal && isUserRegistered) {
+      closeRegistrationModal();
+    }
+  });
+}
+
+function normalizeEthPhone(phoneStr) {
+  if (!phoneStr) return '';
+  let cleaned = phoneStr.replace(/[\s\-\(\)]/g, '');
+  if (cleaned.startsWith('+251')) {
+    cleaned = '0' + cleaned.slice(4);
+  } else if (cleaned.startsWith('251')) {
+    cleaned = '0' + cleaned.slice(3);
+  }
+  return cleaned;
+}
+
+function validateRegistration(name, phone) {
+  if (!name || name.trim().length < 2) {
+    return { valid: false, message: 'እባክዎ ትክክለኛ ስም ያስገቡ (ቢያንስ 2 ፊደል) / Please enter a valid name' };
+  }
+  const cleanPhone = normalizeEthPhone(phone);
+  // Ethiopian mobile numbers: 09XXXXXXXX or 07XXXXXXXX (10 digits)
+  const ethRegex = /^0(9|7)\d{8}$/;
+  if (!ethRegex.test(cleanPhone)) {
+    return { valid: false, message: 'እባክዎ ትክክለኛ የኢትዮጵያ ስልክ ቁጥር ያስገቡ (उदा. 0912345678 ወይም 0712345678)' };
+  }
+  return { valid: true, cleanName: name.trim(), cleanPhone };
+}
+
+if (registerForm) {
+  registerForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const valResult = validateRegistration(regNameInput.value, regPhoneInput.value);
+    if (!valResult.valid) {
+      if (regErrorMsg) {
+        regErrorMsg.textContent = valResult.message;
+        regErrorMsg.style.display = 'block';
+      }
+      return;
+    }
+
+    playerName = valResult.cleanName;
+    userPhone = valResult.cleanPhone;
+    isUserRegistered = true;
+
+    localStorage.setItem('conquer_user_registered', 'true');
+    localStorage.setItem('conquer_user_name', playerName);
+    localStorage.setItem('conquer_user_phone', userPhone);
+
+    // Update UI elements
+    walletUserDisplay.textContent = playerName;
+    playerNameInput.value = playerName;
+    const sNameInp = document.getElementById('sekaPlayerNameInput');
+    if (sNameInp) sNameInp.value = playerName;
+
+    // Notify backend
+    socket.emit('register_user', { userId, name: playerName, phone: userPhone });
+    fetch('/api/user/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId, name: playerName, phone: userPhone })
+    }).catch(() => {});
+
+    playCardSound();
+    closeRegistrationModal();
+
+    showSortToast(`🎉 እንኳን ደህና መጡ ${playerName}! 1,000 ETB ቦነስ ተሰጥቷል።`);
+  });
+}
+
+// Auto-prompt registration on first visit if not registered
+if (!isUserRegistered) {
+  setTimeout(openRegistrationModal, 600);
+}
 
 playerNameInput.addEventListener('change', () => {
   playerName = playerNameInput.value || 'Player';
   localStorage.setItem('conquer_user_name', playerName);
   walletUserDisplay.textContent = playerName;
-  socket.emit('register_user', { userId, name: playerName });
+  const sNameInp = document.getElementById('sekaPlayerNameInput');
+  if (sNameInp) sNameInp.value = playerName;
+  socket.emit('register_user', { userId, name: playerName, phone: userPhone });
 });
 
 // Socket connection
 socket.on('connect', () => {
-  socket.emit('register_user', { userId, name: playerName });
+  socket.emit('register_user', { userId, name: playerName, phone: userPhone });
   refreshRoomsList();
 });
 
@@ -146,17 +429,104 @@ socket.on('error_msg', (msg) => {
   alert(`⚠️ ${msg}`);
 });
 
+socket.on('room_expired', ({ message }) => {
+  alert(message || '⏳ ጨዋታው በ1 ደቂቃ ውስጥ ተጋጣሚ ስላልገባ ፈርሷል (Game expired)');
+  switchToLobbyView();
+  refreshRoomsList();
+  refreshSekaRoomsList();
+});
+
+socket.on('rooms_updated', () => {
+  refreshRoomsList();
+  refreshSekaRoomsList();
+});
+
 socket.on('room_created', ({ roomId }) => {
   currentRoomId = roomId;
   switchToGameView();
 });
 
-// Real-Time Game State Sync
+// Real-Time Game State Sync (Conquer)
 socket.on('game_state', (state) => {
+  if (state.roomId !== currentRoomId) {
+    playerOrderedCardIds = [];
+    currentRoomId = state.roomId;
+  }
+  if (state.status === 'PLAYING' && state.myHand) {
+    state.myHand = syncHandPreservingOrder(state.myHand);
+  }
   currentGameState = state;
-  currentRoomId = state.roomId;
   renderGame(state);
 });
+
+// Real-Time Game State Sync (Seka)
+socket.on('seka_room_created', ({ roomId }) => {
+  currentRoomId = roomId;
+  switchToGameView();
+});
+
+socket.on('seka_game_state', (state) => {
+  if (state.roomId !== currentRoomId) {
+    playerOrderedCardIds = [];
+    currentRoomId = state.roomId;
+  }
+  if (state.status === 'PLAYING' && state.myHand) {
+    state.myHand = syncHandPreservingOrder(state.myHand);
+  }
+  currentGameState = state;
+  renderGame(state);
+});
+
+// Game Selector Tabs (ኮንከር vs ሴካ)
+const tabConquerBtn = document.getElementById('tabConquerBtn');
+const tabSekaBtn = document.getElementById('tabSekaBtn');
+const conquerLobbySection = document.getElementById('conquerLobbySection');
+const sekaLobbySection = document.getElementById('sekaLobbySection');
+const createSekaRoomBtn = document.getElementById('createSekaRoomBtn');
+const playSekaBotBtn = document.getElementById('playSekaBotBtn');
+
+if (tabConquerBtn && tabSekaBtn) {
+  tabConquerBtn.addEventListener('click', () => {
+    tabConquerBtn.classList.add('active');
+    tabSekaBtn.classList.remove('active');
+    if (conquerLobbySection) conquerLobbySection.style.display = 'block';
+    if (sekaLobbySection) sekaLobbySection.style.display = 'none';
+    playCardSound();
+  });
+
+  tabSekaBtn.addEventListener('click', () => {
+    tabSekaBtn.classList.add('active');
+    tabConquerBtn.classList.remove('active');
+    if (sekaLobbySection) sekaLobbySection.style.display = 'block';
+    if (conquerLobbySection) conquerLobbySection.style.display = 'none';
+    refreshSekaRoomsList();
+    playCardSound();
+  });
+}
+
+// Create Seka Room
+if (createSekaRoomBtn) {
+  createSekaRoomBtn.addEventListener('click', () => {
+    const sekaNameInput = document.getElementById('sekaPlayerNameInput');
+    const sekaStakeSelect = document.getElementById('sekaStakeSelect');
+    const sName = sekaNameInput && sekaNameInput.value ? sekaNameInput.value : playerName;
+    const stakeAmount = sekaStakeSelect ? Number(sekaStakeSelect.value) : 100;
+    playCardSound();
+    socket.emit('create_seka_room', { userId, name: sName, stakeAmount });
+  });
+}
+
+// Play Seka vs Bot
+if (playSekaBotBtn) {
+  playSekaBotBtn.addEventListener('click', () => {
+    const sekaNameInput = document.getElementById('sekaPlayerNameInput');
+    const sekaStakeSelect = document.getElementById('sekaStakeSelect');
+    const sName = sekaNameInput && sekaNameInput.value ? sekaNameInput.value : playerName;
+    const stakeAmount = sekaStakeSelect ? Number(sekaStakeSelect.value) : 100;
+    playCardSound();
+    socket.emit('play_seka_bot', { userId, name: sName, stakeAmount });
+  });
+}
 
 // Deposit Button
 depositBtn.addEventListener('click', async () => {
@@ -166,7 +536,7 @@ depositBtn.addEventListener('click', async () => {
     body: JSON.stringify({ userId, amount: 500 })
   });
   playCardSound();
-  socket.emit('register_user', { userId, name: playerName });
+  socket.emit('register_user', { userId, name: playerName, phone: userPhone });
 });
 
 // Create Room
@@ -195,9 +565,32 @@ async function refreshRoomsList() {
       <div class="room-list-item">
         <div>
           <strong style="color: var(--primary-gold);">${r.creatorName}'s Table</strong>
-          <div style="font-size: 12px; color: #94a3b8;">Stake: ${r.stakeAmount} ETB</div>
+          <div style="font-size: 12px; color: #94a3b8;">Stake: ${r.stakeAmount} ETB ${r.expiresIn ? `| <span style="color: #f59e0b;">⏳ ${r.expiresIn}s ይቀራል</span>` : ''}</div>
         </div>
         <button class="btn-primary" style="width: auto; padding: 6px 14px; font-size: 12px;" onclick="joinRoom('${r.roomId}')">Join Table</button>
+      </div>
+    `).join('');
+  } catch (e) { }
+  refreshSekaRoomsList();
+}
+
+async function refreshSekaRoomsList() {
+  try {
+    const res = await fetch('/api/seka/rooms');
+    const rooms = await res.json();
+    const sekaContainer = document.getElementById('sekaRoomsListContainer');
+    if (!sekaContainer) return;
+    if (rooms.length === 0) {
+      sekaContainer.innerHTML = `<p style="color: #64748b; font-size: 14px;">በአሁኑ ሰዓት ክፍት የሴካ ጠረጴዛ የለም። አዲስ ጠረጴዛ ይፍጠሩ ወይም ከAI Bot ጋር ይጫወቱ!</p>`;
+      return;
+    }
+    sekaContainer.innerHTML = rooms.map(r => `
+      <div class="room-list-item">
+        <div>
+          <strong style="color: #f59e0b;">🃏 ${r.creatorName}'s Seka Table</strong>
+          <div style="font-size: 12px; color: #94a3b8;">Stake: ${r.stakeAmount} ETB ${r.expiresIn ? `| <span style="color: #f59e0b;">⏳ ${r.expiresIn}s ይቀራል</span>` : ''}</div>
+        </div>
+        <button class="btn-primary" style="width: auto; padding: 6px 14px; font-size: 12px; background: linear-gradient(135deg, #f59e0b, #d97706); border-color: #fbbf24;" onclick="joinSekaRoom('${r.roomId}')">ጠረጴዛ ተቀላቀል</button>
       </div>
     `).join('');
   } catch (e) { }
@@ -208,7 +601,22 @@ window.joinRoom = function (roomId) {
   switchToGameView();
 };
 
+window.joinSekaRoom = function (roomId) {
+  const sekaNameInput = document.getElementById('sekaPlayerNameInput');
+  const sName = sekaNameInput && sekaNameInput.value ? sekaNameInput.value : playerName;
+  socket.emit('join_seka_room', { roomId, userId, name: sName });
+  switchToGameView();
+};
+
 function switchToGameView() {
+  hasPlayedDealingAnim = false;
+  isDealingInProgress = false;
+  previousHandLength = 0;
+  previousOpponentCardCount = 0;
+  previousGroundCardId = null;
+  playerOrderedCardIds = [];
+  selectedCardsSet.clear();
+  selectedCardId = null;
   lobbyView.style.display = 'none';
   gameView.style.display = 'block';
 }
@@ -219,21 +627,37 @@ function switchToLobbyView() {
   previousHandLength = 0;
   previousOpponentCardCount = 0;
   previousGroundCardId = null;
+  playerOrderedCardIds = [];
+  if (baseJokerCardContainer) {
+    baseJokerCardContainer.style.display = 'none';
+    baseJokerCardContainer.innerHTML = '';
+  }
+  if (deckJokerCallBadge) {
+    deckJokerCallBadge.style.display = 'none';
+    deckJokerCallBadge.innerHTML = '';
+  }
   if (groundMeldBar) groundMeldBar.style.display = 'none';
   selectedCardsSet.clear();
   selectedCardId = null;
   lobbyView.style.display = 'block';
   gameView.style.display = 'none';
   cutJokerModal.style.display = 'none';
+  if (waitingJokerModal) waitingJokerModal.style.display = 'none';
   gameResultModal.style.display = 'none';
+  const winningHandDisplay = document.getElementById('winningHandDisplay');
+  if (winningHandDisplay) winningHandDisplay.style.display = 'none';
   refreshRoomsList();
+  refreshSekaRoomsList();
 }
 
 leaveGameBtn.addEventListener('click', () => {
+  if (currentGameState && currentGameState.gameType === 'SEKA') {
+    socket.emit('leave_seka_room', { roomId: currentRoomId, userId });
+  }
   switchToLobbyView();
 });
 
-// Rule 2: High/Low Joker Selection
+// Rule 2: Blind Cut Joker Selection (Joiner calls before dealing)
 cutHighBtn.addEventListener('click', () => {
   if (currentRoomId) {
     playCardSound();
@@ -250,34 +674,51 @@ cutLowBtn.addEventListener('click', () => {
   }
 });
 
+cutSameBtn.addEventListener('click', () => {
+  if (currentRoomId) {
+    playCardSound();
+    socket.emit('set_joker_high_low', { roomId: currentRoomId, userId, choice: 'same' });
+    cutJokerModal.style.display = 'none';
+  }
+});
+
+cutGonBtn.addEventListener('click', () => {
+  if (currentRoomId) {
+    playCardSound();
+    socket.emit('set_joker_high_low', { roomId: currentRoomId, userId, choice: 'gon' });
+    cutJokerModal.style.display = 'none';
+  }
+});
+
 function handleDrawAction(source) {
   if (!currentGameState || currentGameState.status !== 'PLAYING') return;
   if (currentGameState.currentTurnPlayerId !== userId) return alert('Not your turn!');
   if (currentGameState.turnState !== 'AWAITING_DRAW') return alert('Already drew card! Discard one now.');
 
+  if (currentGameState.gameType === 'SEKA') {
+    playDrawSound();
+    socket.emit('draw_seka_card', { roomId: currentRoomId, userId, source });
+    return;
+  }
+
   if (source === 'deck') {
     if (groundMeldBar) groundMeldBar.style.display = 'none';
-    playCardSound();
+    playDrawSound();
     socket.emit('draw_card', { roomId: currentRoomId, userId, source: 'deck' });
     return;
   }
 
   if (source === 'ground') {
     if (!currentGameState.topGroundCard) return;
-    if (currentGameState.isFirstDiscard) return; // Silent if first discard
-
-    const topGround = currentGameState.topGroundCard;
-
-    // Rule 6: If top ground card is a Joker, player can pick it directly without needing 41
-    if (topGround.isJoker || topGround.rank === currentGameState.jokerRank) {
-      if (groundMeldBar) groundMeldBar.style.display = 'none';
-      playCardSound();
-      socket.emit('draw_card', { roomId: currentRoomId, userId, source: 'ground' });
+    if (currentGameState.isFirstDiscard) {
+      showSortToast('⚠️ የመጀመሪያው ካርታ ከመሬት አይነሳም!');
       return;
     }
 
-    // Open Ground 41 Meld Bar so user can add more melds to reach 41!
-    openGroundMeldBar();
+    // Direct draw from ground as requested: "so useru siyanes mnm atebelew yansa gin 41 mewred alebet gebak"
+    playDrawSound();
+    currentGameState.mustMeld41 = true;
+    socket.emit('draw_card', { roomId: currentRoomId, userId, source: 'ground' });
     return;
   }
 }
@@ -285,12 +726,99 @@ function handleDrawAction(source) {
 // Open Ground Meld Mode
 function openGroundMeldBar() {
   if (!currentGameState || !groundMeldBar) return;
+  currentMeldBarMode = 'ground';
   groundMeldBar.style.display = 'flex';
   const topGround = currentGameState.topGroundCard;
-  if (topGround) {
+  if (groundMeldTitle) {
+    groundMeldTitle.textContent = '📥 ከመሬት ለማንሳት 41 ማውረድ አለብህ';
+  }
+  if (topGround && groundTargetCardBadge) {
     groundTargetCardBadge.textContent = `ካርታ: [ ${topGround.rank}${topGround.suit} ]`;
   }
+  if (forfeitGroundBtn) {
+    forfeitGroundBtn.style.display = 'inline-block';
+  }
   updateGroundMeldBar();
+}
+
+// Open Wered (Meld to table) Mode
+function openWeredMeldBar() {
+  if (!currentGameState || !groundMeldBar) return;
+  currentMeldBarMode = 'wered';
+  groundMeldBar.style.display = 'flex';
+  const hasAlreadyOpened = currentGameState.tableMelds && currentGameState.tableMelds[userId] && currentGameState.tableMelds[userId].length > 0;
+
+  if (groundMeldTitle) {
+    groundMeldTitle.textContent = hasAlreadyOpened ? '📥 ካርታዎችን ወደ ጠረጴዛ አውርድ' : '📥 ለመውረድ ቢያንስ 41 ነጥብ ትሪስ ምረጥ';
+  }
+  if (groundTargetCardBadge) {
+    groundTargetCardBadge.textContent = hasAlreadyOpened ? 'ሜልድ' : 'መጀመሪያ ማውረድ (41+)';
+  }
+  if (forfeitGroundBtn) {
+    forfeitGroundBtn.style.display = 'none'; // Only applies when taking from ground
+  }
+  updateGroundMeldBar();
+}
+
+function handleWeredAction() {
+  if (!currentGameState || currentGameState.status !== 'PLAYING') return;
+  if (currentGameState.currentTurnPlayerId !== userId) {
+    return alert('የአንተ ተራ አይደለም!');
+  }
+
+  const selectedCards = (currentGameState.myHand || []).filter(c =>
+    selectedCardsSet.has(String(c.id)) || selectedCardsSet.has(c.id)
+  );
+
+  // If cards are already selected, try to meld them directly
+  if (selectedCards.length >= 3) {
+    const validPartition = partitionIntoValidMelds(
+      selectedCards,
+      currentGameState.jokerRank,
+      currentGameState.jokerSuits
+    );
+    if (!validPartition) {
+      const cardNames = selectedCards.map(c => `${c.rank}${c.suit}`).join(' ');
+      return alert(`የመረጥካቸው ካርታዎች [ ${cardNames} ] ትክክለኛ ትሪስ (Meld) አልሰሩም!\nተመሳሳይ ቁጥር (ለምሳሌ 7♥ 7♦ 7♠) ወይም ተከታታይ ካርታዎች (ለምሳሌ 5♥ 6♥ 7♥) መሆን አለባቸው።`);
+    }
+
+    let totalPts = 0;
+    selectedCards.forEach(c => { totalPts += c.pointValue || 0; });
+
+    // Direct meld execution!
+    executeMeldDown(validPartition, totalPts);
+    return;
+  }
+
+  showSortToast('👉 ለማውረድ ቢያንስ 1 ትሪስ (3 ካርታ) መርጠህ "ውረድ" ን ተጫን!');
+}
+
+function executeMeldDown(melds, totalPts) {
+  playCardSound();
+  const meldedCardIds = new Set(melds.flat().map(c => c.id));
+
+  // Optimistically remove melded cards so hand does not scramble
+  playerOrderedCardIds = playerOrderedCardIds.filter(id => !meldedCardIds.has(id));
+  if (currentGameState && currentGameState.myHand) {
+    currentGameState.myHand = currentGameState.myHand.filter(c => !meldedCardIds.has(c.id));
+    renderPlayerHand(currentGameState.myHand);
+  }
+
+  socket.emit('lay_down_melds', {
+    roomId: currentRoomId,
+    userId,
+    melds
+  });
+
+  selectedCardsSet.clear();
+  selectedCardId = null;
+  if (groundMeldBar) groundMeldBar.style.display = 'none';
+
+  showSortToast(`📥 ${totalPts} ነጥብ ወረደ!`);
+}
+
+if (weredBtn) {
+  weredBtn.addEventListener('click', handleWeredAction);
 }
 
 // Live update points and hint in Ground Meld Bar as cards are selected
@@ -300,43 +828,63 @@ function updateGroundMeldBar() {
 
   const selectedCards = currentGameState.myHand.filter(c => selectedCardsSet.has(c.id));
   const jokerRank = currentGameState.jokerRank;
+  const hasAlreadyOpened = currentGameState.tableMelds && currentGameState.tableMelds[userId] && currentGameState.tableMelds[userId].length > 0;
 
   // Attempt to partition selected cards into valid melds
   const validPartition = partitionIntoValidMelds(selectedCards, jokerRank);
-  
+
   let totalPts = 0;
   selectedCards.forEach(c => { totalPts += c.pointValue || 0; });
 
   groundMeldPointsVal.textContent = totalPts;
 
   if (selectedCards.length === 0) {
-    groundMeldHintText.textContent = '👉 ከመሬት ለማንሳት 41 የሚሞሉትን ካርታዎች (Melds) ከእጅህ ምረጥ!';
+    if (currentMeldBarMode === 'wered') {
+      groundMeldHintText.textContent = hasAlreadyOpened
+        ? '👉 ወደ ጠረጴዛ ለማውረድ የሚሆኑ ትሪሶችን ከእጅህ ምረጥ!'
+        : '👉 ለመጀመሪያ ጊዜ ለመውረድ 41 የሚሞሉትን ካርታዎች ከእጅህ ምረጥ!';
+    } else {
+      groundMeldHintText.textContent = '👉 ከመሬት ለማንሳት 41 የሚሞሉትን ካርታዎች (Melds) ከእጅህ ምረጥ!';
+    }
     groundMeldHintText.style.color = '#f5b041';
     confirmGroundMeldBtn.disabled = true;
     confirmGroundMeldBtn.style.opacity = '0.5';
+    confirmGroundMeldBtn.textContent = currentMeldBarMode === 'wered' ? '✅ አውርድ' : '✅ 41 ሞልቷል - አውርድና አንሳ';
   } else if (!validPartition) {
-    groundMeldHintText.textContent = `⚠️ የተመረጡት ካርታዎች (${selectedCards.length}) ትክክለኛ ትሪስ (Meld) አልሰሩም! 3 ወይም 4 የሚሆኑ ተመሳሳይ ወይም ተከታታይ ካርታዎችን ምረጥ!`;
+    const isMultipleJokers = selectedCards.filter(c => isWildJoker(c, currentGameState.jokerRank, currentGameState.jokerSuits) || isSekaWildJoker(c)).length > 1;
+    if (isMultipleJokers) {
+      groundMeldHintText.textContent = `⚠️ ተከታታይ ጆከር ማድረግ አይቻልም! በአንድ ሜልድ ውስጥ ከአንድ ጆከር በላይ መጠቀም አይቻልም!`;
+    } else {
+      groundMeldHintText.textContent = `⚠️ የተመረጡት ካርታዎች (${selectedCards.length}) ትክክለኛ ትሪስ (Meld) አልሰሩም! 3 ወይም 4 የሚሆኑ ተመሳሳይ ወይም ተከታታይ ካርታዎችን ምረጥ!`;
+    }
     groundMeldHintText.style.color = '#f87171';
     confirmGroundMeldBtn.disabled = true;
     confirmGroundMeldBtn.style.opacity = '0.5';
-  } else if (totalPts < 41) {
-    // Exactly what user specified: "777 kehone sidemer 21 selhone lela endichemir yederegal"
+    confirmGroundMeldBtn.textContent = currentMeldBarMode === 'wered' ? '✅ አውርድ' : '✅ 41 ሞልቷል - አውርድና አንሳ';
+  } else if (!hasAlreadyOpened && totalPts < 41) {
     const meldNames = validPartition.map(m => m.map(c => c.rank + c.suit).join('-')).join(' + ');
     groundMeldHintText.textContent = `⚠️ ${totalPts} ነጥብ ብቻ ነው (${meldNames})! 41 አልሞላም — እባክህ ሌላ ትሪስ (Meld) ጨምር!`;
     groundMeldHintText.style.color = '#f87171';
     confirmGroundMeldBtn.disabled = true;
     confirmGroundMeldBtn.style.opacity = '0.5';
+    confirmGroundMeldBtn.textContent = currentMeldBarMode === 'wered' ? '✅ አውርድ' : '✅ 41 ሞልቷል - አውርድና አንሳ';
   } else {
-    // Reached 41!
+    // Reached 41 or has already opened!
     const meldNames = validPartition.map(m => m.map(c => c.rank + c.suit).join('-')).join(' + ');
-    groundMeldHintText.textContent = `✅ ${totalPts} ነጥብ ሞልቷል (${meldNames})! አውርደህ ከመሬት ማንሳት ትችላለህ!`;
+    if (currentMeldBarMode === 'wered') {
+      groundMeldHintText.textContent = `✅ ${totalPts} ነጥብ (${meldNames})! አሁን ወደ ጠረጴዛ ማውረድ ትችላለህ!`;
+      confirmGroundMeldBtn.textContent = '✅ አውርድ (ወደ ጠረጴዛ)';
+    } else {
+      groundMeldHintText.textContent = `✅ ${totalPts} ነጥብ ሞልቷል (${meldNames})! አውርደህ ከመሬት ማንሳት ትችላለህ!`;
+      confirmGroundMeldBtn.textContent = '✅ 41 ሞልቷል - አውርድና አንሳ';
+    }
     groundMeldHintText.style.color = '#4ade80';
     confirmGroundMeldBtn.disabled = false;
     confirmGroundMeldBtn.style.opacity = '1';
   }
 }
 
-// Confirm Ground Meld and Lay Down (kalew yawerdal)
+// Confirm Ground Meld or Wered Lay Down
 confirmGroundMeldBtn.addEventListener('click', () => {
   if (!currentGameState || !currentGameState.myHand) return;
   const selectedCards = currentGameState.myHand.filter(c => selectedCardsSet.has(c.id));
@@ -345,8 +893,18 @@ confirmGroundMeldBtn.addEventListener('click', () => {
   let totalPts = 0;
   selectedCards.forEach(c => { totalPts += c.pointValue || 0; });
 
+  const hasAlreadyOpened = currentGameState.tableMelds && currentGameState.tableMelds[userId] && currentGameState.tableMelds[userId].length > 0;
+
+  if (currentMeldBarMode === 'wered') {
+    if (!validPartition || (!hasAlreadyOpened && totalPts < 41)) {
+      return alert('ያልተሟላ ወይም ከ41 ነጥብ በታች የሆነ ሜልድ ነው!');
+    }
+    executeMeldDown(validPartition, totalPts);
+    return;
+  }
+
   if (!validPartition || totalPts < 41) {
-    // If player insists on confirming with < 41: they forfeit (kelelw gin yeshenefal)
+    // If player insists on confirming with < 41 when drawing from ground: they forfeit (kelelw gin yeshenefal)
     socket.emit('forfeit_ground_fail', { roomId: currentRoomId, userId });
     groundMeldBar.style.display = 'none';
     selectedCardsSet.clear();
@@ -365,23 +923,6 @@ confirmGroundMeldBtn.addEventListener('click', () => {
   selectedCardsSet.clear();
   selectedCardId = null;
   renderPlayerHand(currentGameState.myHand);
-});
-
-// Auto-Select 41 Helper
-autoSelect41Btn.addEventListener('click', () => {
-  if (!currentGameState || !currentGameState.myHand) return;
-  const foundMelds = find41MeldsCombination(currentGameState.myHand, currentGameState.jokerRank);
-  if (foundMelds && foundMelds.length > 0) {
-    playCardSound();
-    selectedCardsSet.clear();
-    selectedCardId = null;
-    foundMelds.flat().forEach(c => selectedCardsSet.add(c.id));
-    renderPlayerHand(currentGameState.myHand);
-    updateGroundMeldBar();
-  } else {
-    groundMeldHintText.textContent = '❌ በእጅህ ውስጥ 41 የሚሞላ የትሪስ ጥምረት የለም!';
-    groundMeldHintText.style.color = '#ef4444';
-  }
 });
 
 // Forfeit Ground Draw (kelelw gin yeshenefal)
@@ -417,46 +958,121 @@ groundDiscardSlot.addEventListener('click', (e) => {
 });
 takeGroundBtn.addEventListener('click', () => handleDrawAction('ground'));
 
-// Discard Selected Card to Ground
+// Discard Selected Card to Ground (መሬት ጣል)
 discardBtn.addEventListener('click', () => {
   if (!selectedCardId && selectedCardsSet.size === 0) return alert('ከእጅህ አንድ የሚጣል ካርታ ምረጥ!');
   if (!currentGameState || currentGameState.turnState !== 'AWAITING_DISCARD') {
     return alert('ካርታ ከመጣልህ በፊት መጀመሪያ ካርታ መሳብ አለብህ!');
   }
 
+  // Handle Seka Discard
+  if (currentGameState.gameType === 'SEKA') {
+    const cardToDiscard = selectedCardId || Array.from(selectedCardsSet)[0];
+    if (!cardToDiscard) return alert('ከእጅህ አንድ የሚጣል ካርታ ምረጥ!');
+    playCardSound();
+
+    if (cardToDiscard) {
+      playerOrderedCardIds = playerOrderedCardIds.filter(id => id !== cardToDiscard);
+      selectedCardsSet.delete(cardToDiscard);
+      if (selectedCardId === cardToDiscard) selectedCardId = null;
+      if (currentGameState && currentGameState.myHand) {
+        currentGameState.myHand = currentGameState.myHand.filter(c => c.id !== cardToDiscard);
+        renderPlayerHand(currentGameState.myHand);
+      }
+    }
+
+    socket.emit('discard_seka_card', {
+      roomId: currentRoomId,
+      userId,
+      cardId: cardToDiscard
+    });
+    return;
+  }
+
+  // If user drew from ground, they MUST meld 41 before discarding!
+  if (currentGameState.mustMeld41) {
+    if (confirm('⚠️ ከመሬት ስላነሳህ 41 ሳታወርድ ወደ መሬት መጣል አትችልም!\n\n41 ማውረድ ካልቻልክ ጨዋታውን ትሸነፋለህ! እጅ መስጠት (መሸነፍ) ትፈልጋለህ?')) {
+      socket.emit('forfeit_ground_fail', { roomId: currentRoomId, userId });
+    }
+    return;
+  }
+
   const cardToDiscard = selectedCardId || Array.from(selectedCardsSet)[0];
+  const cardObj = currentGameState.myHand?.find(c => c.id === cardToDiscard);
+
+  // Rule: GEBI (ገቢ) Restriction on Discarding
+  // A player CANNOT discard a card to ground if it can be GEBI into any open table meld!
+  if (cardObj && isCardGebiToTable(cardObj, currentGameState.tableMelds, currentGameState.jokerRank, currentGameState.jokerSuits)) {
+    showSortToast(`⚠️ [ ${cardObj.rank}${cardObj.suit} ] ወደ ጠረጴዛው ሜልድ ገቢ (GEBI) ስለሚሆን ወደ መሬት መጣል አትችልም! ጠረጴዛው ላይ ገቢ አድርግ ወይም ሌላ ካርታ ጣል!`);
+    return;
+  }
+
   playCardSound();
+
+  // Optimistically remove the discarded card from player's hand immediately so remaining cards never scramble!
+  if (cardToDiscard) {
+    playerOrderedCardIds = playerOrderedCardIds.filter(id => id !== cardToDiscard);
+    if (currentGameState && currentGameState.myHand) {
+      currentGameState.myHand = currentGameState.myHand.filter(c => c.id !== cardToDiscard);
+      renderPlayerHand(currentGameState.myHand);
+    }
+  }
+
+  // If hand has 13 cards fully melded (Conquer), discarding the 14th card claims the win!
+  const isWinningHand = currentGameState._winningMelds && currentGameState._winningMelds.length >= 3;
   socket.emit('discard_card', {
     roomId: currentRoomId,
     userId,
     cardId: cardToDiscard,
-    toGebi: false
+    toGebi: isWinningHand,
+    melds: isWinningHand ? currentGameState._winningMelds : null
   });
   selectedCardsSet.clear();
   selectedCardId = null;
   updateTakeGroundButton();
 });
 
-// Discard to GEBI / Conquer (Rule 5 & 12)
-gebiSlot.addEventListener('click', () => {
-  triggerConquer();
-});
-conquerBtn.addEventListener('click', () => {
-  triggerConquer();
-});
+// Seka Win Button (ሴካ አሸንፍ)
+const sekaWinBtn = document.getElementById('sekaWinBtn');
+if (sekaWinBtn) {
+  sekaWinBtn.addEventListener('click', () => {
+    if (!currentGameState || currentGameState.gameType !== 'SEKA') return;
+    if (currentGameState.currentTurnPlayerId !== userId) return alert('የአንተ ተራ አይደለም!');
+    if (currentGameState.turnState !== 'AWAITING_DISCARD') return alert('ለማሸነፍ መጀመሪያ 1 ካርታ አንሳ!');
+
+    const discardCard = selectedCardId || (selectedCardsSet.size === 1 ? Array.from(selectedCardsSet)[0] : null);
+    playCardSound();
+    socket.emit('claim_seka_win', {
+      roomId: currentRoomId,
+      userId,
+      discardCardId: discardCard
+    });
+  });
+}
+
+// Conquer Button (ኮንከር!)
+if (conquerBtn) {
+  conquerBtn.addEventListener('click', () => {
+    triggerConquer();
+  });
+}
 
 function triggerConquer() {
-  if (!selectedCardId) return alert('Select your final winning card to drop into GEBI!');
   if (!currentGameState || currentGameState.currentTurnPlayerId !== userId) return alert('Not your turn!');
+  if (currentGameState.turnState !== 'AWAITING_DISCARD') {
+    return alert('ካርታ ከመጣልህ በፊት መጀመሪያ ካርታ መሳብ አለብህ!');
+  }
 
-  // Simple auto-partition of remaining 13 cards into melds for validation
-  const remainingHand = currentGameState.myHand.filter(c => c.id !== selectedCardId);
-  const melds = autoGroupHandIntoMelds(remainingHand);
+  const cardToDiscard = selectedCardId || currentGameState._tetayCardId || (currentGameState.myHand && currentGameState.myHand[currentGameState.myHand.length - 1]?.id);
+  if (!cardToDiscard) return alert('መሬት ላይ የሚጣለውን የመጨረሻ ተጣይ ካርታ ምረጥ!');
+
+  const remainingHand = currentGameState.myHand.filter(c => c.id !== cardToDiscard);
+  const melds = currentGameState._winningMelds || autoGroupHandIntoMelds(remainingHand);
 
   socket.emit('discard_card', {
     roomId: currentRoomId,
     userId,
-    cardId: selectedCardId,
+    cardId: cardToDiscard,
     toGebi: true,
     melds
   });
@@ -469,40 +1085,42 @@ pokeBtn.addEventListener('click', () => {
   socket.emit('poke_player', { roomId: currentRoomId, userId });
 });
 
-// Move Selected Card Left
-moveLeftBtn.addEventListener('click', () => {
+function moveSelectedCard(dir) {
   if (!selectedCardId || !currentGameState || !currentGameState.myHand) return;
   const idx = currentGameState.myHand.findIndex(c => c.id === selectedCardId);
-  if (idx > 0) {
+  const targetIdx = idx + dir;
+  if (idx !== -1 && targetIdx >= 0 && targetIdx < currentGameState.myHand.length) {
     const temp = currentGameState.myHand[idx];
-    currentGameState.myHand[idx] = currentGameState.myHand[idx - 1];
-    currentGameState.myHand[idx - 1] = temp;
+    currentGameState.myHand[idx] = currentGameState.myHand[targetIdx];
+    currentGameState.myHand[targetIdx] = temp;
+    playerOrderedCardIds = currentGameState.myHand.map(c => c.id);
     playCardSound();
     renderPlayerHand(currentGameState.myHand);
   }
-});
+}
 
-// Move Selected Card Right
-moveRightBtn.addEventListener('click', () => {
+// Keyboard Left/Right Arrow keys to manually shift cards smoothly
+window.addEventListener('keydown', (e) => {
   if (!selectedCardId || !currentGameState || !currentGameState.myHand) return;
-  const idx = currentGameState.myHand.findIndex(c => c.id === selectedCardId);
-  if (idx !== -1 && idx < currentGameState.myHand.length - 1) {
-    const temp = currentGameState.myHand[idx];
-    currentGameState.myHand[idx] = currentGameState.myHand[idx + 1];
-    currentGameState.myHand[idx + 1] = temp;
-    playCardSound();
-    renderPlayerHand(currentGameState.myHand);
+  if (e.key === 'ArrowLeft') {
+    e.preventDefault();
+    moveSelectedCard(-1);
+  } else if (e.key === 'ArrowRight') {
+    e.preventDefault();
+    moveSelectedCard(1);
   }
 });
 
 // Toggle Groups View
-groupMeldsBtn.addEventListener('click', () => {
-  isGroupViewActive = !isGroupViewActive;
-  groupMeldsBtn.textContent = isGroupViewActive ? '🃏 View in Single Line' : '🗂️ View in Groups';
-  groupMeldsBtn.style.background = isGroupViewActive ? '#38bdf8' : 'rgba(15, 23, 42, 0.85)';
-  groupMeldsBtn.style.color = isGroupViewActive ? '#000' : '#fff';
-  renderPlayerHand(currentGameState.myHand);
-});
+if (groupMeldsBtn) {
+  groupMeldsBtn.addEventListener('click', () => {
+    isGroupViewActive = !isGroupViewActive;
+    groupMeldsBtn.textContent = isGroupViewActive ? '🃏 View in Single Line' : '🗂️ View in Groups';
+    groupMeldsBtn.style.background = isGroupViewActive ? '#38bdf8' : 'rgba(15, 23, 42, 0.85)';
+    groupMeldsBtn.style.color = isGroupViewActive ? '#000' : '#fff';
+    renderPlayerHand(currentGameState.myHand);
+  });
+}
 
 // Rank ordering maps
 const RANK_VALUES = {
@@ -555,64 +1173,109 @@ function canFormSequenceWithJoker(naturalCards, jokerCount, targetLength) {
   return as1 || as14;
 }
 
-function isValidTris(cards, jokerRank) {
-  if (!cards || cards.length !== 3) return false;
-  const jokerCount = cards.filter(c => c.rank === jokerRank || c.isJoker).length;
-  if (jokerCount > 1) return false;
-  const naturalCards = cards.filter(c => c.rank !== jokerRank && !c.isJoker);
+function isNaturalMeld(cards) {
+  if (!cards || (cards.length !== 3 && cards.length !== 4)) return false;
+  if (cards.some(c => c.isJoker || c.isMainJoker || c.isFalseJoker)) return false;
+  if (isSequenceSameSuit(cards)) return true;
+  if (cards.every(c => c.rank === cards[0].rank)) {
+    const suits = new Set(cards.map(c => c.suit));
+    return suits.size >= 2;
+  }
+  return false;
+}
 
+function isWildJoker(c, jokerRank, jokerSuits) {
+  if (!c) return false;
+  if (c.isFalseJoker) return false; // False joker is NEVER wild!
+  if (c.isJoker && !c.isFalseJoker) return true;
+  if (jokerRank && c.rank === jokerRank) {
+    if (!jokerSuits || jokerSuits.includes(c.suit)) return true;
+  }
+  return false;
+}
+
+function isValidTris(cards, jokerRank, jokerSuits) {
+  if (!cards || cards.length !== 3) return false;
+  if (isNaturalMeld(cards)) return true;
+
+  const isJk = (c) => isWildJoker(c, jokerRank, jokerSuits);
+  const jokerCount = cards.filter(isJk).length;
+  if (jokerCount > 1) return false;
+
+  const naturalCards = cards.filter(c => !isJk(c));
+  const getRank = (c) => (c.isFalseJoker ? jokerRank : c.rank);
+
+  // Case 1: Pure Tris (Set of 3 same rank, or False Joker substituting designated rank)
   if (jokerCount === 0) {
-    if (naturalCards[0].rank === naturalCards[1].rank && naturalCards[1].rank === naturalCards[2].rank) {
+    const r0 = getRank(naturalCards[0]);
+    if (r0 && getRank(naturalCards[1]) === r0 && getRank(naturalCards[2]) === r0) {
       const suits = new Set(naturalCards.map(c => c.suit));
       return suits.size >= 2;
     }
-    if (isSequenceSameSuit(naturalCards)) return true;
+    const cardsWithRanks = naturalCards.map(c => ({ rank: getRank(c), suit: c.suit }));
+    if (isSequenceSameSuit(cardsWithRanks)) return true;
   }
 
+  // Case 2: Tris with 1 Joker
   if (jokerCount === 1) {
-    if (naturalCards[0].rank === naturalCards[1].rank) return true;
+    const r0 = getRank(naturalCards[0]);
+    const r1 = getRank(naturalCards[1]);
+    if (r0 && r0 === r1) return true;
     if (naturalCards[0].suit === naturalCards[1].suit) {
-      if (canFormSequenceWithJoker(naturalCards, 1, 3)) return true;
+      if (canFormSequenceWithJoker([
+        { rank: r0, suit: naturalCards[0].suit },
+        { rank: r1, suit: naturalCards[1].suit }
+      ], 1, 3)) return true;
     }
   }
   return false;
 }
 
-function isValidQuatris(cards, jokerRank) {
+function isValidQuatris(cards, jokerRank, jokerSuits) {
   if (!cards || cards.length !== 4) return false;
-  const jokerCount = cards.filter(c => c.rank === jokerRank || c.isJoker).length;
-  if (jokerCount > 1) return false;
-  const naturalCards = cards.filter(c => c.rank !== jokerRank && !c.isJoker);
+  if (isNaturalMeld(cards)) return true;
 
+  const isJk = (c) => isWildJoker(c, jokerRank, jokerSuits);
+  const jokerCount = cards.filter(isJk).length;
+  if (jokerCount > 1) return false;
+
+  const naturalCards = cards.filter(c => !isJk(c));
+  const getRank = (c) => (c.isFalseJoker ? jokerRank : c.rank);
+
+  // Case 1: Pure Quatris (4 same rank or 4 sequence same suit)
   if (jokerCount === 0) {
-    if (naturalCards.every(c => c.rank === naturalCards[0].rank)) {
+    const r0 = getRank(naturalCards[0]);
+    if (r0 && naturalCards.every(c => getRank(c) === r0)) {
       const suits = new Set(naturalCards.map(c => c.suit));
-      return suits.size >= 3;
+      return suits.size >= 2;
     }
-    if (isSequenceSameSuit(naturalCards)) return true;
+    const cardsWithRanks = naturalCards.map(c => ({ rank: getRank(c), suit: c.suit }));
+    if (isSequenceSameSuit(cardsWithRanks)) return true;
   }
 
+  // Case 2: Quatris with 1 Joker
   if (jokerCount === 1) {
-    if (naturalCards.every(c => c.rank === naturalCards[0].rank)) return true;
+    const r0 = getRank(naturalCards[0]);
+    if (r0 && naturalCards.every(c => getRank(c) === r0)) return true;
     if (naturalCards.every(c => c.suit === naturalCards[0].suit)) {
-      if (canFormSequenceWithJoker(naturalCards, 1, 4)) return true;
+      if (canFormSequenceWithJoker(naturalCards.map(c => ({ rank: getRank(c), suit: c.suit })), 1, 4)) return true;
     }
   }
   return false;
 }
 
 // Partitions a set of selected cards (e.g. 6 or 7 cards) into valid disjoint Tris / Quatris melds
-function partitionIntoValidMelds(cards, jokerRank) {
+function partitionIntoValidMelds(cards, jokerRank, jokerSuits) {
   if (!cards || cards.length < 3) return null;
-  if (cards.length === 3 && isValidTris(cards, jokerRank)) return [cards];
-  if (cards.length === 4 && isValidQuatris(cards, jokerRank)) return [cards];
+  if (cards.length === 3 && isValidTris(cards, jokerRank, jokerSuits)) return [cards];
+  if (cards.length === 4 && isValidQuatris(cards, jokerRank, jokerSuits)) return [cards];
   if (cards.length === 6) {
     for (let i = 0; i < 4; i++) {
       for (let j = i + 1; j < 5; j++) {
         for (let k = j + 1; k < 6; k++) {
           const m1 = [cards[i], cards[j], cards[k]];
           const m2 = cards.filter((_, idx) => idx !== i && idx !== j && idx !== k);
-          if (isValidTris(m1, jokerRank) && isValidTris(m2, jokerRank)) {
+          if (isValidTris(m1, jokerRank, jokerSuits) && isValidTris(m2, jokerRank, jokerSuits)) {
             return [m1, m2];
           }
         }
@@ -626,8 +1289,8 @@ function partitionIntoValidMelds(cards, jokerRank) {
           for (let l = k + 1; l < cards.length; l++) {
             const m1 = [cards[i], cards[j], cards[k], cards[l]];
             const m2 = cards.filter((_, idx) => idx !== i && idx !== j && idx !== k && idx !== l);
-            if ((isValidQuatris(m1, jokerRank) && isValidTris(m2, jokerRank)) ||
-                (isValidTris(m1, jokerRank) && isValidQuatris(m2, jokerRank))) {
+            if ((isValidQuatris(m1, jokerRank, jokerSuits) && isValidTris(m2, jokerRank, jokerSuits)) ||
+              (isValidTris(m1, jokerRank, jokerSuits) && isValidQuatris(m2, jokerRank, jokerSuits))) {
               return [m1, m2];
             }
           }
@@ -642,7 +1305,7 @@ function partitionIntoValidMelds(cards, jokerRank) {
           for (let l = k + 1; l < cards.length; l++) {
             const m1 = [cards[i], cards[j], cards[k], cards[l]];
             const m2 = cards.filter((_, idx) => idx !== i && idx !== j && idx !== k && idx !== l);
-            if (isValidQuatris(m1, jokerRank) && isValidQuatris(m2, jokerRank)) {
+            if (isValidQuatris(m1, jokerRank, jokerSuits) && isValidQuatris(m2, jokerRank, jokerSuits)) {
               return [m1, m2];
             }
           }
@@ -653,429 +1316,974 @@ function partitionIntoValidMelds(cards, jokerRank) {
   return null;
 }
 
-// Finds any combination of Tris/Quatris in hand that sum to >= 41 points
-function find41MeldsCombination(hand, jokerRank) {
-  if (!hand || hand.length < 3) return null;
-  const n = hand.length;
-  const candidateMelds = [];
-
-  for (let i = 0; i < n - 3; i++) {
-    for (let j = i + 1; j < n - 2; j++) {
-      for (let k = j + 1; k < n - 1; k++) {
-        for (let l = k + 1; l < n; l++) {
-          const group = [hand[i], hand[j], hand[k], hand[l]];
-          if (isValidQuatris(group, jokerRank)) {
-            let pts = 0;
-            group.forEach(c => { pts += c.pointValue || 0; });
-            candidateMelds.push({ cards: group, points: pts });
-          }
-        }
-      }
-    }
-  }
-
-  for (let i = 0; i < n - 2; i++) {
-    for (let j = i + 1; j < n - 1; j++) {
-      for (let k = j + 1; k < n; k++) {
-        const group = [hand[i], hand[j], hand[k]];
-        if (isValidTris(group, jokerRank)) {
-          let pts = 0;
-          group.forEach(c => { pts += c.pointValue || 0; });
-          candidateMelds.push({ cards: group, points: pts });
-        }
-      }
-    }
-  }
-
-  for (const m of candidateMelds) {
-    if (m.points >= 41) return [m.cards];
-  }
-
-  for (let i = 0; i < candidateMelds.length; i++) {
-    for (let j = i + 1; j < candidateMelds.length; j++) {
-      const m1 = candidateMelds[i];
-      const m2 = candidateMelds[j];
-      const ids1 = new Set(m1.cards.map(c => c.id));
-      const isDisjoint = m2.cards.every(c => !ids1.has(c.id));
-      if (isDisjoint && (m1.points + m2.points >= 41)) {
-        return [m1.cards, m2.cards];
-      }
-    }
-  }
-
-  for (let i = 0; i < candidateMelds.length; i++) {
-    for (let j = i + 1; j < candidateMelds.length; j++) {
-      for (let k = j + 1; k < candidateMelds.length; k++) {
-        const m1 = candidateMelds[i];
-        const m2 = candidateMelds[j];
-        const m3 = candidateMelds[k];
-        const ids1 = new Set(m1.cards.map(c => c.id));
-        const ids2 = new Set([...ids1, ...m2.cards.map(c => c.id)]);
-        const isDisjoint = m2.cards.every(c => !ids1.has(c.id)) && m3.cards.every(c => !ids2.has(c.id));
-        if (isDisjoint && (m1.points + m2.points + m3.points >= 41)) {
-          return [m1.cards, m2.cards, m3.cards];
-        }
-      }
-    }
-  }
-
-  return null;
-}
-
 function getRankNum(rank, aceHigh = false) {
   if (rank === 'A' && aceHigh) return 14;
   return RANK_VALUES[rank] || 0;
 }
 
-// Check if a card acts as a Joker
+// Rule: In same-rank sets, sandwich colors:
+// 2 Reds + 1 Black -> [Red, Black, Red] (e.g. 5♦ 5♠ 5♥)
+// 2 Blacks + 1 Red -> [Black, Red, Black] (e.g. 5♠ 5♦ 5♣)
+// 2 Reds + 2 Blacks -> [Red, Black, Red, Black]
+function orderSameRankSet(cards) {
+  if (!cards || cards.length < 3) return cards;
+
+  const isRed = (c) => c.suit === '♥' || c.suit === '♦';
+  const reds = cards.filter(isRed);
+  const blacks = cards.filter(c => !isRed(c));
+
+  if (cards.length === 3) {
+    if (reds.length === 2 && blacks.length === 1) {
+      return [reds[0], blacks[0], reds[1]];
+    }
+    if (blacks.length === 2 && reds.length === 1) {
+      return [blacks[0], reds[0], blacks[1]];
+    }
+  } else if (cards.length === 4) {
+    if (reds.length === 2 && blacks.length === 2) {
+      return [reds[0], blacks[0], reds[1], blacks[1]];
+    }
+    if (reds.length === 3 && blacks.length === 1) {
+      return [reds[0], blacks[0], reds[1], reds[2]];
+    }
+    if (blacks.length === 3 && reds.length === 1) {
+      return [blacks[0], reds[0], blacks[1], blacks[2]];
+    }
+  }
+
+  return cards;
+}
+
+// Distance in rank between two cards of same suit (1 = consecutive, 2 = 1-gap)
+function getCardRankDistance(c1, c2) {
+  if (!c1 || !c2 || c1.suit !== c2.suit) return 999;
+  const r1 = getRankNum(c1.rank);
+  const r2 = getRankNum(c2.rank);
+  let dist = Math.abs(r1 - r2);
+  // Ace high check: A(1) and K(13) -> dist 1; A(1) and Q(12) -> dist 2
+  if ((c1.rank === 'A' && c2.rank === 'K') || (c2.rank === 'A' && c1.rank === 'K')) dist = 1;
+  if ((c1.rank === 'A' && c2.rank === 'Q') || (c2.rank === 'A' && c1.rank === 'Q')) dist = 2;
+  return dist;
+}
+
+// Compare rank for natural sequential ordering
+function isCardHigherRank(a, b) {
+  if (a.rank === 'A' && (b.rank === 'K' || b.rank === 'Q')) return true;
+  if (b.rank === 'A' && (a.rank === 'K' || a.rank === 'Q')) return false;
+  if (a.rank === 'A' && (b.rank === '2' || b.rank === '3')) return false;
+  if (b.rank === 'A' && (a.rank === '2' || a.rank === '3')) return true;
+  return getRankNum(a.rank) > getRankNum(b.rank);
+}
+
+// Rule: GEBI (ገቢ) Detection
+// Checks if a card can attach to an existing table meld (extends sequence or completes 4-set).
+function isCardGebiToMeld(card, meld, jokerRank, jokerSuits) {
+  if (!card || !meld || meld.length < 3) return false;
+
+  const isJk = (c) => isWildJoker(c, jokerRank, jokerSuits);
+  const naturals = meld.filter(c => !isJk(c));
+  if (naturals.length === 0) return false;
+
+  // 1. Same-rank set of 3 cards (can take 4th card of same rank)
+  const isSet = naturals.every(c => (c.isFalseJoker ? jokerRank : c.rank) === (naturals[0].isFalseJoker ? jokerRank : naturals[0].rank));
+  if (isSet && meld.length === 3) {
+    const setRank = naturals[0].isFalseJoker ? jokerRank : naturals[0].rank;
+    const cardRank = card.isFalseJoker ? jokerRank : card.rank;
+    if (cardRank === setRank && meld.every(c => c.suit !== card.suit)) {
+      return true;
+    }
+  }
+
+  // 2. Same-suit sequence (can extend on either end)
+  const isSeq = naturals.every(c => c.suit === naturals[0].suit);
+  if (isSeq) {
+    const suit = naturals[0].suit;
+    if (card.suit !== suit) return false;
+
+    // Rank numbers with Ace as 1
+    const numsAs1 = naturals.map(c => RANK_ORDER[c.rank]).sort((a, b) => a - b);
+    const min1 = numsAs1[0];
+    const max1 = numsAs1[numsAs1.length - 1];
+    const cardNum1 = RANK_ORDER[card.rank];
+
+    if (cardNum1 === min1 - 1 || cardNum1 === max1 + 1) return true;
+
+    // Rank numbers with Ace as 14 (Ace High)
+    const numsAs14 = naturals.map(c => (c.rank === 'A' ? 14 : RANK_ORDER[c.rank])).sort((a, b) => a - b);
+    const min14 = numsAs14[0];
+    const max14 = numsAs14[numsAs14.length - 1];
+    const cardNum14 = card.rank === 'A' ? 14 : RANK_ORDER[card.rank];
+
+    if (cardNum14 === min14 - 1 || cardNum14 === max14 + 1) return true;
+  }
+
+  return false;
+}
+
+function isCardGebiToTable(card, tableMelds, jokerRank, jokerSuits) {
+  if (!card || !tableMelds) return false;
+  const allGroups = [];
+  if (Array.isArray(tableMelds)) {
+    allGroups.push(...tableMelds);
+  } else {
+    for (const key of Object.keys(tableMelds)) {
+      if (Array.isArray(tableMelds[key])) {
+        allGroups.push(...tableMelds[key]);
+      }
+    }
+  }
+
+  for (const group of allGroups) {
+    if (isCardGebiToMeld(card, group, jokerRank, jokerSuits)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+// Connection score between two cards (Rank pair = 100, Suited consecutive = 80, Suited 1-gap = 50)
+function getCardConnectionScore(a, b) {
+  if (!a || !b) return 0;
+  if (a.rank === b.rank) return 100;
+  if (a.suit === b.suit) {
+    const d = getCardRankDistance(a, b);
+    if (d === 1) return 80;
+    if (d === 2) return 50;
+  }
+  return 0;
+}
+
+// General Chaining Algorithm: links pairs and suited sequences into seamless unbroken chains
+function buildChainsFromCards(cards) {
+  const remaining = new Map(cards.map(c => [c.id, c]));
+  const chains = [];
+
+  while (remaining.size > 0) {
+    let bestPair = null;
+    let bestScore = 0;
+
+    const remList = Array.from(remaining.values());
+    for (let i = 0; i < remList.length - 1; i++) {
+      for (let j = i + 1; j < remList.length; j++) {
+        const s = getCardConnectionScore(remList[i], remList[j]);
+        if (s > bestScore) {
+          bestScore = s;
+          bestPair = [remList[i], remList[j]];
+        }
+      }
+    }
+
+    if (!bestPair || bestScore === 0) {
+      break;
+    }
+
+    let c1 = bestPair[0];
+    let c2 = bestPair[1];
+    let currentChain;
+    if (c1.suit === c2.suit) {
+      currentChain = isCardHigherRank(c2, c1) ? [c1, c2] : [c2, c1];
+    } else {
+      currentChain = [c1, c2];
+    }
+
+    remaining.delete(c1.id);
+    remaining.delete(c2.id);
+
+    let extended = true;
+    while (extended && remaining.size > 0) {
+      extended = false;
+      const head = currentChain[0];
+      const tail = currentChain[currentChain.length - 1];
+
+      let bestHeadCandidate = null;
+      let bestHeadScore = 0;
+      let bestTailCandidate = null;
+      let bestTailScore = 0;
+
+      for (const cand of remaining.values()) {
+        const sHead = getCardConnectionScore(cand, head);
+        if (sHead > bestHeadScore) {
+          bestHeadScore = sHead;
+          bestHeadCandidate = cand;
+        }
+        const sTail = getCardConnectionScore(tail, cand);
+        if (sTail > bestTailScore) {
+          bestTailScore = sTail;
+          bestTailCandidate = cand;
+        }
+      }
+
+      if (bestHeadScore > 0 && bestHeadScore >= bestTailScore) {
+        currentChain.unshift(bestHeadCandidate);
+        remaining.delete(bestHeadCandidate.id);
+        extended = true;
+      } else if (bestTailScore > 0) {
+        currentChain.push(bestTailCandidate);
+        remaining.delete(bestTailCandidate.id);
+        extended = true;
+      }
+    }
+
+    // Apply color sandwich if chain is same rank of 3 or 4 cards
+    if (currentChain.length >= 3 && currentChain.every(c => c.rank === currentChain[0].rank)) {
+      currentChain = orderSameRankSet(currentChain);
+    }
+
+    chains.push(currentChain);
+  }
+
+  const singles = Array.from(remaining.values());
+  singles.sort((a, b) => (a.pointValue || 0) - (b.pointValue || 0));
+
+  return { chains, singles };
+}
+
+// Check if a card acts as a Joker (Wild Joker)
 function isCardJoker(card, state) {
   if (!card) return false;
-  if (card.isJoker || card.isMainJoker || card.isFalseJoker) return true;
+  if (card.isFalseJoker) return false; // False joker is NEVER wild! Only substitutes designated rank
+  if (card.isJoker && !card.isFalseJoker) return true;
   if (state && state.jokerRank && card.rank === state.jokerRank) {
     if (!state.jokerSuits || state.jokerSuits.includes(card.suit)) return true;
   }
   return false;
 }
 
-let isAutoSortActive = true;
+// -------------------------------------------------------------------------
+// PLAYER-CONTROLLED HAND ARRANGEMENT (ተጫዋቹ ራሱ እንዲደርድር)
+// 1. Player has full manual control to arrange cards via Drag & Drop or Move Buttons
+// 2. Preserves the player's exact manual card order across all server updates
+// 3. Optional "✨ ደርድር" button finds and applies the single BEST arrangement
+// 4. Any valid Tris (e.g. 5♥ 6♥ 7♥) is kept strictly intact in ascending order
+// 5. Seamless visual presentation with NO space between cards (as in reference photo)
+// -------------------------------------------------------------------------
 
-// Single Smart "ደርድር" (Arrange Hand) Button
+let sortToastTimer = null;
+
+function showSortToast(text) {
+  let toast = document.getElementById('sortToast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'sortToast';
+    toast.className = 'sort-toast';
+    document.body.appendChild(toast);
+  } else if (lobbyView && lobbyView.style.display !== 'none' && !document.body.contains(toast)) {
+    document.body.appendChild(toast);
+  }
+  toast.textContent = text;
+  toast.classList.add('show');
+  if (sortToastTimer) clearTimeout(sortToastTimer);
+  sortToastTimer = setTimeout(() => {
+    toast.classList.remove('show');
+  }, 2500);
+}
+
+// Preserve the player's manual card order across server state updates
+function syncHandPreservingOrder(newHand) {
+  if (!newHand || newHand.length === 0) {
+    playerOrderedCardIds = [];
+    return [];
+  }
+  if (!playerOrderedCardIds || playerOrderedCardIds.length === 0) {
+    playerOrderedCardIds = newHand.map(c => c.id);
+    return newHand;
+  }
+
+  const newMap = new Map(newHand.map(c => [c.id, c]));
+  const preserved = [];
+
+  // 1. Keep existing cards in the player's exact custom arranged order
+  for (const id of playerOrderedCardIds) {
+    if (newMap.has(id)) {
+      preserved.push(newMap.get(id));
+      newMap.delete(id);
+    }
+  }
+
+  // 2. Newly drawn cards append to the end so the player can arrange them
+  for (const remaining of newMap.values()) {
+    preserved.push(remaining);
+  }
+
+  playerOrderedCardIds = preserved.map(c => c.id);
+  return preserved;
+}
+
+// Seka Hand & Joker Placement Helpers
+function isSekaWildJoker(c) {
+  if (!c) return false;
+  return c.isJoker === true || c.rank === 'JOKER' || c.suit === '🃏';
+}
+
+function arrangeSekaMeld(cards) {
+  if (!cards || cards.length <= 1) return cards || [];
+  const jokers = cards.filter(isSekaWildJoker);
+  const natural = cards.filter(c => !isSekaWildJoker(c));
+  const rankOrderMap = { 'A': 1, '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9, '10': 10, 'J': 11, 'Q': 12, 'K': 13 };
+
+  if (jokers.length === 0) {
+    const hasA = natural.some(c => c.rank === 'A');
+    const hasKOrQ = natural.some(c => c.rank === 'K' || c.rank === 'Q');
+    const isAceHigh = hasA && hasKOrQ;
+    const rankFn = (c) => (isAceHigh && c.rank === 'A' ? 14 : (rankOrderMap[c.rank] || 0));
+    return [...natural].sort((a, b) => rankFn(a) - rankFn(b));
+  }
+
+  const joker = jokers[0];
+  const hasA = natural.some(c => c.rank === 'A');
+  const hasKOrQ = natural.some(c => c.rank === 'K' || c.rank === 'Q');
+  const isAceHigh = hasA && hasKOrQ;
+  const rankFn = (c) => (isAceHigh && c.rank === 'A' ? 14 : (rankOrderMap[c.rank] || 0));
+  const sortedNatural = [...natural].sort((a, b) => rankFn(a) - rankFn(b));
+
+  let gapIndex = -1;
+  for (let i = 0; i < sortedNatural.length - 1; i++) {
+    const diff = rankFn(sortedNatural[i + 1]) - rankFn(sortedNatural[i]);
+    if (diff === 2) {
+      gapIndex = i;
+      break;
+    }
+  }
+
+  if (gapIndex !== -1) {
+    const result = [...sortedNatural];
+    result.splice(gapIndex + 1, 0, joker);
+    return result;
+  }
+
+  const highest = rankFn(sortedNatural[sortedNatural.length - 1]);
+  if (highest >= 13) {
+    return [joker, ...sortedNatural];
+  }
+
+  return [...sortedNatural, joker];
+}
+
+function checkValidSekaTris(cards) {
+  if (!cards || cards.length !== 3) return false;
+  const jokers = cards.filter(isSekaWildJoker);
+  const natural = cards.filter(c => !isSekaWildJoker(c));
+  if (jokers.length > 1) return false;
+  if (natural.length === 0) return false;
+
+  const suit = natural[0].suit;
+  if (!natural.every(c => c.suit === suit)) return false;
+
+  const rankOrderMap = { 'A': 1, '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9, '10': 10, 'J': 11, 'Q': 12, 'K': 13 };
+  const testSeq = (orderMap) => {
+    const nums = natural.map(c => orderMap(c.rank)).sort((a, b) => a - b);
+    for (let i = 0; i < nums.length - 1; i++) {
+      if (nums[i] === nums[i + 1]) return false;
+    }
+    const span = nums[nums.length - 1] - nums[0] + 1;
+    const missing = span - nums.length;
+    return span <= 3 && missing <= jokers.length;
+  };
+  return testSeq(r => rankOrderMap[r]) || testSeq(r => r === 'A' ? 14 : rankOrderMap[r]);
+}
+
+function checkValidSekaQuatris(cards) {
+  if (!cards || cards.length !== 4) return false;
+  const jokers = cards.filter(isSekaWildJoker);
+  const natural = cards.filter(c => !isSekaWildJoker(c));
+  if (jokers.length > 1) return false;
+  if (natural.length === 0) return false;
+
+  const suit = natural[0].suit;
+  if (!natural.every(c => c.suit === suit)) return false;
+
+  const rankOrderMap = { 'A': 1, '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9, '10': 10, 'J': 11, 'Q': 12, 'K': 13 };
+  const testSeq = (orderMap) => {
+    const nums = natural.map(c => orderMap(c.rank)).sort((a, b) => a - b);
+    for (let i = 0; i < nums.length - 1; i++) {
+      if (nums[i] === nums[i + 1]) return false;
+    }
+    const span = nums[nums.length - 1] - nums[0] + 1;
+    const missing = span - nums.length;
+    return span <= 4 && missing <= jokers.length;
+  };
+  return testSeq(r => rankOrderMap[r]) || testSeq(r => r === 'A' ? 14 : rankOrderMap[r]);
+}
+
+function arrangeSekaHandOptimal(hand) {
+  if (!hand || hand.length <= 1) return { arrangedCards: hand || [], isWin: false };
+
+  const jokers = hand.filter(isSekaWildJoker);
+  let availableJokers = [...jokers];
+  const natural = hand.filter(c => !isSekaWildJoker(c));
+  const rankOrderMap = { 'A': 1, '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9, '10': 10, 'J': 11, 'Q': 12, 'K': 13 };
+
+  const suits = ['♠', '♥', '♦', '♣'];
+  const bySuit = {};
+  suits.forEach(s => bySuit[s] = []);
+  natural.forEach(c => {
+    if (bySuit[c.suit]) bySuit[c.suit].push(c);
+  });
+
+  const arrangedGroups = [];
+
+  for (const s of suits) {
+    const suitCards = bySuit[s].sort((a, b) => (rankOrderMap[a.rank] || 0) - (rankOrderMap[b.rank] || 0));
+    let usedInSuit = new Set();
+
+    // 0. Check natural complete 4-card Quatris sequence FIRST (e.g. J-Q-K-A, 7-8-9-10)
+    for (let i = 0; i <= suitCards.length - 4; i++) {
+      const quad = suitCards.slice(i, i + 4);
+      if (checkValidSekaQuatris(quad) && !quad.some(c => usedInSuit.has(c.id))) {
+        arrangedGroups.push(arrangeSekaMeld(quad));
+        quad.forEach(c => usedInSuit.add(c.id));
+      }
+    }
+    // Also check Ace-high Quatris wrapping (J-Q-K then A at start of sorted array)
+    if (suitCards.length >= 4) {
+      const aceCard = suitCards.find(c => c.rank === 'A' && !usedInSuit.has(c.id));
+      if (aceCard) {
+        const highCards = suitCards.filter(c => !usedInSuit.has(c.id) && ['J', 'Q', 'K'].includes(c.rank));
+        if (highCards.length >= 3) {
+          const quad = [...highCards.slice(0, 3), aceCard];
+          if (checkValidSekaQuatris(quad)) {
+            arrangedGroups.push(arrangeSekaMeld(quad));
+            quad.forEach(c => usedInSuit.add(c.id));
+          }
+        }
+      }
+    }
+
+    // 1. Check natural complete 3-card Tris sequence
+    const remForTris = suitCards.filter(c => !usedInSuit.has(c.id));
+    for (let i = 0; i <= remForTris.length - 3; i++) {
+      const trio = remForTris.slice(i, i + 3);
+      if (checkValidSekaTris(trio) && !trio.some(c => usedInSuit.has(c.id))) {
+        arrangedGroups.push(arrangeSekaMeld(trio));
+        trio.forEach(c => usedInSuit.add(c.id));
+      }
+    }
+    // 1b. Check Ace-high Tris (Q-K-A) that may not be caught by consecutive slicing
+    //     because A is sorted first (rank 1) while Q and K are at the end
+    if (remForTris.length >= 3) {
+      const aceCard = remForTris.find(c => c.rank === 'A' && !usedInSuit.has(c.id));
+      if (aceCard) {
+        const kCard = remForTris.find(c => c.rank === 'K' && !usedInSuit.has(c.id));
+        const qCard = remForTris.find(c => c.rank === 'Q' && !usedInSuit.has(c.id));
+        if (kCard && qCard) {
+          const aceHighTrio = [qCard, kCard, aceCard];
+          if (checkValidSekaTris(aceHighTrio)) {
+            arrangedGroups.push(arrangeSekaMeld(aceHighTrio));
+            aceHighTrio.forEach(c => usedInSuit.add(c.id));
+          }
+        }
+      }
+    }
+
+    // 2. Check 3-card gap with Joker forming Quatris (e.g. J♠ Q♠ 🃏 → J♠ Q♠ 🃏 A♠ style, or 7♦ 8♦ 🃏 10♦)
+    if (availableJokers.length > 0) {
+      const remForQuatrisJoker = suitCards.filter(c => !usedInSuit.has(c.id));
+      for (let i = 0; i < remForQuatrisJoker.length - 2; i++) {
+        for (let j = i + 1; j < remForQuatrisJoker.length - 1; j++) {
+          for (let k = j + 1; k < remForQuatrisJoker.length; k++) {
+            if (availableJokers.length === 0) break;
+            const c1 = remForQuatrisJoker[i], c2 = remForQuatrisJoker[j], c3 = remForQuatrisJoker[k];
+            if (usedInSuit.has(c1.id) || usedInSuit.has(c2.id) || usedInSuit.has(c3.id)) continue;
+            const jk = availableJokers[0];
+            if (checkValidSekaQuatris([c1, c2, c3, jk])) {
+              arrangedGroups.push(arrangeSekaMeld([c1, c2, c3, jk]));
+              usedInSuit.add(c1.id); usedInSuit.add(c2.id); usedInSuit.add(c3.id);
+              availableJokers.shift();
+            }
+          }
+        }
+      }
+    }
+
+    // 3. Check 2-card gap pairs with Joker for Tris (e.g. 5♥ 7♥ → 5♥ Joker 7♥, or 5♥ 6♥ → 5♥ 6♥ Joker)
+    if (availableJokers.length > 0) {
+      const remSuitCards = suitCards.filter(c => !usedInSuit.has(c.id));
+      for (let i = 0; i < remSuitCards.length; i++) {
+        for (let j = i + 1; j < remSuitCards.length; j++) {
+          if (availableJokers.length === 0) break;
+          const c1 = remSuitCards[i];
+          const c2 = remSuitCards[j];
+          if (usedInSuit.has(c1.id) || usedInSuit.has(c2.id)) continue;
+
+          const jk = availableJokers[0];
+          if (checkValidSekaTris([c1, c2, jk])) {
+            const arrangedTrio = arrangeSekaMeld([c1, c2, jk]);
+            arrangedGroups.push(arrangedTrio);
+            usedInSuit.add(c1.id);
+            usedInSuit.add(c2.id);
+            availableJokers.shift();
+          }
+        }
+      }
+    }
+
+    // Remaining natural cards in this suit
+    const leftoverSuit = suitCards.filter(c => !usedInSuit.has(c.id));
+    if (leftoverSuit.length > 0) {
+      arrangedGroups.push(leftoverSuit);
+    }
+  }
+
+  // If there are still unused jokers: NEVER place them consecutively (ተከታታይ ጆከር ማድረግ አይቻልም)!
+  if (availableJokers.length === 1) {
+    arrangedGroups.push([availableJokers[0]]);
+  } else if (availableJokers.length > 1) {
+    // If 2 jokers are unused, separate them so they are never side-by-side
+    if (arrangedGroups.length >= 2) {
+      arrangedGroups[0].push(availableJokers[0]);
+      arrangedGroups[arrangedGroups.length - 1].push(availableJokers[1]);
+    } else {
+      arrangedGroups.unshift([availableJokers[0]]);
+      arrangedGroups.push([availableJokers[1]]);
+    }
+  }
+
+  return {
+    arrangedCards: arrangedGroups.flat(),
+    isWin: false
+  };
+}
+
+// Single "✨ ደርድር" button: finds and applies the ONE single best arrangement (no options/cycling)
 smartSortBtn.addEventListener('click', () => {
   if (!currentGameState || !currentGameState.myHand || currentGameState.myHand.length === 0) return;
   playCardSound();
-  isAutoSortActive = true;
-  currentGameState.myHand = arrangeHandOptimal(currentGameState.myHand, currentGameState);
+
+  // If Seka game: sort by suited sequences (ጦር) placing Jokers in exact spots
+  if (currentGameState.gameType === 'SEKA') {
+    const sekaArranged = arrangeSekaHandOptimal(currentGameState.myHand);
+    currentGameState.myHand = sekaArranged.arrangedCards;
+    playerOrderedCardIds = sekaArranged.arrangedCards.map(c => c.id);
+    showSortToast('✨ የሴካ ካርታዎችህ ተደርድረዋል (ጆከር የሚገባበት ቦታ ገብቷል)');
+    renderPlayerHand(currentGameState.myHand);
+    return;
+  }
+
+  const best = findSingleBestArrangement(currentGameState.myHand, currentGameState);
+  currentGameState.myHand = best.arrangedCards;
+  playerOrderedCardIds = currentGameState.myHand.map(c => c.id);
+
+  if (best.isConquer) {
+    currentGameState._winningMelds = best.meldsCards;
+    currentGameState._tetayCardId = best.tetayCard.id;
+    selectedCardId = best.tetayCard.id;
+    selectedCardsSet.clear();
+    selectedCardsSet.add(selectedCardId);
+    showSortToast(`👑 ኮንከር! 13ቱ ካርታዎች ተሰርተዋል (ተጣይ: ${best.tetayCard.rank}${best.tetayCard.suit})`);
+  } else {
+    currentGameState._winningMelds = null;
+    currentGameState._tetayCardId = null;
+    showSortToast(`✨ ካርታዎችህ በተሻለ ሁኔታ ተደርድረዋል`);
+  }
+
+  smartSortBtn.textContent = '✨ ደርድር';
   renderPlayerHand(currentGameState.myHand);
 });
 
-/**
- * Optimal Conquer Hand Arranger:
- * Arranges all possible melds, pairs, and connected cards at once:
- * 1. Pure 4-card Sequences & Sets (Runs & Groups) [Score: 1000 + points]
- * 2. Pure 3-card Sequences & Sets (Runs & Groups) [Score: 800 + points]
- * 3. 3-card Melds completed with Jokers [Score: 500 + points] (Pure melds NEVER broken!)
- * 4. 2-card Pairs (same rank or consecutive suit) [Score: 70 / 65]
- * 5. Connects related singletons directly to adjacent pairs (e.g. Q♣ + Q♦ + J♦ kept together)
- * 6. Groups remaining single cards by Suit & Rank
- * 7. Places Jokers in the top advantage positions (first slot or highest pair)
- * 8. Tags the first card of each group with isGroupStart = true for visual spacing
- */
-function arrangeHandOptimal(hand, state) {
-  if (!hand || hand.length <= 1) return hand;
+// -------------------------------------------------------------
+// BEST CONQUER HAND ARRANGER
+// Exhaustively searches to find the ONE single best combination:
+// - Keeps valid Tris (e.g. 5♥ 6♥ 7♥) 100% intact and sorted in ascending order
+// - Maximizes complete melds (13 cards = conquer)
+// - Places the worst/highest card at the end as "ተጣይ"
+// -------------------------------------------------------------
+function findSingleBestArrangement(hand, state) {
+  if (!hand || hand.length <= 1) {
+    return { arrangedCards: hand || [], meldsCards: [], tetayCard: hand ? hand[0] : null, isConquer: false, meldedCount: 0 };
+  }
 
-  const jokers = hand.filter(c => isCardJoker(c, state));
-  const naturals = hand.filter(c => !isCardJoker(c, state));
-  const suits = ['♠', '♥', '♣', '♦'];
+  const n = hand.length;
+  const jokerRank = state ? state.jokerRank : null;
+  const jokerSuits = state ? state.jokerSuits : null;
+  const candidates = [];
 
-  // 1. Identify all candidate full 3 or 4 card melds
-  const candidateMelds = [];
-
-  // 1a. Pure sequences of 3 or 4 same suit (Highest Priority)
-  for (const suit of suits) {
-    const suitCards = naturals
-      .filter(c => c.suit === suit)
-      .sort((a, b) => getRankNum(a.rank) - getRankNum(b.rank));
-
-    // Pure runs of length 4 and 3 (Ace Low)
-    for (let len = 4; len >= 3; len--) {
-      for (let i = 0; i <= suitCards.length - len; i++) {
-        const slice = suitCards.slice(i, i + len);
-        let valid = true;
-        let points = 0;
-        for (let k = 0; k < len - 1; k++) {
-          if (getRankNum(slice[k + 1].rank) !== getRankNum(slice[k].rank) + 1) {
-            valid = false;
-            break;
-          }
-        }
-        if (valid) {
-          slice.forEach(c => { points += c.pointValue || 0; });
-          candidateMelds.push({
-            cards: slice,
-            score: (len === 4 ? 1000 : 800) + points,
-            type: 'seq'
-          });
-        }
-      }
-    }
-
-    // High Ace sequences (e.g. 10-J-Q-K-A, J-Q-K-A, Q-K-A)
-    const highSuitCards = naturals
-      .filter(c => c.suit === suit)
-      .sort((a, b) => getRankNum(a.rank, true) - getRankNum(b.rank, true));
-
-    for (let len = 4; len >= 3; len--) {
-      for (let i = 0; i <= highSuitCards.length - len; i++) {
-        const slice = highSuitCards.slice(i, i + len);
-        let valid = true;
-        let points = 0;
-        for (let k = 0; k < len - 1; k++) {
-          if (getRankNum(slice[k + 1].rank, true) !== getRankNum(slice[k].rank, true) + 1) {
-            valid = false;
-            break;
-          }
-        }
-        if (valid) {
-          slice.forEach(c => { points += c.pointValue || 0; });
-          candidateMelds.push({
-            cards: slice,
-            score: (len === 4 ? 1000 : 800) + points,
-            type: 'seq'
+  // 1. All valid Tris (3 cards)
+  for (let i = 0; i < n - 2; i++) {
+    for (let j = i + 1; j < n - 1; j++) {
+      for (let k = j + 1; k < n; k++) {
+        const trio = [hand[i], hand[j], hand[k]];
+        if (isValidTris(trio, jokerRank, jokerSuits)) {
+          let pts = 0;
+          trio.forEach(c => { pts += c.pointValue || 0; });
+          const isPure = isNaturalMeld(trio);
+          candidates.push({
+            cards: trio,
+            len: 3,
+            points: pts,
+            isPure,
+            key: trio.map(c => c.id).sort().join(',')
           });
         }
       }
     }
   }
 
-  // 1b. Pure sets of 3 or 4 same rank
-  const rankGroups = new Map();
-  naturals.forEach(c => {
-    if (!rankGroups.has(c.rank)) rankGroups.set(c.rank, []);
-    rankGroups.get(c.rank).push(c);
-  });
-
-  rankGroups.forEach((cards) => {
-    const uniqueSuits = [];
-    const seen = new Set();
-    cards.forEach(c => {
-      if (!seen.has(c.suit)) {
-        seen.add(c.suit);
-        uniqueSuits.push(c);
+  // 2. All valid Quatris (4 cards)
+  for (let i = 0; i < n - 3; i++) {
+    for (let j = i + 1; j < n - 2; j++) {
+      for (let k = j + 1; k < n - 1; k++) {
+        for (let l = k + 1; l < n; l++) {
+          const quad = [hand[i], hand[j], hand[k], hand[l]];
+          if (isValidQuatris(quad, jokerRank, jokerSuits)) {
+            let pts = 0;
+            quad.forEach(c => { pts += c.pointValue || 0; });
+            const isPure = isNaturalMeld(quad);
+            candidates.push({
+              cards: quad,
+              len: 4,
+              points: pts,
+              isPure,
+              key: quad.map(c => c.id).sort().join(',')
+            });
+          }
+        }
       }
-    });
-    if (uniqueSuits.length >= 3) {
-      let points = 0;
-      uniqueSuits.forEach(c => { points += c.pointValue || 0; });
-      const len = Math.min(uniqueSuits.length, 4);
-      candidateMelds.push({
-        cards: uniqueSuits.slice(0, 4),
-        score: (len === 4 ? 1000 : 800) + points,
-        type: 'set'
-      });
     }
-  });
+  }
 
-  // 1c. 3-card melds using 1 Joker (Score ~500, BELOW pure melds so pure runs like 9-10-J are never broken!)
-  if (jokers.length > 0) {
-    for (const suit of suits) {
-      const suitCards = naturals
-        .filter(c => c.suit === suit)
-        .sort((a, b) => getRankNum(a.rank) - getRankNum(b.rank));
+  // Backtrack to find the single best disjoint combination of melds
+  let bestMelds = [];
+  let bestScore = -1;
+  let maxMeldedCards = 0;
 
-      for (let i = 0; i < suitCards.length - 1; i++) {
-        const c1 = suitCards[i];
-        const c2 = suitCards[i + 1];
-        const diff = getRankNum(c2.rank) - getRankNum(c1.rank);
-        const cardPoints = (c1.pointValue || 0) + (c2.pointValue || 0);
+  function evaluateCombination(currentMelds, usedIds) {
+    let totalCards = 0;
+    let pureCount = 0;
+    let meldPoints = 0;
 
-        if (diff === 1) {
-          candidateMelds.push({
-            cards: [c1, c2],
-            needJoker: true,
-            score: 500 + cardPoints,
-            type: 'joker_seq'
-          });
-        } else if (diff === 2) {
-          candidateMelds.push({
-            cards: [c1, c2],
-            needJoker: true,
-            isSplit: true,
-            score: 480 + cardPoints,
-            type: 'joker_seq'
-          });
+    for (const m of currentMelds) {
+      totalCards += m.len;
+      if (m.isPure) pureCount++;
+      meldPoints += m.points;
+    }
+
+    if (totalCards >= 13) return 1000000 + meldPoints;
+
+    // Heavily reward complete melded cards: 10,000 per card
+    let score = totalCards * 10000;
+
+    // Heavily reward pure melds: 50,000 per pure meld!
+    // This strictly prioritizes keeping natural runs/sets intact instead of stealing cards for wild jokers!
+    score += pureCount * 50000;
+
+    const unmelded = hand.filter(c => !usedIds.has(c.id));
+
+    // Penalty check: Only penalize when a wild card is used in a 3-of-a-kind SET (same rank)
+    // and breaks an open-ended suited run, stranding the neighbor alone.
+    // NEVER penalize completing a sequence or Quatris (e.g. 1♥ 2♥ [Joker] 4♥)!
+    if (totalCards < 13) {
+      for (const m of currentMelds) {
+        if (!m.isPure && m.len === 3) {
+          const nats = m.cards.filter(c => !isCardJoker(c, state));
+          const isSetMeld = nats.length >= 2 && nats.every(c => c.rank === nats[0].rank);
+          if (isSetMeld) {
+            for (const card of m.cards) {
+              if (isCardJoker(card, state)) {
+                const suitedNeighbor = unmelded.find(u => u.suit === card.suit && getCardRankDistance(u, card) === 1);
+                if (suitedNeighbor) {
+                  const neighborHasOther = unmelded.some(u => u.id !== suitedNeighbor.id && (u.rank === suitedNeighbor.rank || (u.suit === suitedNeighbor.suit && getCardRankDistance(u, suitedNeighbor) <= 2)));
+                  if (!neighborHasOther) {
+                    score -= 40000;
+                  }
+                }
+              }
+            }
+          }
         }
       }
     }
 
-    rankGroups.forEach((cards) => {
-      if (cards.length >= 2 && cards[0].suit !== cards[1].suit) {
-        const cardPoints = (cards[0].pointValue || 0) + (cards[1].pointValue || 0);
-        candidateMelds.push({
-          cards: [cards[0], cards[1]],
-          needJoker: true,
-          score: 500 + cardPoints,
-          type: 'joker_set'
-        });
+    // Evaluate unmelded opportunities among remaining cards:
+    const rankMap = new Map();
+    for (const c of unmelded) {
+      if (!rankMap.has(c.rank)) rankMap.set(c.rank, []);
+      rankMap.get(c.rank).push(c);
+    }
+    for (const [r, cards] of rankMap.entries()) {
+      if (cards.length >= 2) score += 600; // Strong Tris opportunity (Pair of same rank)!
+    }
+
+    const suitMap = new Map();
+    for (const c of unmelded) {
+      if (!suitMap.has(c.suit)) suitMap.set(c.suit, []);
+      suitMap.get(c.suit).push(getRankNum(c.rank));
+    }
+    for (const [s, nums] of suitMap.entries()) {
+      nums.sort((a, b) => a - b);
+      for (let i = 0; i < nums.length - 1; i++) {
+        if (nums[i + 1] === nums[i] + 1) score += 500; // Open-ended consecutive run opportunity!
+        else if (nums[i + 1] === nums[i] + 2) score += 250; // Inside straight opportunity!
       }
-    });
+    }
+
+    score += meldPoints;
+    return score;
   }
 
-  // Pick disjoint candidate melds with highest score
-  candidateMelds.sort((a, b) => b.score - a.score);
-  const chosenMelds = [];
+  function backtrack(startIdx, currentMelds, usedIds, totalCards) {
+    const score = evaluateCombination(currentMelds, usedIds);
+    if (score > bestScore) {
+      bestScore = score;
+      maxMeldedCards = totalCards;
+      bestMelds = [...currentMelds];
+    }
+
+    if (totalCards >= 13) return;
+
+    for (let i = startIdx; i < candidates.length; i++) {
+      const cand = candidates[i];
+      let overlaps = false;
+      for (const c of cand.cards) {
+        if (usedIds.has(c.id)) {
+          overlaps = true;
+          break;
+        }
+      }
+      if (overlaps) continue;
+
+      for (const c of cand.cards) usedIds.add(c.id);
+      currentMelds.push(cand);
+
+      backtrack(i + 1, currentMelds, usedIds, totalCards + cand.len);
+
+      currentMelds.pop();
+      for (const c of cand.cards) usedIds.delete(c.id);
+    }
+  }
+
+  backtrack(0, [], new Set(), 0);
+
+  // Format best melds: ensure sequences (like 5♥ 6♥ 7♥) are ordered strictly ascending!
   const usedIds = new Set();
-  let remainingJokers = [...jokers];
+  const meldsCards = [];
 
-  for (const cand of candidateMelds) {
-    const canUseNaturals = cand.cards.every(c => !usedIds.has(c.id));
-    const canUseJoker = !cand.needJoker || remainingJokers.length > 0;
-    if (canUseNaturals && canUseJoker) {
-      cand.cards.forEach(c => usedIds.add(c.id));
-      let meldGroup = [...cand.cards];
-      if (cand.needJoker) {
-        const jk = remainingJokers.shift();
-        if (cand.isSplit) {
-          meldGroup = [cand.cards[0], jk, cand.cards[1]];
-        } else {
-          meldGroup.push(jk);
-        }
+  for (const meld of bestMelds) {
+    const cards = [...meld.cards];
+    if (isNaturalMeld(cards)) {
+      if (isSequenceSameSuit(cards)) {
+        const hasA = cards.some(c => c.rank === 'A');
+        const hasK = cards.some(c => c.rank === 'K');
+        const has2 = cards.some(c => c.rank === '2');
+        const aceHigh = hasA && hasK && !has2;
+        cards.sort((a, b) => getRankNum(a.rank, aceHigh) - getRankNum(b.rank, aceHigh));
+      } else {
+        const ordered = orderSameRankSet(cards);
+        cards.length = 0;
+        cards.push(...ordered);
       }
-      chosenMelds.push(meldGroup);
-    }
-  }
+    } else {
+      const naturals = cards.filter(c => !isCardJoker(c, state));
+      const jokers = cards.filter(c => isCardJoker(c, state));
+      const isSeq = naturals.length > 0 && naturals.every(c => c.suit === naturals[0].suit);
+      const isSet = naturals.length > 0 && naturals.every(c => c.rank === naturals[0].rank);
 
-  let unmelded = naturals.filter(c => !usedIds.has(c.id));
+      if (isSeq) {
+        const hasA = cards.some(c => c.rank === 'A');
+        const hasK = cards.some(c => c.rank === 'K');
+        const has2 = cards.some(c => c.rank === '2');
+        const aceHigh = hasA && hasK && !has2;
+        naturals.sort((a, b) => getRankNum(a.rank, aceHigh) - getRankNum(b.rank, aceHigh));
 
-  // 2. Identify candidate Pairs among unmelded cards
-  const candidatePairs = [];
-  for (let i = 0; i < unmelded.length; i++) {
-    for (let j = i + 1; j < unmelded.length; j++) {
-      const a = unmelded[i];
-      const b = unmelded[j];
-      if (a.rank === b.rank) {
-        candidatePairs.push({ a, b, score: 70, type: 'rank' });
-      } else if (a.suit === b.suit && Math.abs(getRankNum(a.rank) - getRankNum(b.rank)) === 1) {
-        candidatePairs.push({ a, b, score: 65, type: 'suited' });
-      } else if (a.suit === b.suit && Math.abs(getRankNum(a.rank) - getRankNum(b.rank)) === 2) {
-        candidatePairs.push({ a, b, score: 35, type: 'gap' });
-      }
-    }
-  }
-  candidatePairs.sort((x, y) => y.score - x.score);
+        if (jokers.length === 1 && naturals.length >= 2) {
+          // Find if there is any inside gap between adjacent natural cards (e.g. 9 and J -> missing 10!):
+          const natNums = naturals.map(c => getRankNum(c.rank, aceHigh));
+          let insertIdx = -1;
+          for (let i = 0; i < natNums.length - 1; i++) {
+            if (natNums[i + 1] === natNums[i] + 2) {
+              insertIdx = i + 1;
+              break;
+            }
+          }
 
-  const chosenPairs = [];
-  const usedInPairs = new Set();
-  for (const p of candidatePairs) {
-    if (!usedInPairs.has(p.a.id) && !usedInPairs.has(p.b.id)) {
-      usedInPairs.add(p.a.id);
-      usedInPairs.add(p.b.id);
-      chosenPairs.push([p.a, p.b]);
-    }
-  }
-
-  let singletons = unmelded.filter(c => !usedInPairs.has(c.id));
-
-  // 3. ATTACHMENT: Connect any related singleton directly to adjacent pair!
-  // E.g. J♦ attaches directly next to [Q♣, Q♦] => [Q♣, Q♦, J♦]
-  const attachedSingletons = new Set();
-  for (const group of chosenPairs) {
-    for (let k = 0; k < singletons.length; k++) {
-      const s = singletons[k];
-      if (attachedSingletons.has(s.id)) continue;
-
-      const connIndex = group.findIndex(c => {
-        if (c.rank === s.rank) return true;
-        if (c.suit === s.suit && Math.abs(getRankNum(c.rank) - getRankNum(s.rank)) === 1) return true;
-        return false;
-      });
-
-      if (connIndex !== -1) {
-        const matchingCard = group[connIndex];
-        if (connIndex === 0) {
-          if (getRankNum(s.rank) < getRankNum(matchingCard.rank)) {
-            group.unshift(s);
+          cards.length = 0;
+          if (insertIdx !== -1) {
+            // Put the Joker exactly in the middle! (e.g. 9, Joker, J, Q)
+            cards.push(...naturals.slice(0, insertIdx), jokers[0], ...naturals.slice(insertIdx));
           } else {
-            group.splice(1, 0, s);
+            // If no gap, place at end or beginning
+            const lastNum = natNums[natNums.length - 1];
+            if (lastNum >= 14 || (lastNum === 13 && !aceHigh)) {
+              cards.push(jokers[0], ...naturals);
+            } else {
+              cards.push(...naturals, jokers[0]);
+            }
           }
         } else {
-          if (getRankNum(s.rank) > getRankNum(matchingCard.rank)) {
+          cards.length = 0;
+          cards.push(...naturals, ...jokers);
+        }
+      } else if (isSet) {
+        cards.length = 0;
+        cards.push(...orderSameRankSet([...naturals, ...jokers]));
+      }
+    }
+    cards.forEach(c => usedIds.add(c.id));
+    meldsCards.push(cards);
+  }
+
+  let unmelded = hand.filter(c => !usedIds.has(c.id));
+
+  // Connect any unmelded card that extends an existing meld!
+  let attachedAny = true;
+  while (attachedAny) {
+    attachedAny = false;
+    for (const group of meldsCards) {
+      const naturals = group.filter(c => !isCardJoker(c, state));
+      if (naturals.length === 0) continue;
+
+      const isSet = naturals.every(c => c.rank === naturals[0].rank);
+      const isSeq = naturals.every(c => c.suit === naturals[0].suit);
+
+      if (isSet) {
+        const setRank = naturals[0].rank;
+        for (let idx = 0; idx < unmelded.length; idx++) {
+          const s = unmelded[idx];
+          if (s.rank === setRank) {
             group.push(s);
-          } else {
-            group.splice(connIndex, 0, s);
+            const reordered = orderSameRankSet(group);
+            group.length = 0;
+            group.push(...reordered);
+            unmelded.splice(idx, 1);
+            attachedAny = true;
+            break;
           }
         }
-        attachedSingletons.add(s.id);
+      } else if (isSeq) {
+        const suit = naturals[0].suit;
+        const hasA = group.some(c => c.rank === 'A');
+        const hasK = group.some(c => c.rank === 'K');
+        const has2 = group.some(c => c.rank === '2');
+        const aceHigh = hasA && hasK && !has2;
+
+        const firstCard = group[0];
+        const lastCard = group[group.length - 1];
+        const firstNum = getRankNum(firstCard.rank, aceHigh);
+        const lastNum = getRankNum(lastCard.rank, aceHigh);
+
+        for (let idx = 0; idx < unmelded.length; idx++) {
+          const s = unmelded[idx];
+          if (s.suit !== suit) continue;
+          const sNum = getRankNum(s.rank, aceHigh);
+
+          if (sNum === lastNum + 1) {
+            group.push(s);
+            unmelded.splice(idx, 1);
+            attachedAny = true;
+            break;
+          } else if (sNum === firstNum - 1) {
+            group.unshift(s);
+            unmelded.splice(idx, 1);
+            attachedAny = true;
+            break;
+          } else if (s.rank === 'A' && lastCard.rank === 'K') {
+            group.push(s);
+            unmelded.splice(idx, 1);
+            attachedAny = true;
+            break;
+          } else if (s.rank === 'A' && firstCard.rank === '2') {
+            group.unshift(s);
+            unmelded.splice(idx, 1);
+            attachedAny = true;
+            break;
+          }
+        }
       }
     }
   }
 
-  singletons = singletons.filter(s => !attachedSingletons.has(s.id));
+  // -------------------------------------------------------------
+  // GROUPING UNMELDED CARDS (General Chaining / Bridge Graph Algorithm)
+  // Seamlessly links pairs and suited sequences into continuous unbroken chains
+  // -------------------------------------------------------------
+  const { chains, singles } = buildChainsFromCards(unmelded);
 
-  // 4. Sort remaining unattached singletons by Suit then Rank
-  const suitOrder = { '♠': 1, '♥': 2, '♣': 3, '♦': 4 };
-  singletons.sort((a, b) => {
-    if (suitOrder[a.suit] !== suitOrder[b.suit]) {
-      return (suitOrder[a.suit] || 0) - (suitOrder[b.suit] || 0);
+  // Unused Jokers placement:
+  const unmeldedJokers = [];
+  for (let i = singles.length - 1; i >= 0; i--) {
+    if (isCardJoker(singles[i], state)) {
+      unmeldedJokers.push(singles.splice(i, 1)[0]);
     }
-    return getRankNum(a.rank) - getRankNum(b.rank);
-  });
-
-  // 5. Place Jokers in the top possible place for maximum user advantage:
-  // If an unused Joker exists, pair it with the highest-value single card (e.g. Ace, King, Queen)
-  if (remainingJokers.length > 0 && singletons.length > 0) {
-    singletons.sort((a, b) => (b.pointValue || 0) - (a.pointValue || 0));
-    const bestCard = singletons.shift();
-    const jk = remainingJokers.shift();
-    chosenPairs.unshift([bestCard, jk]);
   }
 
-  // 6. Build logical groups for clear visual organization
-  const logicalGroups = [];
-  if (remainingJokers.length > 0) {
-    logicalGroups.push({ name: '⭐ Joker', cards: remainingJokers });
-  }
-  chosenMelds.forEach((m, idx) => {
-    logicalGroups.push({ name: `Meld ${idx + 1} (${m.length})`, cards: m });
-  });
-  chosenPairs.forEach((p, idx) => {
-    logicalGroups.push({ name: `Pair (${p.length})`, cards: p });
-  });
-  if (singletons.length > 0) {
-    logicalGroups.push({ name: `Cards (${singletons.length})`, cards: singletons });
+  if (unmeldedJokers.length > 0) {
+    if (chains.length > 0) {
+      // Put Joker with the highest chain opportunity!
+      chains[0].push(...unmeldedJokers);
+    } else {
+      singles.unshift(...unmeldedJokers);
+    }
   }
 
-  // Assemble finalHand and mark isGroupStart for visual margin separation
-  const finalHand = [];
-  logicalGroups.forEach((group, gIdx) => {
-    group.cards.forEach((card, cIdx) => {
-      card.isGroupStart = (cIdx === 0 && gIdx > 0);
-      finalHand.push(card);
-    });
-  });
-
-  if (state) {
-    state._lastLogicalGroups = logicalGroups;
+  // Flatten the arranged cards
+  const resultCards = [];
+  for (const group of meldsCards) {
+    resultCards.push(...group.map(c => ({ ...c, isTetay: false })));
+  }
+  for (const group of chains) {
+    resultCards.push(...group.map(c => ({ ...c, isTetay: false })));
+  }
+  for (const s of singles) {
+    resultCards.push({ ...s, isTetay: false });
   }
 
-  return finalHand;
+  const isConquer = (maxMeldedCards === 13);
+  const tetayCard = resultCards[resultCards.length - 1];
+  if (isConquer && tetayCard) {
+    tetayCard.isTetay = true;
+  }
+
+  return {
+    arrangedCards: resultCards,
+    meldsCards,
+    tetayCard,
+    isConquer,
+    meldedCount: maxMeldedCards
+  };
+}
+
+// Backward compatibility alias: Optimal Conquer Hand Arranger
+function arrangeHandOptimal(hand, state) {
+  const best = findSingleBestArrangement(hand, state);
+  return best ? best.arrangedCards : (hand || []);
 }
 
 // Main Game Renderer
 function renderGame(state) {
-  tableIdDisplay.textContent = `#${state.roomId.replace('room_', '').replace('bot_', 'BOT-')}`;
-  potDisplay.textContent = `POT: ${state.pot} ETB`;
-  deckCount.textContent = state.deckCardCount;
-
-  // Turn status
-  const isMyTurn = state.currentTurnPlayerId === userId;
-  turnIndicator.textContent = isMyTurn ? 'YOUR TURN' : (state.opponent ? `${state.opponent.name}'s Turn` : 'Waiting for Player...');
-  turnIndicator.style.color = isMyTurn ? '#4ade80' : '#f5b041';
-
-  // Rule 2: Cut Joker modal for Joiner — show 28th card + High/Low buttons
-  if (state.status === 'CUTTING_JOKER' && state.joiner && state.joiner.id === userId && state.baseCard) {
-    cutJokerModal.style.display = 'flex';
-    // Display the revealed 28th card
-    revealedBaseCard.innerHTML = createCardHTML(state.baseCard, false, true);
-
-    // Calculate what High and Low would produce
-    const rankOrder = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
-    const baseRankIdx = rankOrder.indexOf(state.baseCard.rank);
-    const highRank = baseRankIdx < rankOrder.length - 1 ? rankOrder[baseRankIdx + 1] : rankOrder[0];
-    const lowRank = baseRankIdx > 0 ? rankOrder[baseRankIdx - 1] : rankOrder[rankOrder.length - 1];
-    const colorSuits = (state.baseCard.suit === '♣' || state.baseCard.suit === '♠') ? '♣ ♠' : '♥ ♦';
-
-    jokerPreviewInfo.innerHTML = `
-      <span style="color: #4ade80;">⬆️ High → <strong>${highRank}${colorSuits.split(' ')[0]}</strong> & <strong>${highRank}${colorSuits.split(' ')[1]}</strong> become Jokers</span>
-      <br>
-      <span style="color: #f97316;">⬇️ Low → <strong>${lowRank}${colorSuits.split(' ')[0]}</strong> & <strong>${lowRank}${colorSuits.split(' ')[1]}</strong> become Jokers</span>
-    `;
-  } else if (state.status !== 'CUTTING_JOKER') {
-    cutJokerModal.style.display = 'none';
+  const isSeka = state.gameType === 'SEKA';
+  const gameModeBadge = document.getElementById('gameModeBadge');
+  if (gameModeBadge) {
+    gameModeBadge.textContent = isSeka ? '🃏 ሴካ (SEKA)' : '👑 ኮንከር (CONQUER)';
+    gameModeBadge.style.borderColor = isSeka ? '#f59e0b' : 'var(--primary-gold)';
+    gameModeBadge.style.color = isSeka ? '#f59e0b' : 'var(--primary-gold)';
   }
 
-  // Joker Info Bar (if present)
+  tableIdDisplay.textContent = `#${state.roomId.replace('room_', '').replace('bot_', 'BOT-').replace('seka_', 'SEKA-')}`;
+  potDisplay.textContent = `POT: ${state.pot} ETB`;
+  deckCount.textContent = state.deckCount !== undefined ? state.deckCount : (state.deckCardCount !== undefined ? state.deckCardCount : 0);
+
+  // Turn status
+  const isMyTurn = state.isMyTurn !== undefined ? state.isMyTurn : (state.currentTurnPlayerId === userId);
+  const oppName = state.opponent ? state.opponent.name : (state.creator && state.creator.id !== userId ? state.creator.name : (state.joiner && state.joiner.id !== userId ? state.joiner.name : 'Waiting...'));
+  turnIndicator.textContent = isMyTurn ? 'YOUR TURN' : `${oppName}'s Turn`;
+  turnIndicator.style.color = isMyTurn ? '#4ade80' : '#f5b041';
+
+  // Rule 2: Blind Cut Joker modal for Joiner; Waiting modal for Creator (Conquer only)
+  if (state.status === 'CUTTING_JOKER' && !isSeka) {
+    if (state.joiner && state.joiner.id === userId) {
+      cutJokerModal.style.display = 'flex';
+      if (waitingJokerModal) waitingJokerModal.style.display = 'none';
+    } else {
+      cutJokerModal.style.display = 'none';
+      if (waitingJokerModal) waitingJokerModal.style.display = 'flex';
+    }
+  } else {
+    cutJokerModal.style.display = 'none';
+    if (waitingJokerModal) waitingJokerModal.style.display = 'none';
+  }
+
+  // Joker Info Bar (Conquer only)
   if (jokerInfoBar) {
-    if (state.jokerRank && state.jokerSuits && state.status === 'PLAYING') {
+    if (!isSeka && state.jokerRank && state.jokerSuits && state.status === 'PLAYING') {
       jokerInfoBar.style.display = 'flex';
       jokerInfoText.innerHTML = `${state.jokerRank}${state.jokerSuits[0]} & ${state.jokerRank}${state.jokerSuits[1]} ⭐`;
     } else {
@@ -1084,28 +2292,62 @@ function renderGame(state) {
   }
 
   // Opponent display
-  opponentNameDisplay.textContent = state.opponent ? state.opponent.name : 'Waiting...';
-  opponentCardCount.textContent = state.opponentHandCount || 13;
+  opponentNameDisplay.textContent = oppName;
+  const oppCount = state.opponentCardCount !== undefined ? state.opponentCardCount : (state.opponentHandCount || 10);
+  opponentCardCount.textContent = oppCount;
   const isInitialDeal = !hasPlayedDealingAnim && state.status === 'PLAYING';
-  renderOpponentCards(state.opponentHandCount || 13, isInitialDeal);
+  const isFinished = state.status === 'FINISHED';
+  renderOpponentCards(oppCount, isInitialDeal, isFinished, state.winningMelds, state.winningDiscard);
 
-  // Center Field: Base Joker Card (Rule 3)
-  if (state.jokerCard) {
-    baseJokerCardContainer.innerHTML = createCardHTML(state.jokerCard, false, true);
+  // Center Field: Base Joker Card (Conquer only)
+  const canShowJokerCard = !isSeka && state.status === 'PLAYING' && (state.baseCard || state.jokerCard) && hasPlayedDealingAnim && !isDealingInProgress;
+  if (canShowJokerCard) {
+    const cardToShow = state.baseCard || state.jokerCard;
+    baseJokerCardContainer.style.display = 'block';
+    baseJokerCardContainer.innerHTML = createCardHTML(cardToShow, false, true);
+  } else {
+    baseJokerCardContainer.style.display = 'none';
+    baseJokerCardContainer.innerHTML = '';
   }
 
-  // Discard Pile (Meret)
-  if (state.topGroundCard) {
-    const isNewGround = previousGroundCardId !== state.topGroundCard.id;
-    previousGroundCardId = state.topGroundCard.id;
+  // Update Chosen Joker Badge at the "ሳብ" (Deck) location (Conquer only)
+  if (deckJokerCallBadge) {
+    if (!isSeka && canShowJokerCard && state.jokerRank && state.jokerSuits && state.jokerSuits.length > 0) {
+      const choiceMap = {
+        'high': 'ከፍ',
+        'low': 'ዝቅ',
+        'tach': 'ዝቅ',
+        'same': 'አንድ ላይ',
+        'and_lay': 'አንድ ላይ',
+        'gon': 'ጎን',
+        'opposite': 'ጎን'
+      };
+      const choiceLabel = choiceMap[state.jokerChoice] || 'ከፍ';
+      const isRed = state.jokerSuits.includes('♥') || state.jokerSuits.includes('♦');
+      const suitColor = isRed ? '#ef4444' : '#ffffff';
+      const jokersText = `${state.jokerRank}${state.jokerSuits[0]} ${state.jokerRank}${state.jokerSuits[1]}`;
+
+      deckJokerCallBadge.style.display = 'block';
+      deckJokerCallBadge.innerHTML = `⭐ <span style="color: ${suitColor}; font-weight: 800;">${jokersText}</span> <span style="color: #f5b041;">(${choiceLabel})</span>`;
+    } else {
+      deckJokerCallBadge.style.display = 'none';
+      deckJokerCallBadge.innerHTML = '';
+    }
+  }
+
+  // Discard Pile (Meret / Ground)
+  const topGroundCard = state.topDiscard || state.topGroundCard;
+  if (topGroundCard) {
+    const isNewGround = previousGroundCardId !== topGroundCard.id;
+    previousGroundCardId = topGroundCard.id;
     const arrivalClass = isNewGround ? 'discard-arrival' : '';
-    groundCardContainer.innerHTML = createCardHTML(state.topGroundCard, false, false, 1, arrivalClass);
+    groundCardContainer.innerHTML = createCardHTML(topGroundCard, false, false, 1, arrivalClass);
   } else {
     groundCardContainer.innerHTML = `<div class="card" style="border: 2px dashed #94a3b8; display: flex; align-items: center; justify-content: center; color: #94a3b8; font-size: 12px;">Empty</div>`;
   }
 
-  // Ground Draw button status: Always clickable on your turn if ground has a card (Don't reveal locked status)
-  const hasGroundCard = !!state.topGroundCard;
+  // Ground Draw button status: Always clickable on your turn if ground has a card
+  const hasGroundCard = !!topGroundCard;
   const canDrawNow = isMyTurn && state.turnState === 'AWAITING_DRAW';
   takeGroundBtn.disabled = !canDrawNow || !hasGroundCard;
   takeGroundBtn.textContent = '📥 Take Ground';
@@ -1118,25 +2360,44 @@ function renderGame(state) {
   // Draw Deck button status
   drawDeckBtn.disabled = !isMyTurn || state.turnState !== 'AWAITING_DRAW';
 
-  // Rule 8: Poke Status & Timer
-  if (state.pokeState.active) {
-    pokeTimerBanner.style.display = 'block';
-    pokeSecondsDisplay.textContent = state.pokeState.secondsLeft;
-    pokeBtn.disabled = true;
-  } else {
+  // Rule 8: Poke Status & Timer (Conquer only)
+  if (isSeka) {
     pokeTimerBanner.style.display = 'none';
-    pokeBtn.disabled = isMyTurn || state.status !== 'PLAYING';
+    if (pokeBtn) pokeBtn.style.display = 'none';
+    if (weredBtn) weredBtn.style.display = 'none';
+    const sWinBtn = document.getElementById('sekaWinBtn');
+    if (sWinBtn) {
+      sWinBtn.style.display = 'inline-block';
+      sWinBtn.disabled = !isMyTurn || state.turnState !== 'AWAITING_DISCARD';
+    }
+  } else {
+    const sWinBtn = document.getElementById('sekaWinBtn');
+    if (sWinBtn) sWinBtn.style.display = 'none';
+    if (weredBtn) weredBtn.style.display = 'inline-block';
+    if (pokeBtn) pokeBtn.style.display = 'inline-block';
+
+    if (state.pokeState && state.pokeState.active) {
+      pokeTimerBanner.style.display = 'block';
+      pokeSecondsDisplay.textContent = state.pokeState.secondsLeft;
+      pokeBtn.disabled = true;
+    } else {
+      pokeTimerBanner.style.display = 'none';
+      if (pokeBtn) pokeBtn.disabled = isMyTurn || state.status !== 'PLAYING';
+    }
   }
 
-  // Hand Points Display (Do not show Ground Locked indicator — player must calculate themselves)
-  pointsDisplay.textContent = state.points || 0;
+  // Hand Points Display (Removed from table per authentic game rules)
+  if (pointsDisplay) {
+    pointsDisplay.textContent = state.points || 0;
+  }
   if (groundEligibilityBadge) {
     groundEligibilityBadge.style.display = 'none';
   }
 
-  // Ensure hand is arranged optimally with every state update
-  if (state.status === 'PLAYING' && state.myHand && isAutoSortActive) {
-    state.myHand = arrangeHandOptimal(state.myHand, state);
+  // Preserve the player's manual card arrangement across state updates
+  if (state.status === 'PLAYING' && state.myHand) {
+    state.myHand = syncHandPreservingOrder(state.myHand);
+    currentGameState.myHand = state.myHand;
   }
 
   // Render player cards
@@ -1147,28 +2408,103 @@ function renderGame(state) {
     gameLogsContainer.innerHTML = state.logs.map(l => `<div class="log-entry">${l}</div>`).join('');
   }
 
-  // Render Table Melds
+  // Render Table Melds (Conquer only)
   if (tableMeldsArea) {
-    renderTableMelds(state);
+    if (isSeka) {
+      tableMeldsArea.style.display = 'none';
+    } else {
+      renderTableMelds(state);
+    }
   }
 
   // Game Result Modal
   if (state.status === 'FINISHED') {
     if (groundMeldBar) groundMeldBar.style.display = 'none';
-    const iWon = state.winner === userId;
+    const iWon = state.winner === userId || (state.winner && state.winner.id === userId);
     resultModalTitle.textContent = iWon ? '🏆 YOU WON!' : '❌ DEFEAT!';
     resultModalTitle.style.color = iWon ? '#4ade80' : '#ef4444';
-    resultModalDesc.textContent = state.winReason || (iWon ? `You conquered and claimed ${state.pot} ETB!` : 'Better luck next time!');
+    if (isSeka) {
+      resultModalDesc.textContent = iWon
+        ? `እንኳን ደስ አለህ! በ 2 ትሪስ + 1 ኳትሪስ ሴካ ጨርሰህ ${state.pot} ETB አሸንፈሃል!`
+        : `${state.winner ? state.winner.name : 'ተጋጣሚህ'} በሴካ አሸንፏል!`;
+    } else {
+      resultModalDesc.textContent = state.winReason || (iWon ? `You conquered and claimed ${state.pot} ETB!` : 'Better luck next time!');
+    }
+
+    // Reveal winning cards in modal
+    const winningHandDisplay = document.getElementById('winningHandDisplay');
+    const winningMeldsList = document.getElementById('winningMeldsList');
+    if (winningHandDisplay && winningMeldsList) {
+      if (state.winningMelds && state.winningMelds.length > 0) {
+        winningHandDisplay.style.display = 'block';
+        winningMeldsList.innerHTML = renderWinningMeldsHTML(state.winningMelds, state.winningDiscard);
+      } else {
+        winningHandDisplay.style.display = 'none';
+        winningMeldsList.innerHTML = '';
+      }
+    }
+
     gameResultModal.style.display = 'flex';
     if (iWon) playWinSound();
   }
+}
+
+// Helper: renders winning melds face-up with clean visual grouping
+function renderWinningMeldsHTML(melds, tetayCard) {
+  let html = '';
+  if (melds && melds.length > 0) {
+    melds.forEach((m, idx) => {
+      const typeLabel = m.type === 'QUATRIS' ? `ኳትሪስ (${m.cards.length} ካርታ ጦር)` : `ትሪስ ${idx + 1} (${m.cards.length} ካርታ ጦር)`;
+      html += `
+        <div style="background: rgba(30, 41, 59, 0.85); border: 1px solid #475569; border-radius: 8px; padding: 8px 12px; width: 100%;">
+          <div style="font-size: 12px; color: #38bdf8; font-weight: bold; margin-bottom: 6px;">${typeLabel}</div>
+          <div style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;">
+            ${m.cards.map(c => createCardHTML(c, false, false)).join('')}
+          </div>
+        </div>
+      `;
+    });
+  }
+  if (tetayCard) {
+    html += `
+      <div style="background: rgba(30, 41, 59, 0.85); border: 1px solid #dc2626; border-radius: 8px; padding: 8px 12px; width: 100%;">
+        <div style="font-size: 12px; color: #ef4444; font-weight: bold; margin-bottom: 6px;">ተጣይ (11ኛ ካርታ ወደ መሬት የወረደ)</div>
+        <div style="display: flex; gap: 8px; justify-content: center;">
+          ${createCardHTML(tetayCard, false, false)}
+        </div>
+      </div>
+    `;
+  }
+  return html;
 }
 
 returnToLobbyBtn.addEventListener('click', () => {
   switchToLobbyView();
 });
 
-function renderOpponentCards(count, isInitialDeal = false) {
+function renderOpponentCards(count, isInitialDeal = false, isFinished = false, winningMelds = null, winningDiscard = null) {
+  // If game is finished and opponent has winning melds, lay them face-up on table!
+  if (isFinished && winningMelds && winningMelds.length > 0) {
+    let meldCardsHtml = '<div style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; align-items: center;">';
+    winningMelds.forEach((m, mIdx) => {
+      meldCardsHtml += `
+        <div style="display: inline-flex; gap: 4px; padding: 4px 6px; background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(245, 158, 11, 0.6); border-radius: 6px;">
+          ${m.cards.map(c => createCardHTML(c, false, false)).join('')}
+        </div>
+      `;
+    });
+    if (winningDiscard) {
+      meldCardsHtml += `
+        <div style="display: inline-flex; gap: 4px; padding: 4px 6px; background: rgba(220, 38, 38, 0.25); border: 1px solid #ef4444; border-radius: 6px;" title="ተጣይ">
+          ${createCardHTML(winningDiscard, false, false)}
+        </div>
+      `;
+    }
+    meldCardsHtml += '</div>';
+    opponentCardsContainer.innerHTML = meldCardsHtml;
+    return;
+  }
+
   const isSingleDraw = count === previousOpponentCardCount + 1 && previousOpponentCardCount > 0;
   previousOpponentCardCount = count;
 
@@ -1190,6 +2526,36 @@ function renderOpponentCards(count, isInitialDeal = false) {
 }
 
 let draggedCardId = null;
+let dragJustEndedTime = 0;
+
+function getResponsiveFanGeometry(totalCards) {
+  const w = window.innerWidth || document.documentElement.clientWidth || 375;
+  const count = Math.max(totalCards - 1, 1);
+  let maxAngle = 36;
+  let spacing = 28;
+
+  if (w <= 375) {
+    // iPhone Mini & SE (width <= 375px):
+    // 10 card gaps * 20px = 200px + 46px card width = 246px.
+    // Leaves > 64px safety margin inside 375px! 100% visible, zero clipping!
+    maxAngle = 16;
+    spacing = Math.min(21, Math.max(15, Math.floor(220 / count)));
+  } else if (w <= 480) {
+    // Standard Mobile (376px - 480px)
+    maxAngle = 22;
+    spacing = Math.min(25, Math.max(17, Math.floor(260 / count)));
+  } else if (w <= 768) {
+    // Tablets / Large Phones (481px - 768px)
+    maxAngle = 28;
+    spacing = Math.min(28, Math.max(19, Math.floor(340 / count)));
+  } else {
+    // Desktop screens
+    maxAngle = 36;
+    spacing = Math.min(32, Math.max(22, Math.floor(440 / count)));
+  }
+
+  return { maxAngle, spacing };
+}
 
 function renderPlayerHand(hand) {
   if (!hand) return;
@@ -1209,16 +2575,8 @@ function renderPlayerHand(hand) {
   const isSingleDraw = hand.length === previousHandLength + 1;
   previousHandLength = hand.length;
 
-  // Whenever a new card arrives, automatically integrate and re-arrange the entire hand!
-  if (isSingleDraw && isAutoSortActive) {
-    hand = arrangeHandOptimal(hand, currentGameState);
-    currentGameState.myHand = hand;
-  }
-
-  // Update Move button enabled states
-  const selectedIdx = hand.findIndex(c => c.id === selectedCardId);
-  moveLeftBtn.disabled = selectedIdx <= 0;
-  moveRightBtn.disabled = selectedIdx === -1 || selectedIdx >= hand.length - 1;
+  // When a card arrives, keep player's manual arrangement and preserve their order
+  currentGameState.myHand = hand;
 
   if (isGroupViewActive) {
     playerCardsContainer.style.display = 'none';
@@ -1244,15 +2602,23 @@ function renderPlayerHand(hand) {
 
   } else {
     meldGroupsContainer.style.display = 'none';
-    playerCardsContainer.style.display = 'flex';
+    playerCardsContainer.style.display = 'block';
+
+    const total = hand.length;
+    const middle = (total - 1) / 2;
+    const { maxAngle, spacing } = getResponsiveFanGeometry(total);
 
     playerCardsContainer.innerHTML = hand.map((card, idx) => {
-      const isSelected = selectedCardsSet.has(card.id) || card.id === selectedCardId;
+      const isSelected = selectedCardsSet.has(card.id) || selectedCardsSet.has(String(card.id)) || String(card.id) === String(selectedCardId);
       let animClass = '';
       if (isSingleDraw && idx === hand.length - 1) {
         animClass = 'drawn-anim';
       }
-      return createCardHTML(card, isSelected, false, idx + 1, animClass);
+      const angle = middle > 0 ? ((idx - middle) / middle) * maxAngle : 0;
+      const offset = (idx - middle) * spacing;
+      const fanStyle = `--angle: ${angle.toFixed(1)}deg; --offset: ${offset.toFixed(0)}px;`;
+
+      return createCardHTML(card, isSelected, false, idx + 1, animClass, '', fanStyle);
     }).join('');
   }
 
@@ -1262,12 +2628,10 @@ function renderPlayerHand(hand) {
 
 function updateTakeGroundButton() {
   if (!takeGroundBtn || !currentGameState) return;
-  const selectedCards = (currentGameState.myHand || []).filter(c => selectedCardsSet.has(c.id));
-  let points = 0;
-  selectedCards.forEach(c => { points += c.pointValue || 0; });
+  const selectedCards = (currentGameState.myHand || []).filter(c => selectedCardsSet.has(c.id) || selectedCardsSet.has(String(c.id)));
 
   if (selectedCards.length > 0) {
-    takeGroundBtn.textContent = `📥 አውርድና አንሳ (${points} ነጥብ)`;
+    takeGroundBtn.textContent = '📥 አውርድና አንሳ';
   } else {
     takeGroundBtn.textContent = '📥 ከመሬት አንሳ';
   }
@@ -1277,15 +2641,23 @@ function updateTakeGroundButton() {
 function runDealingSequence(hand) {
   isDealingInProgress = true;
   playerCardsContainer.innerHTML = '';
-  playerCardsContainer.style.display = 'flex';
+  playerCardsContainer.style.display = 'block';
   meldGroupsContainer.style.display = 'none';
+
+  const total = hand.length;
+  const middle = (total - 1) / 2;
+  const { maxAngle, spacing } = getResponsiveFanGeometry(total);
 
   hand.forEach((card, idx) => {
     setTimeout(() => {
       const cardEl = document.createElement('div');
       cardEl.className = 'card face-down dealing-anim';
       cardEl.setAttribute('data-id', card.id);
+      const angle = middle > 0 ? ((idx - middle) / middle) * maxAngle : 0;
+      const offset = (idx - middle) * spacing;
       cardEl.style.zIndex = idx + 1;
+      cardEl.style.setProperty('--angle', `${angle.toFixed(1)}deg`);
+      cardEl.style.setProperty('--offset', `${offset.toFixed(0)}px`);
       playerCardsContainer.appendChild(cardEl);
       playCardSound();
 
@@ -1304,14 +2676,19 @@ function flipHandCardsToFaceUp(hand) {
   cardElements.forEach((cardEl, idx) => {
     setTimeout(() => {
       const card = hand[idx];
-      const isRed = card.suit === '♥' || card.suit === '♦';
+      const isFalse = card.isFalseJoker || card.rank === 'FALSE' || card.rank === 'JK';
+      const isRed = card.suit === '♥' || card.suit === '♦' || (isFalse && card.color === 'red');
       const colorClass = isRed ? 'red' : 'black';
+      const displayRank = isFalse ? 'FALSE' : card.rank;
+      const displaySuit = isFalse ? '🃏' : card.suit;
+      const falseTextColor = isRed ? '#ef4444' : '#0f172a';
+      const cornerRankStyle = isFalse ? `style="font-size: 8px; font-weight: 900; color: ${falseTextColor};"` : '';
+      const centerStyle = isFalse ? 'style="font-size: 20px;"' : '';
+
       let starHTML = '';
-      if (card.isMainJoker) {
-        starHTML = `<div class="card-joker-star">⭐</div>`;
-      } else if (card.isFalseJoker) {
-        starHTML = `<div class="card-joker-star false-joker-star">🃏</div>`;
-      } else if (card.isJoker) {
+      if (isFalse) {
+        starHTML = `<div class="card-false-badge ${isRed ? 'red' : 'black'}">FALSE</div>`;
+      } else if (card.isMainJoker || card.isJoker) {
         starHTML = `<div class="card-joker-star">⭐</div>`;
       }
 
@@ -1319,14 +2696,10 @@ function flipHandCardsToFaceUp(hand) {
       cardEl.innerHTML = `
         ${starHTML}
         <div class="card-corner top-left">
-          <div class="corner-rank">${card.rank}</div>
-          <div class="corner-suit">${card.suit}</div>
+          <div class="corner-rank" ${cornerRankStyle}>${displayRank}</div>
+          <div class="corner-suit">${isFalse ? '' : displaySuit}</div>
         </div>
-        <div class="card-center-suit">${card.suit}</div>
-        <div class="card-corner bottom-right">
-          <div class="corner-rank">${card.rank}</div>
-          <div class="corner-suit">${card.suit}</div>
-        </div>
+        <div class="card-center-suit" ${centerStyle}>${displaySuit}</div>
       `;
       playCardSound();
 
@@ -1334,12 +2707,48 @@ function flipHandCardsToFaceUp(hand) {
       if (idx === hand.length - 1) {
         setTimeout(() => {
           isDealingInProgress = false;
+          renderPlayerHand(hand);
           bindCardInteractions(hand);
+
+          // 27 cards have finished dealing! Now reveal the 28th card (Base Joker Card) and badge!
+          if (currentGameState && (currentGameState.baseCard || currentGameState.jokerCard)) {
+            const cardToShow = currentGameState.baseCard || currentGameState.jokerCard;
+            if (baseJokerCardContainer) {
+              baseJokerCardContainer.style.display = 'block';
+              baseJokerCardContainer.innerHTML = createCardHTML(cardToShow, false, true);
+              baseJokerCardContainer.classList.add('flip-reveal');
+            }
+            if (deckJokerCallBadge && currentGameState.jokerRank && currentGameState.jokerSuits && currentGameState.jokerSuits.length > 0) {
+              const choiceMap = {
+                'high': 'ከፍ',
+                'low': 'ዝቅ',
+                'tach': 'ዝቅ',
+                'same': 'አንድ ላይ',
+                'and_lay': 'አንድ ላይ',
+                'gon': 'ጎን',
+                'opposite': 'ጎን'
+              };
+              const choiceLabel = choiceMap[currentGameState.jokerChoice] || 'ከፍ';
+              const isRed = currentGameState.jokerSuits.includes('♥') || currentGameState.jokerSuits.includes('♦');
+              const suitColor = isRed ? '#ef4444' : '#ffffff';
+              const jokersText = `${currentGameState.jokerRank}${currentGameState.jokerSuits[0]} ${currentGameState.jokerRank}${currentGameState.jokerSuits[1]}`;
+              deckJokerCallBadge.style.display = 'block';
+              deckJokerCallBadge.innerHTML = `⭐ <span style="color: ${suitColor}; font-weight: 800;">${jokersText}</span> <span style="color: #f5b041;">(${choiceLabel})</span>`;
+              deckJokerCallBadge.classList.add('flip-reveal');
+            }
+            playCardSound();
+          }
         }, 200);
       }
     }, idx * 45); // Cascading flip wave
   });
 }
+
+let touchDraggedId = null;
+let currentTouchOverEl = null;
+let touchStartX = 0;
+let touchStartY = 0;
+let isTouchDragging = false;
 
 function bindCardInteractions(hand) {
   const activeContainer = isGroupViewActive ? meldGroupsContainer : playerCardsContainer;
@@ -1348,25 +2757,61 @@ function bindCardInteractions(hand) {
   cardElements.forEach(cardEl => {
     cardEl.draggable = true;
 
-    // Click to select/deselect
-    cardEl.addEventListener('click', () => {
+    // --- Click / Tap Handler (Selection & Instant Tap-to-Place) ---
+    cardEl.addEventListener('click', (e) => {
+      if (Date.now() - dragJustEndedTime < 220) return;
+
       const cId = cardEl.getAttribute('data-id');
+
+      // Meld selection mode (e.g. 41 ground meld bar): multi-select
+      if (groundMeldBar && groundMeldBar.style.display !== 'none') {
+        if (selectedCardsSet.has(cId)) {
+          selectedCardsSet.delete(cId);
+          if (selectedCardId === cId) {
+            selectedCardId = selectedCardsSet.size > 0 ? Array.from(selectedCardsSet)[selectedCardsSet.size - 1] : null;
+          }
+        } else {
+          selectedCardsSet.add(cId);
+          selectedCardId = cId;
+        }
+        playCardSound();
+        updateTakeGroundButton();
+        updateGroundMeldBar();
+        renderPlayerHand(currentGameState.myHand);
+        return;
+      }
+
+      // Normal mode: Single-card Tap-to-Place!
+      // If Card A is already selected and user taps Card B -> Move Card A to Card B's position!
+      if (selectedCardId && String(selectedCardId) !== String(cId) && selectedCardsSet.size === 1) {
+        const fromIndex = currentGameState.myHand.findIndex(c => String(c.id) === String(selectedCardId));
+        const toIndex = currentGameState.myHand.findIndex(c => String(c.id) === String(cId));
+        if (fromIndex !== -1 && toIndex !== -1 && fromIndex !== toIndex) {
+          const [movedCard] = currentGameState.myHand.splice(fromIndex, 1);
+          currentGameState.myHand.splice(toIndex, 0, movedCard);
+          playerOrderedCardIds = currentGameState.myHand.map(c => c.id);
+          playCardSound();
+          showSortToast('📍 ካርታው ወደ አዲሱ ቦታ ተቀይሯል');
+          renderPlayerHand(currentGameState.myHand);
+          return;
+        }
+      }
+
+      // Normal selection toggle
       if (selectedCardsSet.has(cId)) {
         selectedCardsSet.delete(cId);
-        if (selectedCardId === cId) {
-          selectedCardId = selectedCardsSet.size > 0 ? Array.from(selectedCardsSet)[selectedCardsSet.size - 1] : null;
-        }
+        selectedCardId = null;
       } else {
+        selectedCardsSet.clear();
         selectedCardsSet.add(cId);
         selectedCardId = cId;
       }
       playCardSound();
       updateTakeGroundButton();
-      updateGroundMeldBar();
       renderPlayerHand(currentGameState.myHand);
     });
 
-    // Drag Start
+    // --- Desktop Mouse Drag and Drop ---
     cardEl.addEventListener('dragstart', (e) => {
       draggedCardId = cardEl.getAttribute('data-id');
       cardEl.classList.add('dragging');
@@ -1374,78 +2819,160 @@ function bindCardInteractions(hand) {
       e.dataTransfer.setData('text/plain', draggedCardId);
     });
 
-    // Drag End
     cardEl.addEventListener('dragend', () => {
       cardEl.classList.remove('dragging');
       document.querySelectorAll('.card').forEach(c => c.classList.remove('drag-over'));
+      dragJustEndedTime = Date.now();
     });
 
-    // Drag Over
     cardEl.addEventListener('dragover', (e) => {
       e.preventDefault();
       e.dataTransfer.dropEffect = 'move';
-      cardEl.classList.add('drag-over');
+      const targetCardId = cardEl.getAttribute('data-id');
+      if (draggedCardId && draggedCardId !== targetCardId) {
+        cardEl.classList.add('drag-over');
+      }
     });
 
-    // Drag Leave
     cardEl.addEventListener('dragleave', () => {
       cardEl.classList.remove('drag-over');
     });
 
-    // Drop on another card to reorder
     cardEl.addEventListener('drop', (e) => {
       e.preventDefault();
       cardEl.classList.remove('drag-over');
+      dragJustEndedTime = Date.now();
       const targetCardId = cardEl.getAttribute('data-id');
       if (!draggedCardId || draggedCardId === targetCardId) return;
 
-      const fromIndex = currentGameState.myHand.findIndex(c => c.id === draggedCardId);
-      const toIndex = currentGameState.myHand.findIndex(c => c.id === targetCardId);
+      const fromIndex = currentGameState.myHand.findIndex(c => String(c.id) === String(draggedCardId));
+      const toIndex = currentGameState.myHand.findIndex(c => String(c.id) === String(targetCardId));
 
-      if (fromIndex !== -1 && toIndex !== -1) {
+      if (fromIndex !== -1 && toIndex !== -1 && fromIndex !== toIndex) {
         const [movedCard] = currentGameState.myHand.splice(fromIndex, 1);
         currentGameState.myHand.splice(toIndex, 0, movedCard);
+        playerOrderedCardIds = currentGameState.myHand.map(c => c.id);
         playCardSound();
+        showSortToast('📍 ካርታው ተቀይሯል');
         renderPlayerHand(currentGameState.myHand);
       }
+    });
+
+    // --- Mobile Touch Screen Drag and Drop (Ultra Smooth) ---
+    cardEl.addEventListener('touchstart', (e) => {
+      const touch = e.touches[0];
+      touchStartX = touch.clientX;
+      touchStartY = touch.clientY;
+      touchDraggedId = cardEl.getAttribute('data-id');
+      currentTouchOverEl = null;
+      isTouchDragging = false;
+    }, { passive: true });
+
+    cardEl.addEventListener('touchmove', (e) => {
+      if (!touchDraggedId) return;
+      const touch = e.touches[0];
+      const dx = touch.clientX - touchStartX;
+      const dy = touch.clientY - touchStartY;
+
+      // Start drag only if finger moved more than 8px
+      if (Math.hypot(dx, dy) > 8) {
+        isTouchDragging = true;
+        if (e.cancelable) e.preventDefault(); // Stop screen scrolling while repositioning card
+        cardEl.classList.add('dragging');
+
+        const elem = document.elementFromPoint(touch.clientX, touch.clientY);
+        const targetCard = elem ? elem.closest('.card') : null;
+
+        if (currentTouchOverEl && currentTouchOverEl !== targetCard) {
+          currentTouchOverEl.classList.remove('drag-over');
+        }
+
+        if (targetCard && targetCard.getAttribute('data-id') !== touchDraggedId && activeContainer.contains(targetCard)) {
+          currentTouchOverEl = targetCard;
+          targetCard.classList.add('drag-over');
+        } else {
+          currentTouchOverEl = null;
+        }
+      }
+    }, { passive: false });
+
+    cardEl.addEventListener('touchend', (e) => {
+      cardEl.classList.remove('dragging');
+      if (isTouchDragging) {
+        dragJustEndedTime = Date.now();
+        if (currentTouchOverEl) {
+          currentTouchOverEl.classList.remove('drag-over');
+          const targetCardId = currentTouchOverEl.getAttribute('data-id');
+          if (touchDraggedId && targetCardId && touchDraggedId !== targetCardId) {
+            const fromIndex = currentGameState.myHand.findIndex(c => String(c.id) === String(touchDraggedId));
+            const toIndex = currentGameState.myHand.findIndex(c => String(c.id) === String(targetCardId));
+            if (fromIndex !== -1 && toIndex !== -1 && fromIndex !== toIndex) {
+              const [movedCard] = currentGameState.myHand.splice(fromIndex, 1);
+              currentGameState.myHand.splice(toIndex, 0, movedCard);
+              playerOrderedCardIds = currentGameState.myHand.map(c => c.id);
+              playCardSound();
+              showSortToast('📍 ካርታው ተቀይሯል');
+              renderPlayerHand(currentGameState.myHand);
+            }
+          }
+        }
+      }
+      touchDraggedId = null;
+      currentTouchOverEl = null;
+      isTouchDragging = false;
+    });
+
+    cardEl.addEventListener('touchcancel', () => {
+      cardEl.classList.remove('dragging');
+      if (currentTouchOverEl) currentTouchOverEl.classList.remove('drag-over');
+      touchDraggedId = null;
+      currentTouchOverEl = null;
+      isTouchDragging = false;
     });
   });
 }
 
-function createCardHTML(card, isSelected = false, isBaseJoker = false, zIndex = 1, animClass = '', animDelay = '') {
-  const isRed = card.suit === '♥' || card.suit === '♦';
+function createCardHTML(card, isSelected = false, isBaseJoker = false, zIndex = 1, animClass = '', animDelay = '', extraStyle = '') {
+  const isFalse = card.isFalseJoker || card.rank === 'FALSE' || card.rank === 'JK';
+  const isSekaWildJoker = (card.isJoker || card.rank === 'JOKER' || card.suit === '🃏') && !isFalse;
+  const isRed = card.suit === '♥' || card.suit === '♦' || card.color === 'red' || (isFalse && card.color === 'red');
   const colorClass = isRed ? 'red' : 'black';
   const selectedClass = isSelected ? 'selected' : '';
   const groupStartClass = card.isGroupStart ? 'group-start' : '';
   const delayStyle = animDelay ? `animation-delay: ${animDelay};` : '';
 
-  // Rule 3: Golden Star on Main Jokers, 🃏 on False Jokers
+  const displayRank = isFalse ? 'FALSE' : (isSekaWildJoker ? '🃏' : card.rank);
+  const displaySuit = isFalse ? '🃏' : (isSekaWildJoker ? 'JOKER' : card.suit);
+  const falseTextColor = isRed ? '#ef4444' : '#0f172a';
+  const cornerRankStyle = isFalse ? `style="font-size: 8px; font-weight: 900; color: ${falseTextColor};"` : (isSekaWildJoker ? `style="font-size: 11px; font-weight: 900;"` : '');
+  const centerStyle = (isFalse || isSekaWildJoker) ? 'style="font-size: 20px;"' : '';
+
+  // Golden Star (⭐) on designated jokers, FALSE badge on printed false jokers, WILD on Seka jokers
   let starHTML = '';
-  if (card.isMainJoker) {
-    starHTML = `<div class="card-joker-star">⭐</div>`;
-  } else if (card.isFalseJoker) {
-    starHTML = `<div class="card-joker-star false-joker-star">🃏</div>`;
-  } else if (card.isJoker) {
+  if (isFalse) {
+    starHTML = `<div class="card-false-badge ${isRed ? 'red' : 'black'}">FALSE</div>`;
+  } else if (isSekaWildJoker) {
+    starHTML = `<div class="card-joker-star" style="font-size: 10px; width: auto; padding: 1px 4px;">🃏 WILD</div>`;
+  } else if (card.isMainJoker || card.isJoker) {
     starHTML = `<div class="card-joker-star">⭐</div>`;
   }
   const baseBadge = isBaseJoker ? `<div class="card-base-badge">BASE ⭐</div>` : '';
+  const tetayBadge = card.isTetay ? `<div class="card-tetay-badge">ተጣይ 🔻</div>` : '';
 
   return `
-    <div class="card ${colorClass} ${selectedClass} ${groupStartClass} ${animClass}" data-id="${card.id}" style="z-index: ${zIndex}; ${delayStyle}">
+    <div class="card ${colorClass} ${selectedClass} ${groupStartClass} ${animClass}" data-id="${card.id}" style="z-index: ${zIndex}; ${delayStyle} ${extraStyle}">
       ${starHTML}
+      ${tetayBadge}
       <div class="card-corner top-left">
-        <div class="corner-rank">${card.rank}</div>
-        <div class="corner-suit">${card.suit}</div>
+        <div class="corner-rank" ${cornerRankStyle}>${displayRank}</div>
+        <div class="corner-suit">${isFalse ? '' : (isSekaWildJoker ? '' : displaySuit)}</div>
       </div>
-      <div class="card-center-suit">${card.suit}</div>
-      <div class="card-corner bottom-right">
-        <div class="corner-rank">${card.rank}</div>
-        <div class="corner-suit">${card.suit}</div>
-      </div>
+      <div class="card-center-suit" ${centerStyle}>${displaySuit}</div>
       ${baseBadge}
     </div>
   `;
 }
+
 
 // Helper: groups 13 cards into 4+3+3+3 or 4+4+3 for conquer check
 function autoGroupHandIntoMelds(cards) {
@@ -1483,8 +3010,8 @@ function renderTableMelds(state) {
     if (myMelds.length > 0) {
       myMeldsBox.style.display = 'block';
       myMeldsLabel.textContent = `የወረዱ ካርታዎችህ (${myMelds.length} ግሩፕ)`;
-      myMeldsContainer.innerHTML = myMelds.map(group => `
-        <div class="table-meld-group">
+      myMeldsContainer.innerHTML = myMelds.map((group, mIdx) => `
+        <div class="table-meld-group" data-owner="${myId}" data-meld-idx="${mIdx}" title="ካርታ ምረጥና እዚህ ላይ ገቢ አድርግ">
           ${group.map(c => createMiniCardHTML(c)).join('')}
         </div>
       `).join('');
@@ -1497,8 +3024,8 @@ function renderTableMelds(state) {
     if (oppMelds.length > 0) {
       opponentMeldsBox.style.display = 'block';
       opponentMeldsLabel.textContent = `${state.opponent ? state.opponent.name : 'ተቃራኒ'} የወረዱ (${oppMelds.length} ግሩፕ)`;
-      opponentMeldsContainer.innerHTML = oppMelds.map(group => `
-        <div class="table-meld-group">
+      opponentMeldsContainer.innerHTML = oppMelds.map((group, mIdx) => `
+        <div class="table-meld-group" data-owner="${oppId}" data-meld-idx="${mIdx}" title="ካርታ ምረጥና እዚህ ላይ ገቢ አድርግ">
           ${group.map(c => createMiniCardHTML(c)).join('')}
         </div>
       `).join('');
@@ -1506,13 +3033,75 @@ function renderTableMelds(state) {
       opponentMeldsBox.style.display = 'none';
     }
   }
+
+  bindTableMeldClicks();
+}
+
+function bindTableMeldClicks() {
+  if (!tableMeldsArea) return;
+  const allMeldEls = tableMeldsArea.querySelectorAll('.table-meld-group');
+  allMeldEls.forEach(el => {
+    el.addEventListener('click', () => {
+      const targetOwnerId = el.getAttribute('data-owner');
+      const meldIndex = parseInt(el.getAttribute('data-meld-idx'), 10);
+      const selectedId = selectedCardId || (selectedCardsSet.size === 1 ? Array.from(selectedCardsSet)[0] : null);
+
+      if (!selectedId) {
+        showSortToast('👉 መጀመሪያ ከእጅህ ገቢ ማድረግ የምትፈልገውን ካርታ ምረጥ!');
+        return;
+      }
+
+      if (!currentGameState || currentGameState.currentTurnPlayerId !== userId) {
+        showSortToast('⚠️ የአንተ ተራ አይደለም!');
+        return;
+      }
+
+      const card = currentGameState.myHand?.find(c => c.id === selectedId);
+      if (!card) return;
+
+      const melds = currentGameState.tableMelds?.[targetOwnerId];
+      const targetMeld = melds?.[meldIndex];
+      if (!targetMeld) return;
+
+      // Check for GEBI attachment:
+      if (isCardGebiToMeld(card, targetMeld, currentGameState.jokerRank, currentGameState.jokerSuits)) {
+        playCardSound();
+        socket.emit('attach_gebi_card', {
+          roomId: currentRoomId,
+          userId,
+          targetOwnerId,
+          meldIndex,
+          cardId: card.id
+        });
+        selectedCardsSet.clear();
+        selectedCardId = null;
+        showSortToast(`📥 [ ${card.rank}${card.suit} ] ወደ ሜልዱ ገቢ ተደረገ!`);
+        return;
+      }
+
+      showSortToast(`⚠️ [ ${card.rank}${card.suit} ] ወደዚህ ሜልድ ገቢ (GEBI) መሆን አይችልም!`);
+    });
+  });
 }
 
 // Mini card for table melds (smaller display)
 function createMiniCardHTML(card) {
-  const isRed = card.suit === '♥' || card.suit === '♦';
+  const isFalse = card.isFalseJoker || card.rank === 'FALSE' || card.rank === 'JK';
+  const isRed = card.suit === '♥' || card.suit === '♦' || (isFalse && card.color === 'red');
   const colorClass = isRed ? 'red' : 'black';
-  const jokerBadge = card.isMainJoker ? '⭐' : (card.isFalseJoker ? '🃏' : '');
+
+  if (isFalse) {
+    const borderColor = isRed ? '#ef4444' : '#64748b';
+    const textColor = isRed ? '#ef4444' : '#94a3b8';
+    return `
+      <div class="mini-card ${colorClass}" style="background: rgba(15, 23, 42, 0.95); border-color: ${borderColor}; min-width: 34px; text-align: center;">
+        <span style="font-size: 8px; font-weight: 900; color: ${textColor}; letter-spacing: 0.5px;">FALSE</span>
+      </div>
+    `;
+  }
+
+  const isDesignatedJoker = card.isMainJoker || card.isJoker;
+  const jokerBadge = isDesignatedJoker ? '⭐' : '';
 
   return `
     <div class="mini-card ${colorClass}">
@@ -1521,3 +3110,15 @@ function createMiniCardHTML(card) {
     </div>
   `;
 }
+
+// Window resize listener to dynamically recalculate card fan geometry across devices
+let resizeTimer = null;
+window.addEventListener('resize', () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => {
+    if (currentGameState && currentGameState.myHand && currentGameState.status === 'PLAYING' && !isDealingInProgress) {
+      renderPlayerHand(currentGameState.myHand);
+    }
+  }, 120);
+});
+

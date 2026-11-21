@@ -2,38 +2,69 @@
 const { RANK_ORDER } = require('./cardTypes');
 
 /**
+ * Checks if cards form a 100% pure natural meld (sequence of same suit or set of same rank)
+ * without using any wild joker power.
+ */
+function isNaturalMeld(cards) {
+  if (!cards || (cards.length !== 3 && cards.length !== 4)) return false;
+  if (cards.some(c => c.isJoker || c.isMainJoker || c.isFalseJoker)) return false;
+  if (isSequenceSameSuit(cards)) return true;
+  if (cards.every(c => c.rank === cards[0].rank)) {
+    const suits = new Set(cards.map(c => c.suit));
+    return suits.size >= 2;
+  }
+  return false;
+}
+
+function isWildJoker(c, jokerRank, jokerSuits) {
+  if (!c) return false;
+  if (c.isFalseJoker) return false; // False joker is NEVER wild!
+  if (c.isJoker && !c.isFalseJoker) return true;
+  if (jokerRank && c.rank === jokerRank) {
+    if (!jokerSuits || jokerSuits.includes(c.suit)) return true;
+  }
+  return false;
+}
+
+/**
  * Checks if a group of 3 cards forms a valid Tris (Set or Sequence).
  * Enforces Rule 14: Maximum 1 Joker per Tris!
  */
-function isValidTris(cards, jokerRank) {
+function isValidTris(cards, jokerRank, jokerSuits) {
   if (!cards || cards.length !== 3) return false;
+  if (isNaturalMeld(cards)) return true;
 
-  const jokerCount = cards.filter(c => c.rank === jokerRank || c.isJoker).length;
+  const isJk = (c) => isWildJoker(c, jokerRank, jokerSuits);
+  const jokerCount = cards.filter(isJk).length;
   // Rule 14: Cannot use 2 or more jokers in the same Tris!
   if (jokerCount > 1) return false;
 
-  const naturalCards = cards.filter(c => c.rank !== jokerRank && !c.isJoker);
+  const naturalCards = cards.filter(c => !isJk(c));
+  const getRank = (c) => (c.isFalseJoker ? jokerRank : c.rank);
 
-  // Case 1: Pure Tris (Set of 3 same rank, different suits)
+  // Case 1: Pure Tris (Set of 3 same rank, or False Joker substituting designated rank)
   if (jokerCount === 0) {
-    if (naturalCards[0].rank === naturalCards[1].rank && naturalCards[1].rank === naturalCards[2].rank) {
-      // Must be different suits (or duplicate allowed if 2 decks, but standard Tris has different suits)
+    const r0 = getRank(naturalCards[0]);
+    if (r0 && getRank(naturalCards[1]) === r0 && getRank(naturalCards[2]) === r0) {
       const suits = new Set(naturalCards.map(c => c.suit));
-      return suits.size >= 2; // Valid set
+      return suits.size >= 2;
     }
-    // Or Pure Sequence of 3 (same suit, consecutive)
-    if (isSequenceSameSuit(naturalCards)) return true;
+    const cardsWithRanks = naturalCards.map(c => ({ rank: getRank(c), suit: c.suit }));
+    if (isSequenceSameSuit(cardsWithRanks)) return true;
   }
 
   // Case 2: Tris with 1 Joker
   if (jokerCount === 1) {
-    // 2 natural cards of the same rank
-    if (naturalCards[0].rank === naturalCards[1].rank) {
+    const r0 = getRank(naturalCards[0]);
+    const r1 = getRank(naturalCards[1]);
+    if (r0 && r0 === r1) {
       return true; // Joker acts as the 3rd card of that rank
     }
-    // Or 2 natural cards of same suit that can form a 3-sequence with 1 joker
     if (naturalCards[0].suit === naturalCards[1].suit) {
-      if (canFormSequenceWithJoker(naturalCards, 1, 3)) return true;
+      if (canFormSequenceWithJoker([
+        { rank: r0, suit: naturalCards[0].suit },
+        { rank: r1, suit: naturalCards[1].suit }
+      ], 1, 3)) return true;
     }
   }
 
@@ -44,33 +75,37 @@ function isValidTris(cards, jokerRank) {
  * Checks if a group of 4 cards forms a valid Quatris (Set or Sequence).
  * Enforces Rule 14: Maximum 1 Joker per Quatris!
  */
-function isValidQuatris(cards, jokerRank) {
+function isValidQuatris(cards, jokerRank, jokerSuits) {
   if (!cards || cards.length !== 4) return false;
+  if (isNaturalMeld(cards)) return true;
 
-  const jokerCount = cards.filter(c => c.rank === jokerRank || c.isJoker).length;
+  const isJk = (c) => isWildJoker(c, jokerRank, jokerSuits);
+  const jokerCount = cards.filter(isJk).length;
   // Rule 14: Cannot use 2 or more jokers in the same Quatris!
   if (jokerCount > 1) return false;
 
-  const naturalCards = cards.filter(c => c.rank !== jokerRank && !c.isJoker);
+  const naturalCards = cards.filter(c => !isJk(c));
+  const getRank = (c) => (c.isFalseJoker ? jokerRank : c.rank);
 
   // Case 1: Pure Quatris (4 same rank or 4 sequence same suit)
   if (jokerCount === 0) {
-    if (naturalCards.every(c => c.rank === naturalCards[0].rank)) {
+    const r0 = getRank(naturalCards[0]);
+    if (r0 && naturalCards.every(c => getRank(c) === r0)) {
       const suits = new Set(naturalCards.map(c => c.suit));
-      return suits.size >= 3;
+      return suits.size >= 2;
     }
-    if (isSequenceSameSuit(naturalCards)) return true;
+    const cardsWithRanks = naturalCards.map(c => ({ rank: getRank(c), suit: c.suit }));
+    if (isSequenceSameSuit(cardsWithRanks)) return true;
   }
 
   // Case 2: Quatris with 1 Joker
   if (jokerCount === 1) {
-    // 3 natural cards of same rank
-    if (naturalCards.every(c => c.rank === naturalCards[0].rank)) {
+    const r0 = getRank(naturalCards[0]);
+    if (r0 && naturalCards.every(c => getRank(c) === r0)) {
       return true;
     }
-    // 3 natural cards same suit forming sequence of 4 with 1 joker
     if (naturalCards.every(c => c.suit === naturalCards[0].suit)) {
-      if (canFormSequenceWithJoker(naturalCards, 1, 4)) return true;
+      if (canFormSequenceWithJoker(naturalCards.map(c => ({ rank: getRank(c), suit: c.suit })), 1, 4)) return true;
     }
   }
 
@@ -241,7 +276,7 @@ function canDrawFromGround(hand, groundCard, isFirstDiscard, jokerRank) {
  * e.g., 4 + 3 + 3 + 3 = 13 cards (or 4 + 4 + 3) + 1 card to GEBI.
  */
 function validateConquerHand(melds, gebiCard, jokerRank, baseCard) {
-  if (!gebiCard) return { valid: false, message: 'You must place a final card into GEBI!' };
+  if (!gebiCard) return { valid: false, message: 'You must select a final card to discard!' };
   if (!melds || melds.length < 3) return { valid: false, message: 'Must have at least 3 valid melds (Tris/Quatris)!' };
 
   let totalCardsCount = 0;
@@ -267,12 +302,86 @@ function validateConquerHand(melds, gebiCard, jokerRank, baseCard) {
   return { valid: true, message: 'CONQUER! Valid winning hand!' };
 }
 
+/**
+ * Rule: GEBI (ገቢ) Detection
+ * Checks if a card can attach to an existing table meld (extends sequence or completes 4-set).
+ * If true, this card CANNOT be discarded to ground (የተወረደ ሜልድ ላይ ገቢ የሚሆን ካርታ መሬት ላይ መጣል አይቻልም)!
+ */
+function isCardGebiToMeld(card, meld, jokerRank, jokerSuits) {
+  if (!card || !meld || meld.length < 3) return false;
+
+  const isJk = (c) => isWildJoker(c, jokerRank, jokerSuits);
+  const naturals = meld.filter(c => !isJk(c));
+  if (naturals.length === 0) return false;
+
+  // 1. Same-rank set of 3 cards (can take 4th card of same rank)
+  const isSet = naturals.every(c => (c.isFalseJoker ? jokerRank : c.rank) === (naturals[0].isFalseJoker ? jokerRank : naturals[0].rank));
+  if (isSet && meld.length === 3) {
+    const setRank = naturals[0].isFalseJoker ? jokerRank : naturals[0].rank;
+    const cardRank = card.isFalseJoker ? jokerRank : card.rank;
+    if (cardRank === setRank && meld.every(c => c.suit !== card.suit)) {
+      return true;
+    }
+  }
+
+  // 2. Same-suit sequence (can extend on either end)
+  const isSeq = naturals.every(c => c.suit === naturals[0].suit);
+  if (isSeq) {
+    const suit = naturals[0].suit;
+    if (card.suit !== suit) return false;
+
+    // Rank numbers with Ace as 1
+    const numsAs1 = naturals.map(c => RANK_ORDER[c.rank]).sort((a, b) => a - b);
+    const min1 = numsAs1[0];
+    const max1 = numsAs1[numsAs1.length - 1];
+    const cardNum1 = RANK_ORDER[card.rank];
+
+    if (cardNum1 === min1 - 1 || cardNum1 === max1 + 1) return true;
+
+    // Rank numbers with Ace as 14 (Ace High)
+    const numsAs14 = naturals.map(c => (c.rank === 'A' ? 14 : RANK_ORDER[c.rank])).sort((a, b) => a - b);
+    const min14 = numsAs14[0];
+    const max14 = numsAs14[numsAs14.length - 1];
+    const cardNum14 = card.rank === 'A' ? 14 : RANK_ORDER[card.rank];
+
+    if (cardNum14 === min14 - 1 || cardNum14 === max14 + 1) return true;
+  }
+
+  return false;
+}
+
+function isCardGebiToTable(card, tableMelds, jokerRank, jokerSuits) {
+  if (!card || !tableMelds) return false;
+  const allGroups = [];
+  if (Array.isArray(tableMelds)) {
+    allGroups.push(...tableMelds);
+  } else {
+    for (const key of Object.keys(tableMelds)) {
+      if (Array.isArray(tableMelds[key])) {
+        allGroups.push(...tableMelds[key]);
+      }
+    }
+  }
+
+  for (const group of allGroups) {
+    if (isCardGebiToMeld(card, group, jokerRank, jokerSuits)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 module.exports = {
+  isWildJoker,
+  isNaturalMeld,
+  isSequenceSameSuit,
   isValidTris,
   isValidQuatris,
   calculateHandPoints,
   findHandTris,
   canDrawFromGround,
-  validateConquerHand
+  validateConquerHand,
+  isCardGebiToMeld,
+  isCardGebiToTable
 };
 

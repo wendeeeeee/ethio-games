@@ -63,26 +63,27 @@ function createConquerDeck(playerCount = 2) {
   }
 
   // 2 Printed False Jokers (1 Black, 1 Red) = Exactly 54 cards
+  // Rule: False Joker is NOT a wild joker! It only substitutes for the designated cut rank!
   deck.push({
     id: `card_false_joker_1_${id++}`,
-    suit: '⭐',
-    rank: 'JK',
+    suit: '🃏',
+    rank: 'FALSE',
     suitName: 'joker',
     color: 'black',
     pointValue: 0,
-    isJoker: true,
+    isJoker: false,
     isBase: false,
     isFalseJoker: true
   });
 
   deck.push({
     id: `card_false_joker_2_${id++}`,
-    suit: '⭐',
-    rank: 'JK',
+    suit: '🃏',
+    rank: 'FALSE',
     suitName: 'joker',
     color: 'red',
     pointValue: 0,
-    isJoker: true,
+    isJoker: false,
     isBase: false,
     isFalseJoker: true
   });

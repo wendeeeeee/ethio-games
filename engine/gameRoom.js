@@ -4,7 +4,11 @@ const {
   calculateHandPoints,
   canDrawFromGround,
   validateConquerHand,
-  findHandTris
+  findHandTris,
+  isValidTris,
+  isValidQuatris,
+  isCardGebiToTable,
+  isCardGebiToMeld
 } = require('./conquerRules');
 const walletManager = require('./walletManager');
 
@@ -34,6 +38,7 @@ class GameRoom {
     this.currentTurnPlayerId = null;
     this.turnState = null; // 'AWAITING_DRAW', 'AWAITING_DISCARD'
     this.isFirstDiscard = true; // Rule 1: Starter's first discard protected
+    this.mustMeld41PlayerId = null; // Player who picked from ground and must meld 41
 
     this.pokeState = {
       active: false,
@@ -67,8 +72,31 @@ class GameRoom {
     }
     this.pot = escrowResult.pot;
 
-    // 54-Card Deck Setup: Deal 14 to Creator, 13 to Joiner (Total 27)
+    // 54-Card 2-Deck Setup (cards will be dealt after Joiner calls Joker!)
     this.deck = shuffleDeck(createConquerDeck(2));
+    this.creatorHand = [];
+    this.joinerHand = [];
+    this.baseCard = null;
+    this.jokerCard = null;
+
+    // Transition to CUTTING_JOKER (Joiner chooses blindly BEFORE cards are dealt!)
+    this.status = 'CUTTING_JOKER';
+    this.log(`${player.name} joined the table. Pot is ${this.pot} ETB.`);
+    this.log(`🎲 ${player.name} ካርታ ከመታደሉ በፊት በጭፍን ጆከር ይሰይማል (ከፍ፣ ዝቅ፣ አንድ ላይ፣ ወይም ጎን)።`);
+
+    return { success: true };
+  }
+
+  // Joiner chooses blindly BEFORE cards are dealt: "ከፍ" (High), "ዝቅ" (Low), "አንድ ላይ" (Same), or "ጎን" (Opposite Color)
+  setJokerHighLow(playerId, choice = 'high') {
+    if (this.status !== 'CUTTING_JOKER') {
+      return { success: false, message: 'Not in cutting phase' };
+    }
+    if (this.joiner.id !== playerId) {
+      return { success: false, message: 'Only the Joiner can call the Joker!' };
+    }
+
+    // 1. Deal 27 cards (14 to Creator, 13 to Joiner)
     this.creatorHand = [];
     this.joinerHand = [];
 
@@ -79,33 +107,44 @@ class GameRoom {
     // Creator gets 14th card
     this.creatorHand.push(this.deck.pop());
 
-    // Reveal the 28th card as the Base Card!
+    // 2. Reveal the 28th card as the Base Card!
     this.baseCard = this.deck.pop();
     this.baseCard.isBase = true;
     this.jokerCard = this.baseCard;
 
-    // Transition to CUTTING_JOKER (Joiner sees 28th card and chooses High or Low)
-    this.status = 'CUTTING_JOKER';
-    this.log(`${player.name} joined the table. Pot is ${this.pot} ETB.`);
-    this.log(`🃏 27 ካርዶች ተከፋፈሉ (14 ለ${this.creator.name}፣ 13 ለ${player.name})።`);
-    this.log(`⭐ 28ኛዋ ካርታ ተገለጸች፦ ${this.baseCard.rank}${this.baseCard.suit}! ${player.name} ከፍ (High) ወይም ዝቅ (Low) ይሰይማል!`);
+    // 3. Determine target rank and suits based on Joiner's blind call:
+    // - 'high' (ከፍ): next rank, same color
+    // - 'low' or 'tach' (ዝቅ / ታች): previous rank, same color
+    // - 'same' or 'and_lay' (አንድ ላይ): same rank, same color
+    // - 'gon' or 'opposite' (ጎን): same rank, OPPOSITE color (black <-> red)
+    let targetRank = this.baseCard.rank;
+    let targetSuits = [];
+    let choiceName = '';
 
-    return { success: true };
-  }
+    const sameColorSuits = this.baseCard.color === 'black' ? ['♣', '♠'] : ['♥', '♦'];
+    const oppColorSuits = this.baseCard.color === 'black' ? ['♥', '♦'] : ['♣', '♠'];
 
-  // Joiner chooses "ከፍ" (High) or "ዝቅ" (Low) for the 28th card
-  setJokerHighLow(playerId, choice = 'high') {
-    if (this.status !== 'CUTTING_JOKER') {
-      return { success: false, message: 'Not in cutting phase' };
+    if (choice === 'high') {
+      targetRank = getNextRank(this.baseCard.rank);
+      targetSuits = sameColorSuits;
+      choiceName = 'ከፍ (High)';
+    } else if (choice === 'low' || choice === 'tach') {
+      targetRank = getPrevRank(this.baseCard.rank);
+      targetSuits = sameColorSuits;
+      choiceName = 'ዝቅ / ታች (Low)';
+    } else if (choice === 'same' || choice === 'and_lay') {
+      targetRank = this.baseCard.rank;
+      targetSuits = sameColorSuits;
+      choiceName = 'አንድ ላይ (Same)';
+    } else if (choice === 'gon' || choice === 'opposite') {
+      targetRank = this.baseCard.rank;
+      targetSuits = oppColorSuits;
+      choiceName = 'ጎን (Opposite Color)';
+    } else {
+      targetRank = getNextRank(this.baseCard.rank);
+      targetSuits = sameColorSuits;
+      choiceName = 'ከፍ (High)';
     }
-    if (this.joiner.id !== playerId) {
-      return { success: false, message: 'Only the Joiner can call High or Low!' };
-    }
-
-    // Determine target rank based on High or Low
-    const targetRank = choice === 'high' ? getNextRank(this.baseCard.rank) : getPrevRank(this.baseCard.rank);
-    // Matching color group: Black -> ♣ and ♠; Red -> ♥ and ♦
-    const targetSuits = this.baseCard.color === 'black' ? ['♣', '♠'] : ['♥', '♦'];
 
     this.jokerRank = targetRank;
     this.jokerSuits = targetSuits;
@@ -124,9 +163,11 @@ class GameRoom {
     this.turnState = 'AWAITING_DISCARD';
     this.status = 'PLAYING';
 
-    const colorName = this.baseCard.color === 'black' ? 'ጥቁር (Black)' : 'ቀይ (Red)';
-    this.log(`⭐ ${this.joiner.name} "${choice === 'high' ? 'ከፍ (High)' : 'ዝቅ (Low)'}" መረጠ!`);
-    this.log(`👑 ዋና ጆከሮች፦ ${targetRank}${targetSuits[0]} እና ${targetRank}${targetSuits[1]} (${colorName})! 2ቱ ፕሪንትድ ጆከሮች ደግሞ ፎልስ ጆከር (False Joker) ናቸው!`);
+    const colorDesc = targetSuits.includes('♥') ? 'ቀይ (Red)' : 'ጥቁር (Black)';
+    this.log(`🃏 27 ካርታዎች ተከፋፈሉ (14 ለ${this.creator.name}፣ 13 ለ${this.joiner.name})።`);
+    this.log(`⭐ 28ኛዋ መቁረጫ ካርታ ተገለጸች፦ ${this.baseCard.rank}${this.baseCard.suit}!`);
+    this.log(`🎯 ${this.joiner.name} በጭፍን የመረጠው፦ "${choiceName}"!`);
+    this.log(`👑 ዋና ጆከሮች፦ ${targetRank}${targetSuits[0]} እና ${targetRank}${targetSuits[1]} (${colorDesc})! 2ቱ ፕሪንትድ ጆከሮች ደግሞ ፎልስ ጆከር (False Joker) ናቸው!`);
     this.log(`👉 ${this.creator.name} 14 ካርታ ስላለው የመጀመሪያውን ካርታ በመጣል ጨዋታውን ይጀምራል!`);
 
     return { success: true, jokerRank: this.jokerRank, jokerSuits: this.jokerSuits };
@@ -143,10 +184,15 @@ class GameRoom {
       if (card.rank === this.jokerRank && this.jokerSuits && this.jokerSuits.includes(card.suit)) {
         card.isJoker = true;
         card.isMainJoker = true;
+      } else {
+        card.isJoker = false;
+        card.isMainJoker = false;
       }
-      // 2. The 2 printed false jokers are also wild jokers!
+      // 2. The printed False Jokers are NOT wild jokers! They only substitute for the designated cut rank:
       if (card.isFalseJoker) {
-        card.isJoker = true;
+        card.isJoker = false;
+        card.isMainJoker = false;
+        card.effectiveRank = this.jokerRank;
       }
     };
     this.creatorHand.forEach(mark);
@@ -186,10 +232,21 @@ class GameRoom {
       if (this.isFirstDiscard) return { success: false, message: 'የመጀመሪያው ካርታ አይነሳም!' };
       if (this.discardPile.length === 0) return { success: false, message: 'Ground is empty' };
 
+      const topCard = this.discardPile[this.discardPile.length - 1];
+      const isFreeJoker = topCard.isJoker || topCard.rank === this.jokerRank;
+
       drawnCard = this.discardPile.pop();
       hand.push(drawnCard);
       this.turnState = 'AWAITING_DISCARD';
       this.resetPoke();
+
+      // If top ground card was not a dropped joker, player must meld 41 on this turn!
+      if (!isFreeJoker) {
+        this.mustMeld41PlayerId = playerId;
+      } else {
+        this.mustMeld41PlayerId = null;
+      }
+
       this.log(`${this.getPlayerName(playerId)} picked ${drawnCard.rank}${drawnCard.suit} from the ground.`);
       return { success: true, card: drawnCard, from: 'ground' };
     }
@@ -203,25 +260,45 @@ class GameRoom {
     if (this.currentTurnPlayerId !== playerId) return { success: false, message: 'Not your turn' };
     if (this.turnState !== 'AWAITING_DISCARD') return { success: false, message: 'You must draw first' };
 
+    // Player picked from ground and must meld 41 before discarding
+    if (this.mustMeld41PlayerId === playerId) {
+      return {
+        success: false,
+        mustMeld41: true,
+        message: 'ከመሬት ስላነሳህ ቢያንስ 41 ነጥብ ሳታወርድ ካርታ ወደ መሬት መጣል አትችልም!'
+      };
+    }
+
     const hand = this.getHand(playerId);
     const cardIndex = hand.findIndex(c => c.id === cardId);
     if (cardIndex === -1) return { success: false, message: 'Card not in your hand' };
 
     const [discardedCard] = hand.splice(cardIndex, 1);
 
-    // Rule 5: Finishing via "Gebi" (Conquer declare)
+    // Rule: GEBI (ገቢ) Restriction on Discarding
+    // A player CANNOT discard a card to ground if it can be GEBI into any open table meld!
+    if (!toGebi && isCardGebiToTable(discardedCard, this.tableMelds, this.jokerRank, this.jokerSuits)) {
+      hand.splice(cardIndex, 0, discardedCard); // restore card
+      return {
+        success: false,
+        isGebi: true,
+        message: `⚠️ [ ${discardedCard.rank}${discardedCard.suit} ] ወደ ጠረጴዛው ሜልድ ገቢ (GEBI) ስለሚሆን ወደ መሬት መጣል አትችልም! ሌላ ካርታ ምረጥ።`
+      };
+    }
+
+    // Finishing Conquer (Rule 5 & 12)
     if (toGebi) {
       const winValidation = validateConquerHand(melds, discardedCard, this.jokerRank, this.jokerCard);
       if (!winValidation.valid) {
         // Return card to hand if invalid
         hand.push(discardedCard);
-        return { success: false, message: `Cannot Gebi: ${winValidation.message}` };
+        return { success: false, message: `Cannot Conquer: ${winValidation.message}` };
       }
 
       // Valid Conquer!
       this.status = 'FINISHED';
       this.winner = playerId;
-      this.winReason = `CONQUER! ${this.getPlayerName(playerId)} placed ${discardedCard.rank}${discardedCard.suit} into GEBI and won!`;
+      this.winReason = `CONQUER! ${this.getPlayerName(playerId)} discarded ${discardedCard.rank}${discardedCard.suit} and won!`;
       this.log(`🏆 ${this.winReason}`);
 
       const payout = walletManager.payoutWinner(this.roomId, playerId);
@@ -295,6 +372,55 @@ class GameRoom {
 
     this.log(`✅ ${this.getPlayerName(playerId)} melded ${meldPoints} points on the table and picked ${drawnCard.rank}${drawnCard.suit} from the ground!`);
     return { success: true, card: drawnCard, meldPoints };
+  }
+
+  // Lay down melds onto the table ("ውረድ") without drawing from ground
+  layDownMelds(playerId, meldsToLayDown) {
+    if (this.status !== 'PLAYING') return { success: false, message: 'Game not in progress' };
+    if (this.currentTurnPlayerId !== playerId) return { success: false, message: 'Not your turn' };
+    if (!meldsToLayDown || meldsToLayDown.length === 0) return { success: false, message: 'No melds provided' };
+
+    const hand = this.getHand(playerId);
+    const hasAlreadyOpened = this.tableMelds[playerId] && this.tableMelds[playerId].length > 0;
+
+    let meldPoints = 0;
+    for (const group of meldsToLayDown) {
+      if (!isValidTris(group, this.jokerRank, this.jokerSuits) && !isValidQuatris(group, this.jokerRank, this.jokerSuits)) {
+        return { success: false, message: 'ያልተሟላ ወይም የተሳሳተ ትሪስ/ሜልድ ነው!' };
+      }
+      for (const c of group) {
+        meldPoints += c.pointValue || 0;
+      }
+    }
+
+    // Verify all cards exist in player hand
+    for (const group of meldsToLayDown) {
+      for (const card of group) {
+        const idx = hand.findIndex(c => String(c.id) === String(card.id));
+        if (idx === -1) return { success: false, message: `Card ${card.rank}${card.suit} not in hand` };
+      }
+    }
+
+    // Remove from hand and add to player's table melds
+    for (const group of meldsToLayDown) {
+      for (const card of group) {
+        const idx = hand.findIndex(c => String(c.id) === String(card.id));
+        if (idx !== -1) hand.splice(idx, 1);
+      }
+      if (!this.tableMelds[playerId]) this.tableMelds[playerId] = [];
+      this.tableMelds[playerId].push(group);
+    }
+
+    // Clear ground-draw 41 requirement once total melds reach 41 points
+    const totalTablePoints = (this.tableMelds[playerId] || []).reduce(
+      (sum, m) => sum + m.reduce((mSum, c) => mSum + (c.pointValue || 0), 0), 0
+    );
+    if (this.mustMeld41PlayerId === playerId && totalTablePoints >= 41) {
+      this.mustMeld41PlayerId = null;
+    }
+
+    this.log(`📥 ${this.getPlayerName(playerId)} ወረደ (ወደ ጠረጴዛ አወረደ): ${meldPoints} ነጥብ!`);
+    return { success: true, meldPoints, melds: meldsToLayDown };
   }
 
   // Penalty: Player touched ground but cannot reach 41 -> IMMEDIATE FORFEIT!
@@ -391,6 +517,32 @@ class GameRoom {
     return { success: true, stolenJoker };
   }
 
+  // Rule: Attach a card from hand to an open table meld (ገቢ ማድረግ)
+  attachGebiCard(playerId, targetPlayerMeldOwnerId, meldIndex, cardId) {
+    if (this.status !== 'PLAYING') return { success: false, message: 'Game not active' };
+    if (this.currentTurnPlayerId !== playerId) return { success: false, message: 'Can only attach cards on your turn' };
+
+    const playerHand = this.getHand(playerId);
+    const cardIndex = playerHand.findIndex(c => c.id === cardId);
+    if (cardIndex === -1) return { success: false, message: 'Card not in hand' };
+    const card = playerHand[cardIndex];
+
+    const melds = this.tableMelds[targetPlayerMeldOwnerId];
+    if (!melds || !melds[meldIndex]) return { success: false, message: 'Meld not found' };
+    const targetMeld = melds[meldIndex];
+
+    if (!isCardGebiToMeld(card, targetMeld, this.jokerRank, this.jokerSuits)) {
+      return { success: false, message: 'ይህ ካርታ ወደዚህ ሜልድ ገቢ (GEBI) መሆን አይችልም!' };
+    }
+
+    // Attach card to target meld
+    targetMeld.push(card);
+    playerHand.splice(cardIndex, 1);
+
+    this.log(`📥 ${this.getPlayerName(playerId)} attached ${card.rank}${card.suit} to table meld (ገቢ አደረገ)!`);
+    return { success: true, card, meld: targetMeld };
+  }
+
   getPlayerName(playerId) {
     if (this.creator && this.creator.id === playerId) return this.creator.name;
     if (this.joiner && this.joiner.id === playerId) return this.joiner.name;
@@ -424,6 +576,7 @@ class GameRoom {
       jokerCard: this.jokerCard,
       jokerRank: this.jokerRank,
       jokerSuits: this.jokerSuits,
+      jokerChoice: this.jokerChoice,
       topGroundCard: groundCard,
       groundCardCount: this.discardPile.length,
       deckCardCount: this.deck.length,
@@ -437,6 +590,7 @@ class GameRoom {
       points: pointsInfo.total,
       hasSpecial41: pointsInfo.hasSpecial41,
       specialReason: pointsInfo.specialReason,
+      mustMeld41: this.mustMeld41PlayerId === playerId,
       trisCount: trisList.length,
       groundEligibility,
       pokeState: {
