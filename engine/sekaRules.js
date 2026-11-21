@@ -262,7 +262,14 @@ function arrangeSekaHandOptimal(hand) {
 
   // In each suit, find complete sequences or gap pairs that need Joker
   for (const s of suits) {
-    const suitCards = bySuit[s].sort((a, b) => (RANK_ORDER[a.rank] || 0) - (RANK_ORDER[b.rank] || 0));
+    const suitNatural = bySuit[s];
+    const hasA = suitNatural.some(c => c.rank === 'A');
+    const hasHigh = suitNatural.some(c => ['K', 'Q', 'J', '10'].includes(c.rank));
+    const hasLow = suitNatural.some(c => ['2', '3', '4', '5'].includes(c.rank));
+    const isAceHigh = hasA && hasHigh && !hasLow;
+    const rankFn = (c) => (isAceHigh && c.rank === 'A' ? 14 : (RANK_ORDER[c.rank] || 0));
+
+    const suitCards = suitNatural.sort((a, b) => rankFn(a) - rankFn(b));
     let usedInSuit = new Set();
 
     // 0. Check natural complete 4-card Quatris sequence FIRST (e.g. J-Q-K-A, 7-8-9-10)

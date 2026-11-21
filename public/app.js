@@ -276,8 +276,8 @@ const weredBtn = document.getElementById('weredBtn');
 let currentMeldBarMode = 'ground'; // 'ground' or 'wered'
 
 // Initial setup
-playerNameInput.value = playerName;
-walletUserDisplay.textContent = playerName;
+if (playerNameInput) playerNameInput.value = playerName;
+if (walletUserDisplay) walletUserDisplay.textContent = playerName;
 const initialSekaNameInput = document.getElementById('sekaPlayerNameInput');
 if (initialSekaNameInput) initialSekaNameInput.value = playerName;
 
@@ -377,8 +377,8 @@ if (registerForm) {
     localStorage.setItem('conquer_user_phone', userPhone);
 
     // Update UI elements
-    walletUserDisplay.textContent = playerName;
-    playerNameInput.value = playerName;
+    if (walletUserDisplay) walletUserDisplay.textContent = playerName;
+    if (playerNameInput) playerNameInput.value = playerName;
     const sNameInp = document.getElementById('sekaPlayerNameInput');
     if (sNameInp) sNameInp.value = playerName;
 
@@ -388,7 +388,7 @@ if (registerForm) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ userId, name: playerName, phone: userPhone })
-    }).catch(() => {});
+    }).catch(() => { });
 
     playCardSound();
     closeRegistrationModal();
@@ -402,14 +402,27 @@ if (!isUserRegistered) {
   setTimeout(openRegistrationModal, 600);
 }
 
-playerNameInput.addEventListener('change', () => {
-  playerName = playerNameInput.value || 'Player';
-  localStorage.setItem('conquer_user_name', playerName);
-  walletUserDisplay.textContent = playerName;
-  const sNameInp = document.getElementById('sekaPlayerNameInput');
-  if (sNameInp) sNameInp.value = playerName;
-  socket.emit('register_user', { userId, name: playerName, phone: userPhone });
-});
+if (playerNameInput) {
+  playerNameInput.addEventListener('change', () => {
+    playerName = playerNameInput.value || 'Player';
+    localStorage.setItem('conquer_user_name', playerName);
+    if (walletUserDisplay) walletUserDisplay.textContent = playerName;
+    const sNameInp = document.getElementById('sekaPlayerNameInput');
+    if (sNameInp) sNameInp.value = playerName;
+    socket.emit('register_user', { userId, name: playerName, phone: userPhone });
+  });
+}
+
+const initialSekaInput = document.getElementById('sekaPlayerNameInput');
+if (initialSekaInput) {
+  initialSekaInput.addEventListener('change', () => {
+    playerName = initialSekaInput.value || 'Player';
+    localStorage.setItem('conquer_user_name', playerName);
+    if (walletUserDisplay) walletUserDisplay.textContent = playerName;
+    if (playerNameInput) playerNameInput.value = playerName;
+    socket.emit('register_user', { userId, name: playerName, phone: userPhone });
+  });
+}
 
 // Socket connection
 socket.on('connect', () => {
@@ -1757,7 +1770,14 @@ function arrangeSekaHandOptimal(hand) {
   const arrangedGroups = [];
 
   for (const s of suits) {
-    const suitCards = bySuit[s].sort((a, b) => (rankOrderMap[a.rank] || 0) - (rankOrderMap[b.rank] || 0));
+    const suitNatural = bySuit[s];
+    const hasA = suitNatural.some(c => c.rank === 'A');
+    const hasHigh = suitNatural.some(c => ['K', 'Q', 'J', '10'].includes(c.rank));
+    const hasLow = suitNatural.some(c => ['2', '3', '4', '5'].includes(c.rank));
+    const isAceHigh = hasA && hasHigh && !hasLow;
+    const rankFn = (c) => (isAceHigh && c.rank === 'A' ? 14 : (rankOrderMap[c.rank] || 0));
+
+    const suitCards = suitNatural.sort((a, b) => rankFn(a) - rankFn(b));
     let usedInSuit = new Set();
 
     // 0. Check natural complete 4-card Quatris sequence FIRST (e.g. J-Q-K-A, 7-8-9-10)
