@@ -358,11 +358,30 @@ function updateTurnDisplay(state) {
   if (!s || !turnIndicator) return;
   if (s.status !== 'PLAYING') {
     turnIndicator.textContent = s.status === 'FINISHED' ? 'የጨዋታ ውጤት' : 'ተራ...';
+    if (turnTimerBadge) turnTimerBadge.style.display = 'none';
     return;
   }
   const isMyTurn = s.isMyTurn !== undefined ? s.isMyTurn : (s.currentTurnPlayerId === userId);
   const oppName = s.opponentName || (s.creator && s.creator.id !== userId ? s.creator.name : (s.joiner && s.joiner.id !== userId ? s.joiner.name : 'Opponent'));
-  const sec = s.turnDeadline ? Math.max(0, Math.round((s.turnDeadline - Date.now()) / 1000)) : (s.turnSecondsLeft !== undefined ? s.turnSecondsLeft : 60);
+  
+  // Real-time second calculation
+  let sec = 60;
+  if (s.turnDeadline) {
+    sec = Math.max(0, Math.round((s.turnDeadline - Date.now()) / 1000));
+  } else if (s.turnSecondsLeft !== undefined) {
+    sec = Math.max(0, s.turnSecondsLeft);
+  }
+
+  // Active smooth local ticking if server didn't supply live turnDeadline
+  if (!s.turnDeadline) {
+    if (!s._localTurnStartTime || s._lastTurnPlayerId !== s.currentTurnPlayerId || s._lastTurnState !== s.turnState) {
+      s._localTurnStartTime = Date.now();
+      s._lastTurnPlayerId = s.currentTurnPlayerId;
+      s._lastTurnState = s.turnState;
+    }
+    const elapsed = Math.floor((Date.now() - s._localTurnStartTime) / 1000);
+    sec = Math.max(0, 60 - elapsed);
+  }
 
   if (isMyTurn) {
     turnIndicator.innerHTML = `🔥 YOUR TURN <span style="font-size: 15px; font-weight: 900; color: ${sec <= 15 ? '#ef4444' : '#fef08a'}; margin-left: 6px;">(⏳ ${sec}s)</span>`;
@@ -373,6 +392,7 @@ function updateTurnDisplay(state) {
   }
 
   if (turnTimerBadge && turnSecondsVal) {
+    turnTimerBadge.style.display = 'inline-flex';
     turnSecondsVal.textContent = sec;
     if (sec <= 15) turnTimerBadge.classList.add('urgent');
     else turnTimerBadge.classList.remove('urgent');
@@ -2682,6 +2702,7 @@ function renderGame(state) {
   }
 
   // Opponent display
+  const oppName = state.opponentName || (state.creator && state.creator.id !== userId ? state.creator.name : (state.joiner && state.joiner.id !== userId ? state.joiner.name : 'Opponent'));
   opponentNameDisplay.textContent = oppName;
   const oppCount = state.opponentCardCount !== undefined ? state.opponentCardCount : (state.opponentHandCount || 10);
   opponentCardCount.textContent = oppCount;
@@ -3203,24 +3224,8 @@ function bindCardInteractions(hand) {
         return;
       }
 
-      // Normal mode: Single-card Tap-to-Place!
-      // If Card A is already selected and user taps Card B -> Move Card A to Card B's position!
-      if (selectedCardId && String(selectedCardId) !== String(cId) && selectedCardsSet.size === 1) {
-        const fromIndex = currentGameState.myHand.findIndex(c => String(c.id) === String(selectedCardId));
-        const toIndex = currentGameState.myHand.findIndex(c => String(c.id) === String(cId));
-        if (fromIndex !== -1 && toIndex !== -1 && fromIndex !== toIndex) {
-          const [movedCard] = currentGameState.myHand.splice(fromIndex, 1);
-          currentGameState.myHand.splice(toIndex, 0, movedCard);
-          playerOrderedCardIds = currentGameState.myHand.map(c => c.id);
-          playCardSound();
-          showSortToast('📍 ካርታው ወደ አዲሱ ቦታ ተቀይሯል');
-          renderPlayerHand(currentGameState.myHand);
-          return;
-        }
-      }
-
-      // Normal selection toggle
-      if (selectedCardsSet.has(cId)) {
+      // Normal selection: tapping a card selects it (or deselects if already selected)
+      if (selectedCardsSet.has(cId) && selectedCardId === cId) {
         selectedCardsSet.delete(cId);
         selectedCardId = null;
       } else {

@@ -465,12 +465,12 @@ class SekaBotPlayer {
     if (this.room.status !== 'PLAYING') return;
     if (this.room.currentTurnPlayerId !== this.botId) return;
 
-    // Small delay to simulate human play
-    setTimeout(() => {
-      if (this.room.status !== 'PLAYING') return;
+    if (this.room.turnState === 'AWAITING_DRAW') {
+      setTimeout(() => {
+        if (this.room.status !== 'PLAYING') return;
+        if (this.room.currentTurnPlayerId !== this.botId) return;
+        if (this.room.turnState !== 'AWAITING_DRAW') return;
 
-      // 1. AWAITING_DRAW
-      if (this.room.turnState === 'AWAITING_DRAW') {
         const topDiscard = this.room.discardPile.length > 0
           ? this.room.discardPile[this.room.discardPile.length - 1]
           : null;
@@ -479,13 +479,11 @@ class SekaBotPlayer {
 
         // Check if top ground card is beneficial
         if (topDiscard) {
-          const currentHand = this.room.getHand(this.botId);
-          // Test if drawing top ground card creates an immediate win
+          const currentHand = this.room.getHand(this.botId) || [];
           const testWin = validateSekaWinningHand([...currentHand, topDiscard]);
           if (testWin.valid) {
             drawFrom = 'ground';
           } else {
-            // Check if top discard has matching suit with hand
             const sameSuit = currentHand.filter(c => c.suit === topDiscard.suit);
             if (sameSuit.length >= 2) {
               const topRankNum = RANK_ORDER[topDiscard.rank] || 0;
@@ -499,32 +497,40 @@ class SekaBotPlayer {
         }
 
         this.room.drawCard(this.botId, drawFrom);
-        if (io) callback && callback();
-      }
+        if (callback) callback();
 
-      // 2. AWAITING_DISCARD
+        // 2. AWAITING_DISCARD after 1 second delay
+        setTimeout(() => {
+          this.executeBotDiscard(callback);
+        }, 1000);
+
+      }, 800);
+    } else if (this.room.turnState === 'AWAITING_DISCARD') {
       setTimeout(() => {
-        if (this.room.status !== 'PLAYING') return;
-        if (this.room.currentTurnPlayerId !== this.botId) return;
-        if (this.room.turnState !== 'AWAITING_DISCARD') return;
-
-        const hand = this.room.getHand(this.botId);
-
-        // Check if Bot has winning hand
-        const winCheck = validateSekaWinningHand(hand);
-        if (winCheck.valid) {
-          this.room.claimWin(this.botId, winCheck.discardedCard.id);
-          if (io) callback && callback();
-          return;
-        }
-
-        // Otherwise pick the least useful card to discard
-        const cardToDiscard = this.chooseDiscard(hand);
-        this.room.discardCard(this.botId, cardToDiscard.id);
-        if (io) callback && callback();
+        this.executeBotDiscard(callback);
       }, 1000);
+    }
+  }
 
-    }, 800);
+  executeBotDiscard(callback = null) {
+    if (this.room.status !== 'PLAYING') return;
+    if (this.room.currentTurnPlayerId !== this.botId) return;
+    if (this.room.turnState !== 'AWAITING_DISCARD') return;
+
+    const hand = this.room.getHand(this.botId) || [];
+
+    // Check if Bot has winning hand
+    const winCheck = validateSekaWinningHand(hand);
+    if (winCheck.valid) {
+      this.room.claimWin(this.botId, winCheck.discardedCard.id);
+      if (callback) callback();
+      return;
+    }
+
+    // Otherwise pick the least useful card to discard
+    const cardToDiscard = this.chooseDiscard(hand);
+    this.room.discardCard(this.botId, cardToDiscard.id);
+    if (callback) callback();
   }
 
   chooseDiscard(hand) {

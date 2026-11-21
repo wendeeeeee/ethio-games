@@ -368,7 +368,7 @@ io.on('connection', (socket) => {
     const botResult = room.join({ id: botId, name: 'Seka Bot (AI)', socketId: null, isBot: true });
     if (!botResult.success) return socket.emit('error_msg', botResult.message);
 
-    socket.emit('seka_room_created', { roomId });
+    socket.emit('seka_room_created', { roomId, isBot: true });
     broadcastWallet(room.creator.id);
     broadcastSekaRoomUpdate(room);
 
@@ -515,9 +515,6 @@ function handleSekaBotTurn(room) {
   const botPlayer = new SekaBotPlayer(room, botId, 'Seka Bot (AI)');
   botPlayer.takeTurn(io, () => {
     broadcastSekaRoomUpdate(room);
-    if (room.status === 'PLAYING' && room.currentTurnPlayerId === botId) {
-      handleSekaBotTurn(room);
-    }
   });
 }
 
