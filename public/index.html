@@ -173,9 +173,7 @@
           POT: 200 ETB
         </div>
         <div style="display: flex; align-items: center; gap: 8px;">
-          <div class="turn-timer-badge" id="turnTimerBadge" title="የካርታ መጣያ ቀሪ ጊዜ">⏳ <span id="turnSecondsVal">60</span>s</div>
           <button class="sound-toggle-btn" id="soundToggleBtnTable" title="Toggle Sound (ድምፅ)">🔊</button>
-          <button class="leave-game-btn" id="leaveGameBtn" title="ከጠረጴዛ ውጣ (Leave Table)">🚪 ውጣ</button>
           <button class="poke-btn" id="pokeBtn" style="display: none;">
             <span>⏰</span> POKE (30s)
           </button>
@@ -302,7 +300,8 @@
             style="display: none; background: linear-gradient(135deg, #f59e0b, #d97706); color: #fff; font-weight: bold; border-color: #fbbf24; min-width: 120px;">🏆
             ሴካ አሸንፍ</button>
           <button class="ctrl-btn discard-btn" id="discardBtn">መሬት ጣል</button>
-          <button class="ctrl-btn" id="leaveGameBtn">ውጣ</button>
+          <button class="ctrl-btn" id="leaveGameBtn"
+            style="background: rgba(239, 68, 68, 0.2); border-color: #ef4444; color: #fca5a5; font-weight: 700; min-width: 75px;">🚪 ውጣ</button>
         </div>
 
         <!-- Optional Melds Groups View Container -->
@@ -502,7 +501,7 @@
 
   <!-- Socket.io & App Script -->
   <script src="/socket.io/socket.io.js"></script>
-  <script src="app.js?v=34"></script>
+  <script src="app.js?v=35"></script>
 </body>
 
 </html>

@@ -35,6 +35,124 @@ class SekaGameRoom {
     this.winReason = null;
     this.winningMelds = null;
     this.logs = [];
+
+    // 60-Second Turn & Leave Timers
+    this.turnDuration = 60 * 1000;
+    this.turnDeadline = null;
+    this.turnTimer = null;
+    this.temporarilyLeft = {};
+    this.leaveTimeouts = {};
+    this.onTurnTimeoutCallback = null;
+    this.onLeaveTimeoutCallback = null;
+    this.forfeitedPlayer = null;
+  }
+
+  clearAllTimers() {
+    if (this.turnTimer) {
+      clearTimeout(this.turnTimer);
+      this.turnTimer = null;
+    }
+    if (this.leaveTimeouts) {
+      for (const uid in this.leaveTimeouts) {
+        clearTimeout(this.leaveTimeouts[uid]);
+      }
+      this.leaveTimeouts = {};
+    }
+  }
+
+  resetTurnTimer(onTimeout) {
+    if (this.turnTimer) {
+      clearTimeout(this.turnTimer);
+      this.turnTimer = null;
+    }
+    if (this.status !== 'PLAYING') return;
+
+    this.turnDeadline = Date.now() + this.turnDuration;
+    const activePlayer = this.players.find(p => p.id === this.currentTurnPlayerId);
+    if (!activePlayer || activePlayer.isBot) return;
+
+    const cb = onTimeout || this.onTurnTimeoutCallback;
+    this.turnTimer = setTimeout(() => {
+      if (this.status === 'PLAYING') {
+        this.handleTurnTimeout(cb);
+      }
+    }, this.turnDuration);
+  }
+
+  handleTurnTimeout(onTimeout) {
+    if (this.status !== 'PLAYING') return;
+    const timedOutPlayer = this.players.find(p => p.id === this.currentTurnPlayerId);
+    if (!timedOutPlayer) return;
+
+    const opponents = this.players.filter(p => p.id !== timedOutPlayer.id);
+    const winner = opponents[0] || this.creator;
+
+    this.status = 'FINISHED';
+    this.winner = winner;
+    this.winReason = 'TIMEOUT_FORFEIT';
+    this.forfeitedPlayer = timedOutPlayer;
+
+    walletManager.payoutWinner(this.roomId, winner.id);
+    this.log(`⏰ ተጫዋች ${timedOutPlayer.name} በ1 ደቂቃ ውስጥ ካርታ ስላልጣለ ተሸንፏል! ${winner.name} አሸነፈ (Timeout)!`);
+
+    this.clearAllTimers();
+
+    if (onTimeout) onTimeout(this, winner, timedOutPlayer);
+  }
+
+  playerLeaveTemp(userId, onTimeout) {
+    if (this.status !== 'PLAYING') return;
+    const leftPlayer = this.players.find(p => p.id === userId);
+    if (!leftPlayer) return;
+
+    const deadline = Date.now() + 60 * 1000;
+    this.temporarilyLeft[userId] = {
+      name: leftPlayer.name,
+      deadline
+    };
+
+    this.log(`🚪 ${leftPlayer.name} ለጊዜው ከጠረጴዛው ወጥቷል! በ1 ደቂቃ ውስጥ ካልተመለሰ ይሸነፋል!`);
+
+    if (this.leaveTimeouts[userId]) {
+      clearTimeout(this.leaveTimeouts[userId]);
+    }
+
+    const cb = onTimeout || this.onLeaveTimeoutCallback;
+    this.leaveTimeouts[userId] = setTimeout(() => {
+      if (this.status === 'PLAYING' && this.temporarilyLeft[userId]) {
+        const opponents = this.players.filter(p => p.id !== userId);
+        const winner = opponents[0] || this.creator;
+
+        this.status = 'FINISHED';
+        this.winner = winner;
+        this.winReason = 'ABANDON_FORFEIT';
+        this.forfeitedPlayer = leftPlayer;
+
+        walletManager.payoutWinner(this.roomId, winner.id);
+        this.log(`❌ ${leftPlayer.name} በ1 ደቂቃ ውስጥ ስላልተመለሰ ተሸንፏል! ${winner.name} አሸነፈ!`);
+
+        delete this.temporarilyLeft[userId];
+        delete this.leaveTimeouts[userId];
+
+        this.clearAllTimers();
+
+        if (cb) cb(this, winner, leftPlayer);
+      }
+    }, 60 * 1000);
+  }
+
+  playerReturn(userId) {
+    if (this.leaveTimeouts && this.leaveTimeouts[userId]) {
+      clearTimeout(this.leaveTimeouts[userId]);
+      delete this.leaveTimeouts[userId];
+    }
+    if (this.temporarilyLeft && this.temporarilyLeft[userId]) {
+      delete this.temporarilyLeft[userId];
+    }
+    const returningPlayer = this.players.find(p => p.id === userId);
+    if (returningPlayer) {
+      this.log(`👋 ${returningPlayer.name} ወደ ጨዋታው ተመልሷል!`);
+    }
   }
 
   log(message) {
@@ -90,6 +208,7 @@ class SekaGameRoom {
     // Creator starts in AWAITING_DISCARD because they already have 11 cards
     this.currentTurnPlayerId = this.creator.id;
     this.turnState = 'AWAITING_DISCARD';
+    this.resetTurnTimer();
 
     this.log(`🎮 ሴካ ጨዋታ ተጀመረ! ፖት: ${this.pot} ETB (${this.players.length} ተጫዋቾች)።`);
     this.log(`🃏 አጫዋች ${this.creator.name} 11 ካርታ ተሰጥቶታል፤ 1 ካርታ ወደ መሬት በመጣል ጨዋታውን ይጀምራል!`);
@@ -186,6 +305,7 @@ class SekaGameRoom {
       this.winReason = 'SEKA_WIN';
       this.winningMelds = winCheck.melds;
       this.winningDiscard = cardToDiscard;
+      this.clearAllTimers();
 
       walletManager.payoutWinner(this.roomId, this.winner.id);
 
@@ -213,6 +333,7 @@ class SekaGameRoom {
     const nextIdx = (currIdx + 1) % this.players.length;
     this.currentTurnPlayerId = this.players[nextIdx].id;
     this.turnState = 'AWAITING_DRAW';
+    this.resetTurnTimer();
 
     return {
       success: true,
@@ -264,6 +385,7 @@ class SekaGameRoom {
     this.winReason = 'SEKA_WIN';
     this.winningMelds = winCheck.melds;
     this.winningDiscard = tetay;
+    this.clearAllTimers();
 
     walletManager.payoutWinner(this.roomId, this.winner.id);
 
@@ -320,6 +442,10 @@ class SekaGameRoom {
       winReason: this.winReason,
       winningMelds: this.winningMelds,
       winningDiscard: this.winningDiscard,
+      turnDeadline: this.turnDeadline,
+      turnSecondsLeft: this.turnDeadline ? Math.max(0, Math.round((this.turnDeadline - Date.now()) / 1000)) : 60,
+      temporarilyLeft: this.temporarilyLeft || {},
+      forfeitedPlayer: this.forfeitedPlayer ? { id: this.forfeitedPlayer.id, name: this.forfeitedPlayer.name } : null,
       logs: this.logs.slice(0, 10)
     };
   }
