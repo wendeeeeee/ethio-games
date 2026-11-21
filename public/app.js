@@ -298,7 +298,7 @@ function showActiveGameReturnBanner(roomId, deadline) {
   const targetEnd = deadline || (Date.now() + 60 * 1000);
 
   function update() {
-    const left = Math.max(0, Math.round((targetEnd - Date.now()) / 1000));
+    const left = Math.min(60, Math.max(0, Math.round((targetEnd - Date.now()) / 1000)));
     if (returnBannerCountdown) returnBannerCountdown.textContent = left + 's';
     if (left <= 0) {
       clearInterval(returnBannerTimer);
@@ -364,24 +364,17 @@ function updateTurnDisplay(state) {
   const isMyTurn = s.isMyTurn !== undefined ? s.isMyTurn : (s.currentTurnPlayerId === userId);
   const oppName = s.opponentName || (s.creator && s.creator.id !== userId ? s.creator.name : (s.joiner && s.joiner.id !== userId ? s.joiner.name : 'Opponent'));
   
-  // Real-time second calculation
-  let sec = 60;
-  if (s.turnDeadline) {
-    sec = Math.max(0, Math.round((s.turnDeadline - Date.now()) / 1000));
-  } else if (s.turnSecondsLeft !== undefined) {
-    sec = Math.max(0, s.turnSecondsLeft);
+  // Real-time second calculation immune to device clock skew (strictly capped at 60s)
+  if (!s._clientReceivedAt || s._lastTurnPlayerId !== s.currentTurnPlayerId || s._lastTurnState !== s.turnState) {
+    s._clientReceivedAt = Date.now();
+    s._serverSecondsLeft = typeof s.turnSecondsLeft === 'number' ? Math.min(60, s.turnSecondsLeft) : 60;
+    s._lastTurnPlayerId = s.currentTurnPlayerId;
+    s._lastTurnState = s.turnState;
   }
 
-  // Active smooth local ticking if server didn't supply live turnDeadline
-  if (!s.turnDeadline) {
-    if (!s._localTurnStartTime || s._lastTurnPlayerId !== s.currentTurnPlayerId || s._lastTurnState !== s.turnState) {
-      s._localTurnStartTime = Date.now();
-      s._lastTurnPlayerId = s.currentTurnPlayerId;
-      s._lastTurnState = s.turnState;
-    }
-    const elapsed = Math.floor((Date.now() - s._localTurnStartTime) / 1000);
-    sec = Math.max(0, 60 - elapsed);
-  }
+  const elapsed = Math.floor((Date.now() - s._clientReceivedAt) / 1000);
+  let sec = Math.max(0, (s._serverSecondsLeft || 60) - elapsed);
+  sec = Math.min(60, Math.max(0, sec));
 
   if (isMyTurn) {
     const actionHint = s.turnState === 'AWAITING_DISCARD' ? '— 1 ካርታ ጣል' : '— ካርታ ሳብ / አንሳ';
