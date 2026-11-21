@@ -20,14 +20,26 @@
     </div>
     <div class="wallet-badge">
       <button class="sound-toggle-btn" id="soundToggleBtn" title="Toggle Sound (ድምፅ)">🔊</button>
-      <div class="user-profile-badge" id="openProfileBtn" title="የተጫዋች መረጃ ለመቀየር ይጫኑ (Click to edit profile)">
-        <span>👤 <span id="walletUserDisplay">Player</span></span>
-        <span class="profile-edit-icon">✏️</span>
+
+      <!-- Unregistered user: Shows Sign Up Button -->
+      <button class="header-signup-btn" id="headerSignupBtn" title="ይመዝገቡ (Sign Up)">
+        👤 Sign Up / ይመዝገቡ
+      </button>
+
+      <!-- Registered user: Shows User Profile, Balance & Logout Button -->
+      <div id="userLoggedInArea" class="user-logged-in-area" style="display: none;">
+        <div class="user-profile-badge" id="openProfileBtn" title="የተጫዋች መረጃ (Profile)">
+          <span>👤 <span id="walletUserDisplay">Player</span></span>
+        </div>
+        <div class="wallet-balance-wrap">
+          <span>💰</span>
+          <span id="walletBalanceDisplay">1,000 ETB</span>
+        </div>
+        <button class="header-logout-btn" id="headerLogoutBtn" title="ውጣ (Logout)">
+          🚪 Logout
+        </button>
       </div>
-      <div class="wallet-balance-wrap">
-        <span>💰</span>
-        <span id="walletBalanceDisplay">1,000 ETB</span>
-      </div>
+
       <button class="deposit-btn" id="depositBtn" style="display: none;">+ Deposit</button>
     </div>
   </header>
@@ -380,12 +392,12 @@
         style="position: absolute; top: 12px; right: 14px; background: #f1f5f9; border: 1px solid #e2e8f0; color: #64748b; width: 32px; height: 32px; border-radius: 50%; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center;">✕</button>
       
       <div style="margin-bottom: 16px;">
-        <div style="font-size: 44px; margin-bottom: 6px;">👤</div>
+        <div style="font-size: 44px; margin-bottom: 6px;">📝</div>
         <div style="font-size: 20px; font-weight: 900; color: #0f172a; margin-bottom: 4px;">
-          የተጫዋች መረጃ
+          ይመዝገቡ (Sign Up / Login)
         </div>
         <p style="font-size: 13px; color: #64748b; margin: 0; line-height: 1.5;">
-          ስምዎን እና ስልክ ቁጥርዎን ያስገቡ
+          ስምዎን እና ስልክ ቁጥርዎን ያስገቡ። ቀደም ሲል ከተመዘገቡ ስልክ ቁጥርዎን ሲያስገቡ የነበረው ሂሳብዎ ይጫናል!
         </p>
       </div>
 
@@ -412,7 +424,7 @@
 
         <button type="submit" class="btn-primary" id="submitRegBtn"
           style="padding: 13px; font-size: 15px; font-weight: 800; background: linear-gradient(135deg, #10b981, #059669); color: #fff; border: 2px solid #34d399; border-radius: 12px; cursor: pointer; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25); margin-top: 4px;">
-          ✅ ተመዝገብ (Register)
+          ✅ Sign Up / Login (ይግቡ)
         </button>
       </form>
     </div>
@@ -490,7 +502,7 @@
 
   <!-- Socket.io & App Script -->
   <script src="/socket.io/socket.io.js"></script>
-  <script src="app.js?v=32"></script>
+  <script src="app.js?v=33"></script>
 </body>
 
 </html>

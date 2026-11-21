@@ -2598,6 +2598,57 @@ select:focus {
   color: #fcd34d;
 }
 
+/* Header Sign Up Button */
+.header-signup-btn {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: #ffffff;
+  border: 1.5px solid #34d399;
+  border-radius: 20px;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+  transition: all 0.2s;
+}
+
+.header-signup-btn:hover {
+  background: #059669;
+  transform: translateY(-1px);
+}
+
+/* User Logged In Wrapper */
+.user-logged-in-area {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Header Logout Button */
+.header-logout-btn {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+  border: 1px solid #f87171;
+  border-radius: 18px;
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.header-logout-btn:hover {
+  background: #dc2626;
+  color: #ffffff;
+  border-color: #dc2626;
+}
+
 /* Leave Game Button */
 .leave-game-btn {
   background: rgba(239, 68, 68, 0.2);

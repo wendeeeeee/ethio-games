@@ -13,6 +13,36 @@ class WalletManager {
 
   // Get or create a user wallet (checks Supabase first, then cache)
   async getWalletAsync(userId, name = 'Player', phone = '') {
+    // If phone is provided, check if a registered user with this phone exists in Supabase
+    if (phone) {
+      const { data: userByPhone } = await supabase
+        .from('users')
+        .select('*')
+        .eq('phone', phone)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (userByPhone) {
+        const wallet = {
+          id: userByPhone.id,
+          name: (name && name !== 'Player') ? name : userByPhone.name,
+          phone: userByPhone.phone,
+          balance: userByPhone.balance,
+          locked: userByPhone.locked,
+          transactions: []
+        };
+        this.wallets.set(wallet.id, wallet);
+        if (userId && userId !== wallet.id) {
+          this.wallets.set(userId, wallet);
+        }
+        if (name && name !== 'Player' && name !== userByPhone.name) {
+          await supabase.from('users').update({ name, updated_at: new Date().toISOString() }).eq('id', wallet.id);
+        }
+        return wallet;
+      }
+    }
+
     // Check in-memory cache first
     if (this.wallets.has(userId)) {
       const cached = this.wallets.get(userId);
@@ -26,7 +56,7 @@ class WalletManager {
       .from('users')
       .select('*')
       .eq('id', userId)
-      .single();
+      .maybeSingle();
 
     if (existing) {
       const wallet = {
