@@ -477,38 +477,59 @@ socket.on('seka_game_state', (state) => {
   renderGame(state);
 });
 
-// Game Selector Tabs (ኮንከር vs ሴካ)
-const tabConquerBtn = document.getElementById('tabConquerBtn');
-const tabSekaBtn = document.getElementById('tabSekaBtn');
-const conquerLobbySection = document.getElementById('conquerLobbySection');
+// Game Selector (Home Page: Conquer Coming Soon vs Seka Play Now)
+const homeGameSelectView = document.getElementById('homeGameSelectView');
+const homeConquerBtn = document.getElementById('homeConquerBtn');
+const homeSekaBtn = document.getElementById('homeSekaBtn');
+const backToHomeBtn = document.getElementById('backToHomeBtn');
 const sekaLobbySection = document.getElementById('sekaLobbySection');
 const createSekaRoomBtn = document.getElementById('createSekaRoomBtn');
 const playSekaBotBtn = document.getElementById('playSekaBotBtn');
+const conquerComingSoonModal = document.getElementById('conquerComingSoonModal');
+const goToSekaFromModalBtn = document.getElementById('goToSekaFromModalBtn');
+const closeConquerModalBtn = document.getElementById('closeConquerModalBtn');
 
-if (tabConquerBtn && tabSekaBtn) {
-  function selectGameMode(mode) {
-    const isConquer = mode === 'conquer';
-    tabConquerBtn.classList.toggle('active', isConquer);
-    tabSekaBtn.classList.toggle('active', !isConquer);
-
-    const conquerSelectText = tabConquerBtn.querySelector('.select-btn-text');
-    const sekaSelectText = tabSekaBtn.querySelector('.select-btn-text');
-    if (conquerSelectText) conquerSelectText.textContent = isConquer ? '✓ ተመርጧል' : 'ይምረጡ';
-    if (sekaSelectText) sekaSelectText.textContent = !isConquer ? '✓ ተመርጧል' : 'ይምረጡ';
-
-    if (conquerLobbySection) conquerLobbySection.style.display = isConquer ? 'block' : 'none';
-    if (sekaLobbySection) sekaLobbySection.style.display = !isConquer ? 'block' : 'none';
-
-    if (!isConquer) {
-      refreshSekaRoomsList();
-    } else {
-      refreshRoomsList();
-    }
+if (homeSekaBtn) {
+  homeSekaBtn.addEventListener('click', () => {
     playCardSound();
-  }
+    if (homeGameSelectView) homeGameSelectView.style.display = 'none';
+    if (sekaLobbySection) sekaLobbySection.style.display = 'block';
+    refreshSekaRoomsList();
+  });
+}
 
-  tabConquerBtn.addEventListener('click', () => selectGameMode('conquer'));
-  tabSekaBtn.addEventListener('click', () => selectGameMode('seka'));
+if (homeConquerBtn) {
+  homeConquerBtn.addEventListener('click', () => {
+    playCardSound();
+    if (conquerComingSoonModal) {
+      conquerComingSoonModal.style.display = 'flex';
+    } else {
+      showSortToast('👑 የኮንከር (Conquer) ጨዋታ በቅርቡ ይጠብቁ! (Coming Soon)');
+    }
+  });
+}
+
+if (closeConquerModalBtn && conquerComingSoonModal) {
+  closeConquerModalBtn.addEventListener('click', () => {
+    conquerComingSoonModal.style.display = 'none';
+  });
+}
+
+if (goToSekaFromModalBtn && conquerComingSoonModal) {
+  goToSekaFromModalBtn.addEventListener('click', () => {
+    conquerComingSoonModal.style.display = 'none';
+    if (homeGameSelectView) homeGameSelectView.style.display = 'none';
+    if (sekaLobbySection) sekaLobbySection.style.display = 'block';
+    refreshSekaRoomsList();
+  });
+}
+
+if (backToHomeBtn) {
+  backToHomeBtn.addEventListener('click', () => {
+    playCardSound();
+    if (sekaLobbySection) sekaLobbySection.style.display = 'none';
+    if (homeGameSelectView) homeGameSelectView.style.display = 'flex';
+  });
 }
 
 // Create Seka Room
@@ -616,6 +637,8 @@ window.joinSekaRoom = function (roomId) {
 };
 
 function switchToGameView() {
+  document.documentElement.classList.add('in-game');
+  document.body.classList.add('in-game');
   hasPlayedDealingAnim = false;
   isDealingInProgress = false;
   previousHandLength = 0;
@@ -629,6 +652,8 @@ function switchToGameView() {
 }
 
 function switchToLobbyView() {
+  document.documentElement.classList.remove('in-game');
+  document.body.classList.remove('in-game');
   hasPlayedDealingAnim = false;
   isDealingInProgress = false;
   previousHandLength = 0;
@@ -648,6 +673,8 @@ function switchToLobbyView() {
   selectedCardId = null;
   lobbyView.style.display = 'block';
   gameView.style.display = 'none';
+  if (homeGameSelectView) homeGameSelectView.style.display = 'flex';
+  if (sekaLobbySection) sekaLobbySection.style.display = 'none';
   cutJokerModal.style.display = 'none';
   if (waitingJokerModal) waitingJokerModal.style.display = 'none';
   gameResultModal.style.display = 'none';

@@ -21,6 +21,13 @@
   user-select: none;
 }
 
+html {
+  background: #f1f5f9;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
 body {
   background: #f1f5f9;
   color: #0f172a;
@@ -139,82 +146,245 @@ body {
   overflow-y: auto;
 }
 
-/* ============================================================
-   CLEAN & LIGHT 2 GAME SELECTION BOXES (CONQUER vs SEKA)
-   ============================================================ */
-.game-mode-boxes {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-  max-width: 620px;
-  margin: 8px auto 18px auto;
-  user-select: none;
+/* In-Game Full Table Background (Prevents ANY white gap at bottom) */
+html.in-game,
+body.in-game {
+  background: #14532d !important;
+  background-color: #14532d !important;
+  height: 100% !important;
+  height: 100dvh !important;
+  max-height: 100dvh !important;
+  min-height: 100dvh !important;
+  overflow: hidden !important;
+  margin: 0 !important;
+  padding: 0 !important;
 }
 
-.game-mode-card {
-  background: #ffffff;
-  border: 2px solid #e2e8f0;
-  border-radius: 16px;
-  padding: 16px 14px;
-  cursor: pointer;
-  text-align: center;
-  transition: all 0.2s ease;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+body.in-game .app-header {
+  background: #0f3d20 !important;
+  border-bottom: 1px solid #166534 !important;
+  color: #f8fafc !important;
+}
+
+body.in-game .app-header .logo-title {
+  color: #f8fafc !important;
+}
+
+body.in-game .app-header .logo-title span {
+  color: #86efac !important;
+}
+
+body.in-game .app-header .wallet-badge {
+  background: rgba(0, 0, 0, 0.45) !important;
+  border: 1px solid rgba(217, 119, 6, 0.5) !important;
+  color: #fef08a !important;
+}
+
+body.in-game #gameView {
+  flex: 1 1 auto;
+  display: flex !important;
+  flex-direction: column !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  width: 100% !important;
+  background: #14532d !important;
+  background-color: #14532d !important;
+  overflow: hidden !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+body.in-game .game-table {
+  flex: 1 1 auto;
+  height: 100% !important;
+  max-height: 100% !important;
+  min-height: 0 !important;
+  background: radial-gradient(ellipse at center, #16a34a 0%, #15803d 70%, #14532d 100%) !important;
+  background-color: #14532d !important;
+  padding-bottom: max(12px, env(safe-area-inset-bottom, 12px)) !important;
+  box-sizing: border-box !important;
+  margin: 0 !important;
+  border: none !important;
+}
+
+/* ============================================================
+   HOME PAGE: ONLY 2 BUTTONS / BOXES VIEW (CONQUER vs SEKA)
+   ============================================================ */
+.home-select-container {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  justify-content: center;
+  min-height: 68vh;
+  padding: 24px 12px;
+  text-align: center;
 }
 
-.game-mode-card:hover {
-  border-color: #cbd5e1;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+.home-select-header {
+  margin-bottom: 24px;
 }
 
-.game-mode-card.active {
-  background: #fffbeb;
-  border: 2px solid #d97706;
-  box-shadow: 0 4px 16px rgba(217, 119, 6, 0.18);
-}
-
-.game-mode-icon {
-  font-size: 32px;
-  margin-bottom: 2px;
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.08));
-}
-
-.game-mode-title {
-  font-size: 18px;
-  font-weight: 800;
+.home-title {
+  font-size: 26px;
+  font-weight: 900;
   color: #0f172a;
+  margin-bottom: 6px;
 }
 
-.game-mode-card.active .game-mode-title {
-  color: #b45309;
-}
-
-.game-mode-desc {
-  font-size: 12px;
+.home-subtitle {
+  font-size: 14px;
   color: #64748b;
+  margin: 0;
+}
+
+.home-two-boxes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  max-width: 680px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.home-game-card {
+  background: #ffffff;
+  border: 2px solid #e2e8f0;
+  border-radius: 20px;
+  padding: 26px 20px;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  position: relative;
+  min-height: 240px;
+}
+
+.home-game-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+}
+
+.home-game-card.seka-card {
+  border-color: #f59e0b;
+  background: #fffdf5;
+}
+
+.home-game-card.seka-card:hover {
+  border-color: #d97706;
+  box-shadow: 0 10px 28px rgba(217, 119, 6, 0.18);
+}
+
+.home-game-card.conquer-card {
+  opacity: 0.85;
+  background: #fafafa;
+}
+
+.home-game-card.conquer-card:hover {
+  border-color: #cbd5e1;
+}
+
+.coming-soon-badge {
+  font-size: 11px;
+  font-weight: 800;
+  padding: 3px 10px;
+  border-radius: 20px;
+  background: #f1f5f9;
+  color: #64748b;
+  border: 1px solid #cbd5e1;
   margin-bottom: 8px;
 }
 
-.game-mode-status {
-  padding: 4px 14px;
+.active-live-badge {
+  font-size: 11px;
+  font-weight: 800;
+  padding: 3px 10px;
   border-radius: 20px;
-  font-size: 12px;
-  font-weight: 700;
-  background: #f1f5f9;
+  background: rgba(245, 158, 11, 0.15);
+  color: #d97706;
+  border: 1px solid #f59e0b;
+  margin-bottom: 8px;
+}
+
+.home-card-icon {
+  font-size: 46px;
+  margin: 6px 0 10px 0;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.08));
+}
+
+.home-card-title {
+  font-size: 22px;
+  font-weight: 900;
+  color: #0f172a;
+  margin-bottom: 4px;
+}
+
+.home-card-desc {
+  font-size: 13px;
   color: #64748b;
-  border: 1px solid #e2e8f0;
+  margin-bottom: 18px;
+}
+
+.home-card-btn {
+  width: 100%;
+  padding: 12px 18px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 800;
+  text-align: center;
+  box-sizing: border-box;
   transition: all 0.2s ease;
 }
 
-.game-mode-card.active .game-mode-status {
-  background: #d97706;
+.home-card-btn.active-btn {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
   color: #ffffff;
-  border-color: #d97706;
+  border: none;
+  box-shadow: 0 4px 14px rgba(217, 119, 6, 0.3);
+}
+
+.home-card-btn.disabled-btn {
+  background: #e2e8f0;
+  color: #64748b;
+  border: 1px solid #cbd5e1;
+}
+
+.back-home-btn {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #334155;
+  padding: 6px 14px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.back-home-btn:hover {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+  color: #0f172a;
+}
+
+@media (max-width: 600px) {
+  .home-select-container {
+    min-height: 55vh;
+    padding: 16px 8px;
+  }
+  .home-two-boxes {
+    grid-template-columns: 1fr;
+    gap: 16px;
+    max-width: 380px;
+  }
+  .home-game-card {
+    padding: 20px 16px;
+    min-height: auto;
+  }
 }
 
 /* Backward compatibility */
@@ -1600,7 +1770,9 @@ select:focus {
   /* Game Table */
   .game-table {
     padding: 4px 6px;
-    height: calc(100vh - 38px);
+    height: 100% !important;
+    max-height: 100% !important;
+    min-height: 0;
   }
 
   .table-top-bar {
@@ -1923,8 +2095,9 @@ select:focus {
   /* Game Table: fills visible viewport without clipping */
   .game-table {
     padding: 4px 6px;
-    height: calc(100dvh - 38px);
-    max-height: calc(100dvh - 38px);
+    height: 100% !important;
+    max-height: 100% !important;
+    min-height: 0;
     overflow: hidden;
     display: flex;
     flex-direction: column;
@@ -2207,7 +2380,9 @@ select:focus {
   }
 
   .game-table {
-    height: calc(100dvh - 30px);
+    height: 100% !important;
+    max-height: 100% !important;
+    min-height: 0;
     padding: 2px 6px;
   }
 
