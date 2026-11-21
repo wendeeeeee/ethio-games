@@ -2711,7 +2711,7 @@ function renderGame(state) {
   renderOpponentCards(oppCount, isInitialDeal, isFinished, state.winningMelds, state.winningDiscard);
 
   // Center Field: Base Joker Card (Conquer only)
-  const canShowJokerCard = !isSeka && state.status === 'PLAYING' && (state.baseCard || state.jokerCard) && hasPlayedDealingAnim && !isDealingInProgress;
+  const canShowJokerCard = !isSeka && state.status === 'PLAYING' && (state.baseCard || state.jokerCard);
   if (canShowJokerCard) {
     const cardToShow = state.baseCard || state.jokerCard;
     baseJokerCardContainer.style.display = 'block';
@@ -3003,16 +3003,10 @@ function getResponsiveFanGeometry(totalCards) {
 function renderPlayerHand(hand) {
   if (!hand) return;
 
-  // Dealing motion: First deal cards one-by-one face down (showing only back)
   const isInitialDeal = !hasPlayedDealingAnim && currentGameState && currentGameState.status === 'PLAYING';
   if (isInitialDeal) {
     hasPlayedDealingAnim = true;
-    runDealingSequence(hand);
-    return;
   }
-
-  // If initial dealing animation is currently in progress, wait until it finishes
-  if (isDealingInProgress) return;
 
   // Check if a single card was just drawn during play
   const isSingleDraw = hand.length === previousHandLength + 1;
@@ -3054,12 +3048,15 @@ function renderPlayerHand(hand) {
     playerCardsContainer.innerHTML = hand.map((card, idx) => {
       const isSelected = selectedCardsSet.has(card.id) || selectedCardsSet.has(String(card.id)) || String(card.id) === String(selectedCardId);
       let animClass = '';
-      if (isSingleDraw && idx === hand.length - 1) {
+      if (isInitialDeal) {
+        animClass = 'dealing-anim';
+      } else if (isSingleDraw && idx === hand.length - 1) {
         animClass = 'drawn-anim';
       }
       const angle = middle > 0 ? ((idx - middle) / middle) * maxAngle : 0;
       const offset = (idx - middle) * spacing;
-      const fanStyle = `--angle: ${angle.toFixed(1)}deg; --offset: ${offset.toFixed(0)}px;`;
+      const delayStyle = isInitialDeal ? `animation-delay: ${idx * 50}ms;` : '';
+      const fanStyle = `--angle: ${angle.toFixed(1)}deg; --offset: ${offset.toFixed(0)}px; ${delayStyle}`;
 
       return createCardHTML(card, isSelected, false, idx + 1, animClass, '', fanStyle);
     }).join('');
@@ -3080,112 +3077,7 @@ function updateTakeGroundButton() {
   }
 }
 
-// Deal cards one-by-one face down, then flip to reveal once finished!
-function runDealingSequence(hand) {
-  isDealingInProgress = true;
-  playerCardsContainer.innerHTML = '';
-  playerCardsContainer.style.display = 'block';
-  meldGroupsContainer.style.display = 'none';
 
-  const total = hand.length;
-  const middle = (total - 1) / 2;
-  const { maxAngle, spacing } = getResponsiveFanGeometry(total);
-
-  hand.forEach((card, idx) => {
-    setTimeout(() => {
-      const cardEl = document.createElement('div');
-      cardEl.className = 'card face-down dealing-anim';
-      cardEl.setAttribute('data-id', card.id);
-      const angle = middle > 0 ? ((idx - middle) / middle) * maxAngle : 0;
-      const offset = (idx - middle) * spacing;
-      cardEl.style.zIndex = idx + 1;
-      cardEl.style.setProperty('--angle', `${angle.toFixed(1)}deg`);
-      cardEl.style.setProperty('--offset', `${offset.toFixed(0)}px`);
-      playerCardsContainer.appendChild(cardEl);
-      playCardSound();
-
-      // Once all cards have been dealt face-down:
-      if (idx === hand.length - 1) {
-        setTimeout(() => {
-          flipHandCardsToFaceUp(hand);
-        }, 350);
-      }
-    }, idx * 80);
-  });
-}
-
-function flipHandCardsToFaceUp(hand) {
-  const cardElements = playerCardsContainer.querySelectorAll('.card');
-  cardElements.forEach((cardEl, idx) => {
-    setTimeout(() => {
-      const card = hand[idx];
-      const isFalse = card.isFalseJoker || card.rank === 'FALSE' || card.rank === 'JK';
-      const isRed = card.suit === '♥' || card.suit === '♦' || (isFalse && card.color === 'red');
-      const colorClass = isRed ? 'red' : 'black';
-      const displayRank = isFalse ? 'FALSE' : card.rank;
-      const displaySuit = isFalse ? '🃏' : card.suit;
-      const falseTextColor = isRed ? '#ef4444' : '#0f172a';
-      const cornerRankStyle = isFalse ? `style="font-size: 8px; font-weight: 900; color: ${falseTextColor};"` : '';
-      const centerStyle = isFalse ? 'style="font-size: 20px;"' : '';
-
-      let starHTML = '';
-      if (isFalse) {
-        starHTML = `<div class="card-false-badge ${isRed ? 'red' : 'black'}">FALSE</div>`;
-      } else if (card.isMainJoker || card.isJoker) {
-        starHTML = `<div class="card-joker-star">⭐</div>`;
-      }
-
-      cardEl.className = `card ${colorClass} flip-reveal`;
-      cardEl.innerHTML = `
-        ${starHTML}
-        <div class="card-corner top-left">
-          <div class="corner-rank" ${cornerRankStyle}>${displayRank}</div>
-          <div class="corner-suit">${isFalse ? '' : displaySuit}</div>
-        </div>
-        <div class="card-center-suit" ${centerStyle}>${displaySuit}</div>
-      `;
-      playCardSound();
-
-      // All cards flipped and revealed!
-      if (idx === hand.length - 1) {
-        setTimeout(() => {
-          isDealingInProgress = false;
-          renderPlayerHand(hand);
-          bindCardInteractions(hand);
-
-          // 27 cards have finished dealing! Now reveal the 28th card (Base Joker Card) and badge!
-          if (currentGameState && (currentGameState.baseCard || currentGameState.jokerCard)) {
-            const cardToShow = currentGameState.baseCard || currentGameState.jokerCard;
-            if (baseJokerCardContainer) {
-              baseJokerCardContainer.style.display = 'block';
-              baseJokerCardContainer.innerHTML = createCardHTML(cardToShow, false, true);
-              baseJokerCardContainer.classList.add('flip-reveal');
-            }
-            if (deckJokerCallBadge && currentGameState.jokerRank && currentGameState.jokerSuits && currentGameState.jokerSuits.length > 0) {
-              const choiceMap = {
-                'high': 'ከፍ',
-                'low': 'ዝቅ',
-                'tach': 'ዝቅ',
-                'same': 'አንድ ላይ',
-                'and_lay': 'አንድ ላይ',
-                'gon': 'ጎን',
-                'opposite': 'ጎን'
-              };
-              const choiceLabel = choiceMap[currentGameState.jokerChoice] || 'ከፍ';
-              const isRed = currentGameState.jokerSuits.includes('♥') || currentGameState.jokerSuits.includes('♦');
-              const suitColor = isRed ? '#ef4444' : '#ffffff';
-              const jokersText = `${currentGameState.jokerRank}${currentGameState.jokerSuits[0]} ${currentGameState.jokerRank}${currentGameState.jokerSuits[1]}`;
-              deckJokerCallBadge.style.display = 'block';
-              deckJokerCallBadge.innerHTML = `⭐ <span style="color: ${suitColor}; font-weight: 800;">${jokersText}</span> <span style="color: #f5b041;">(${choiceLabel})</span>`;
-              deckJokerCallBadge.classList.add('flip-reveal');
-            }
-            playCardSound();
-          }
-        }, 200);
-      }
-    }, idx * 45); // Cascading flip wave
-  });
-}
 
 let touchDraggedId = null;
 let currentTouchOverEl = null;
