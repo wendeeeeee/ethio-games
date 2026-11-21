@@ -399,10 +399,10 @@ if (registerForm) {
   });
 }
 
-// Auto-prompt registration on first visit if not registered
-if (!isUserRegistered) {
-  setTimeout(openRegistrationModal, 600);
-}
+// Auto-prompt registration — DISABLED (user opens profile manually via header)
+// if (!isUserRegistered) {
+//   setTimeout(openRegistrationModal, 600);
+// }
 
 if (playerNameInput) {
   playerNameInput.addEventListener('change', () => {
