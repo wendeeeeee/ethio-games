@@ -723,9 +723,7 @@ async function refreshSekaRoomsList() {
                 ${r.expiresIn !== undefined ? `| <span style="color: #d97706; font-weight: 800;">⏳ ${r.expiresIn}s ይቀራል</span>` : ''}
               </div>
             </div>
-            <button class="btn-cancel-room" style="background: #fee2e2; color: #dc2626; border: 1.5px solid #fca5a5; border-radius: 8px; padding: 7px 14px; font-size: 12px; font-weight: 800; cursor: pointer;" onclick="cancelCreatedRoom('${r.roomId}')">
-              ✕ ሰርዝ (Cancel)
-            </button>
+            <span style="font-size: 12px; color: #d97706; font-weight: 700;">⏳ ${r.expiresIn !== undefined ? r.expiresIn + 's' : '...'}</span>
           </div>
         `;
       } else {
