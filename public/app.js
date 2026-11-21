@@ -384,7 +384,8 @@ function updateTurnDisplay(state) {
   }
 
   if (isMyTurn) {
-    turnIndicator.innerHTML = `🔥 YOUR TURN <span style="font-size: 15px; font-weight: 900; color: ${sec <= 15 ? '#ef4444' : '#fef08a'}; margin-left: 6px;">(⏳ ${sec}s)</span>`;
+    const actionHint = s.turnState === 'AWAITING_DISCARD' ? '— 1 ካርታ ጣል' : '— ካርታ ሳብ / አንሳ';
+    turnIndicator.innerHTML = `🔥 YOUR TURN <span style="font-size: 13px; font-weight: 800; color: #fef08a;">${actionHint}</span> <span style="font-size: 15px; font-weight: 900; color: ${sec <= 15 ? '#ef4444' : '#fef08a'}; margin-left: 6px;">(⏳ ${sec}s)</span>`;
     turnIndicator.style.color = '#4ade80';
   } else {
     turnIndicator.innerHTML = `👤 ${oppName}'s Turn <span style="font-size: 14px; font-weight: 800; color: ${sec <= 15 ? '#ef4444' : '#cbd5e1'}; margin-left: 6px;">(⏳ ${sec}s)</span>`;
@@ -1099,8 +1100,22 @@ cutGonBtn.addEventListener('click', () => {
 
 function handleDrawAction(source) {
   if (!currentGameState || currentGameState.status !== 'PLAYING') return;
-  if (currentGameState.currentTurnPlayerId !== userId) return alert('Not your turn!');
-  if (currentGameState.turnState !== 'AWAITING_DRAW') return alert('Already drew card! Discard one now.');
+  const isMyTurn = currentGameState.isMyTurn !== undefined 
+    ? currentGameState.isMyTurn 
+    : (currentGameState.currentTurnPlayerId === userId);
+
+  if (!isMyTurn) {
+    showSortToast('⚠️ የአንተ ተራ አይደለም! የተጋጣሚህን ተራ ጠብቅ።');
+    return;
+  }
+  if (currentGameState.turnState !== 'AWAITING_DRAW') {
+    if (currentGameState.myHand && currentGameState.myHand.length >= 11) {
+      showSortToast('⚠️ 11 ካርታ ስላለህ መጀመሪያ 1 ካርታ መሬት ላይ ጣል!');
+    } else {
+      showSortToast('⚠️ አስቀድመህ ካርታ ስበሃል፤ አሁን 1 ካርታ መሬት ላይ ጣል!');
+    }
+    return;
+  }
 
   if (currentGameState.gameType === 'SEKA') {
     playDrawSound();
@@ -1122,7 +1137,6 @@ function handleDrawAction(source) {
       return;
     }
 
-    // Direct draw from ground as requested: "so useru siyanes mnm atebelew yansa gin 41 mewred alebet gebak"
     playDrawSound();
     currentGameState.mustMeld41 = true;
     socket.emit('draw_card', { roomId: currentRoomId, userId, source: 'ground' });
@@ -3004,15 +3018,6 @@ function getResponsiveFanGeometry(totalCards) {
 function renderPlayerHand(hand) {
   if (!hand) return;
 
-  const isInitialDeal = !hasPlayedDealingAnim && currentGameState && currentGameState.status === 'PLAYING';
-  if (isInitialDeal) {
-    hasPlayedDealingAnim = true;
-  }
-
-  // Check if a single card was just drawn during play
-  const isSingleDraw = hand.length === previousHandLength + 1;
-  previousHandLength = hand.length;
-
   // When a card arrives, keep player's manual arrangement and preserve their order
   currentGameState.myHand = hand;
 
@@ -3048,18 +3053,11 @@ function renderPlayerHand(hand) {
 
     playerCardsContainer.innerHTML = hand.map((card, idx) => {
       const isSelected = selectedCardsSet.has(card.id) || selectedCardsSet.has(String(card.id)) || String(card.id) === String(selectedCardId);
-      let animClass = '';
-      if (isInitialDeal) {
-        animClass = 'dealing-anim';
-      } else if (isSingleDraw && idx === hand.length - 1) {
-        animClass = 'drawn-anim';
-      }
       const angle = middle > 0 ? ((idx - middle) / middle) * maxAngle : 0;
       const offset = (idx - middle) * spacing;
-      const delayStyle = isInitialDeal ? `animation-delay: ${idx * 50}ms;` : '';
-      const fanStyle = `--angle: ${angle.toFixed(1)}deg; --offset: ${offset.toFixed(0)}px; ${delayStyle}`;
+      const fanStyle = `--angle: ${angle.toFixed(1)}deg; --offset: ${offset.toFixed(0)}px;`;
 
-      return createCardHTML(card, isSelected, false, idx + 1, animClass, '', fanStyle);
+      return createCardHTML(card, isSelected, false, idx + 1, '', '', fanStyle);
     }).join('');
   }
 
