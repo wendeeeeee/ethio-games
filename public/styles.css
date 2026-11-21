@@ -902,17 +902,17 @@ select:focus {
 
   65% {
     opacity: 1;
-    transform: translateY(-15px) scale(1.08) rotate(3deg);
+    transform: translateX(var(--offset, 0px)) translateY(-15px) scale(1.08) rotate(calc(var(--angle, 0deg) + 2deg));
   }
 
   100% {
-    transform: translateY(0) scale(1) rotate(0deg);
+    transform: translateX(var(--offset, 0px)) translateY(0) scale(1) rotate(var(--angle, 0deg));
     opacity: 1;
   }
 }
 
 .card.dealing-anim {
-  animation: dealCardMotion 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: dealCardMotion 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 /* Face Down Card during Dealing (Shows only the back) */
@@ -940,18 +940,18 @@ select:focus {
 /* 3D Flip to Reveal Hand when Dealing Finishes */
 @keyframes flipCardReveal {
   0% {
-    transform: rotateY(90deg) scale(0.95);
+    transform: translateX(var(--offset, 0px)) rotateY(90deg) scale(0.95) rotate(var(--angle, 0deg));
     opacity: 0.8;
   }
 
   100% {
-    transform: rotateY(0deg) scale(1);
+    transform: translateX(var(--offset, 0px)) rotateY(0deg) scale(1) rotate(var(--angle, 0deg));
     opacity: 1;
   }
 }
 
 .card.flip-reveal {
-  animation: flipCardReveal 0.4s cubic-bezier(0.2, 0.85, 0.3, 1) both;
+  animation: flipCardReveal 0.32s cubic-bezier(0.2, 0.85, 0.3, 1) both;
 }
 
 @keyframes drawCardMotion {

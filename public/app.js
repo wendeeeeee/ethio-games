@@ -3018,6 +3018,15 @@ function getResponsiveFanGeometry(totalCards) {
 function renderPlayerHand(hand) {
   if (!hand) return;
 
+  const isInitialDeal = !hasPlayedDealingAnim && currentGameState && currentGameState.status === 'PLAYING';
+  if (isInitialDeal) {
+    hasPlayedDealingAnim = true;
+    runDealingSequence(hand);
+    return;
+  }
+
+  if (isDealingInProgress) return;
+
   // When a card arrives, keep player's manual arrangement and preserve their order
   currentGameState.myHand = hand;
 
@@ -3063,6 +3072,53 @@ function renderPlayerHand(hand) {
 
   updateTakeGroundButton();
   bindCardInteractions(hand);
+}
+
+// Dealing animation: Cards fly in one by one from deck face-down, then flip face-up in front of player
+function runDealingSequence(hand) {
+  if (!hand || hand.length === 0) return;
+  isDealingInProgress = true;
+  playerCardsContainer.innerHTML = '';
+  playerCardsContainer.style.display = 'block';
+  if (meldGroupsContainer) meldGroupsContainer.style.display = 'none';
+
+  const total = hand.length;
+  const middle = (total - 1) / 2;
+  const { maxAngle, spacing } = getResponsiveFanGeometry(total);
+
+  hand.forEach((card, idx) => {
+    setTimeout(() => {
+      const angle = middle > 0 ? ((idx - middle) / middle) * maxAngle : 0;
+      const offset = (idx - middle) * spacing;
+      const fanStyle = `--angle: ${angle.toFixed(1)}deg; --offset: ${offset.toFixed(0)}px;`;
+
+      const cardHtml = createCardHTML(card, false, false, idx + 1, 'face-down dealing-anim', '', fanStyle);
+      const tempDiv = document.createElement('div');
+      tempDiv.innerHTML = cardHtml.trim();
+      const cardEl = tempDiv.firstElementChild;
+      playerCardsContainer.appendChild(cardEl);
+      playCardSound();
+
+      // Card lands and flips face-up to reveal rank & suit!
+      setTimeout(() => {
+        if (cardEl && cardEl.parentNode) {
+          cardEl.classList.remove('face-down');
+          cardEl.classList.remove('dealing-anim');
+          cardEl.classList.add('flip-reveal');
+          playCardSound();
+        }
+      }, 240);
+
+      // Once all cards have been dealt and flipped, finalize interactive hand!
+      if (idx === hand.length - 1) {
+        setTimeout(() => {
+          isDealingInProgress = false;
+          hasPlayedDealingAnim = true;
+          renderPlayerHand(hand);
+        }, 550);
+      }
+    }, idx * 75);
+  });
 }
 
 function updateTakeGroundButton() {
