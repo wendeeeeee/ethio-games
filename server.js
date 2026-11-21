@@ -495,13 +495,16 @@ function handleBotTurn(room) {
   }, 1200);
 }
 
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-  console.log(`====================================================`);
-  console.log(` Ethiopian Conquer Card & Betting Server Running!`);
-  console.log(` URL: http://localhost:${PORT}`);
-  console.log(`====================================================`);
-});
+// Start server only when NOT running on Vercel (Vercel uses serverless)
+if (!process.env.VERCEL) {
+  const PORT = process.env.PORT || 3000;
+  server.listen(PORT, () => {
+    console.log(`====================================================`);
+    console.log(` Ethiopian Conquer Card & Betting Server Running!`);
+    console.log(` URL: http://localhost:${PORT}`);
+    console.log(`====================================================`);
+  });
+}
 
-module.exports = server;
+module.exports = app;
 
