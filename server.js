@@ -9,6 +9,7 @@ const { v4: uuidv4 } = require('uuid');
 const GameRoom = require('./engine/gameRoom');
 const { SekaGameRoom, SekaBotPlayer } = require('./engine/sekaGameRoom');
 const walletManager = require('./engine/walletManager');
+const { supabase, SUPABASE_URL, SUPABASE_ANON_KEY } = require('./engine/supabaseClient');
 
 const app = express();
 const server = http.createServer(app);
@@ -27,6 +28,11 @@ const sekaRooms = new Map();
 // Socket to player map: { socketId: { userId, roomId, gameType } }
 const socketPlayerMap = new Map();
 
+// Supabase config endpoint (for frontend — anon key only)
+app.get('/api/config/supabase', (req, res) => {
+  res.json({ url: SUPABASE_URL, anonKey: SUPABASE_ANON_KEY });
+});
+
 // REST API for Wallet
 app.get('/api/wallet/:userId', (req, res) => {
   const wallet = walletManager.getWallet(req.params.userId);
@@ -43,15 +49,15 @@ app.post('/api/wallet/deposit', (req, res) => {
 app.get('/favicon.ico', (req, res) => res.status(204).end());
 
 // REST API for User Registration & Profile
-app.post('/api/user/register', (req, res) => {
+app.post('/api/user/register', async (req, res) => {
   const { userId, name, phone } = req.body;
   if (!userId) return res.status(400).json({ success: false, message: 'userId is required' });
-  const wallet = walletManager.updateProfile(userId, { name, phone });
+  const wallet = await walletManager.updateProfileAsync(userId, { name, phone });
   res.json({ success: true, wallet });
 });
 
-app.get('/api/user/profile/:userId', (req, res) => {
-  const wallet = walletManager.getWallet(req.params.userId);
+app.get('/api/user/profile/:userId', async (req, res) => {
+  const wallet = await walletManager.getWalletAsync(req.params.userId);
   res.json({ success: true, wallet });
 });
 
@@ -94,16 +100,16 @@ app.get('/api/seka/rooms', (req, res) => {
 // Socket.io Events
 io.on('connection', (socket) => {
   // Join Lobby / Register Player
-  socket.on('register_user', ({ userId, name, phone }) => {
+  socket.on('register_user', async ({ userId, name, phone }) => {
     socketPlayerMap.set(socket.id, { userId, name, phone });
-    const wallet = walletManager.getWallet(userId, name, phone);
+    const wallet = await walletManager.getWalletAsync(userId, name, phone);
     socket.emit('wallet_update', wallet);
   });
 
   // Update Profile
-  socket.on('update_profile', ({ userId, name, phone }) => {
+  socket.on('update_profile', async ({ userId, name, phone }) => {
     socketPlayerMap.set(socket.id, { userId, name, phone });
-    const wallet = walletManager.updateProfile(userId, { name, phone });
+    const wallet = await walletManager.updateProfileAsync(userId, { name, phone });
     socket.emit('wallet_update', wallet);
   });
 

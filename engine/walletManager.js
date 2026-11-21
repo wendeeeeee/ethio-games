@@ -1,23 +1,99 @@
 // engine/walletManager.js
+// Supabase-backed wallet manager — persists users & balances to the database
+
+const { supabase } = require('./supabaseClient');
 
 class WalletManager {
   constructor() {
-    // In-memory wallet store: { userId: { id, name, balance, locked } }
+    // In-memory cache for fast access during gameplay
     this.wallets = new Map();
     // Escrow pots by roomId: { roomId: { amount, players: [] } }
     this.escrows = new Map();
   }
 
+  // Get or create a user wallet (checks Supabase first, then cache)
+  async getWalletAsync(userId, name = 'Player', phone = '') {
+    // Check in-memory cache first
+    if (this.wallets.has(userId)) {
+      const cached = this.wallets.get(userId);
+      if (name && name !== 'Player') cached.name = name;
+      if (phone) cached.phone = phone;
+      return cached;
+    }
+
+    // Try to load from Supabase
+    const { data: existing } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', userId)
+      .single();
+
+    if (existing) {
+      const wallet = {
+        id: existing.id,
+        name: (name && name !== 'Player') ? name : existing.name,
+        phone: phone || existing.phone,
+        balance: existing.balance,
+        locked: existing.locked,
+        transactions: []
+      };
+      this.wallets.set(userId, wallet);
+
+      // Update name/phone if changed
+      if ((name && name !== 'Player' && name !== existing.name) || (phone && phone !== existing.phone)) {
+        await supabase.from('users').update({
+          name: wallet.name,
+          phone: wallet.phone,
+          updated_at: new Date().toISOString()
+        }).eq('id', userId);
+      }
+
+      return wallet;
+    }
+
+    // Create new user in Supabase
+    const newWallet = {
+      id: userId,
+      name: name || 'Player',
+      phone: phone || '',
+      balance: 1000,
+      locked: 0,
+      transactions: []
+    };
+
+    await supabase.from('users').insert({
+      id: userId,
+      name: newWallet.name,
+      phone: newWallet.phone,
+      balance: 1000,
+      locked: 0
+    });
+
+    // Log the welcome bonus
+    await supabase.from('transactions').insert({
+      user_id: userId,
+      type: 'WELCOME_BONUS',
+      amount: 1000,
+      description: 'የአዲስ ተጫዋች ቦነስ (Welcome bonus)'
+    });
+
+    this.wallets.set(userId, newWallet);
+    return newWallet;
+  }
+
+  // Synchronous fallback (uses cache; for compatibility with existing code)
   getWallet(userId, name = 'Player', phone = '') {
     if (!this.wallets.has(userId)) {
       this.wallets.set(userId, {
         id: userId,
         name,
         phone: phone || '',
-        balance: 1000, // Starting demo balance (1,000 ETB)
+        balance: 1000,
         locked: 0,
         transactions: []
       });
+      // Fire-and-forget: sync to Supabase
+      this._syncUserToDb(userId, name, phone);
     } else {
       const wallet = this.wallets.get(userId);
       if (name && name !== 'Player') wallet.name = name;
@@ -26,10 +102,90 @@ class WalletManager {
     return this.wallets.get(userId);
   }
 
+  async _syncUserToDb(userId, name, phone) {
+    try {
+      const { data: existing } = await supabase
+        .from('users')
+        .select('id, balance, locked, name, phone')
+        .eq('id', userId)
+        .single();
+
+      if (existing) {
+        // Load from DB into cache
+        const cached = this.wallets.get(userId);
+        if (cached) {
+          cached.balance = existing.balance;
+          cached.locked = existing.locked;
+          if (existing.name && existing.name !== 'Player') cached.name = existing.name;
+          if (existing.phone) cached.phone = existing.phone;
+        }
+        // Update name/phone if provided
+        if ((name && name !== 'Player' && name !== existing.name) || (phone && phone !== existing.phone)) {
+          await supabase.from('users').update({
+            name: (name && name !== 'Player') ? name : existing.name,
+            phone: phone || existing.phone,
+            updated_at: new Date().toISOString()
+          }).eq('id', userId);
+        }
+      } else {
+        // Create new user
+        await supabase.from('users').insert({
+          id: userId,
+          name: name || 'Player',
+          phone: phone || '',
+          balance: 1000,
+          locked: 0
+        });
+        await supabase.from('transactions').insert({
+          user_id: userId,
+          type: 'WELCOME_BONUS',
+          amount: 1000,
+          description: 'የአዲስ ተጫዋች ቦነስ (Welcome bonus)'
+        });
+      }
+    } catch (err) {
+      console.error('[WalletManager] Supabase sync error:', err.message);
+    }
+  }
+
+  async _saveBalanceToDb(userId) {
+    const wallet = this.wallets.get(userId);
+    if (!wallet) return;
+    try {
+      await supabase.from('users').update({
+        balance: wallet.balance,
+        locked: wallet.locked,
+        updated_at: new Date().toISOString()
+      }).eq('id', userId);
+    } catch (err) {
+      console.error('[WalletManager] Save balance error:', err.message);
+    }
+  }
+
+  async updateProfileAsync(userId, { name, phone }) {
+    const wallet = await this.getWalletAsync(userId, name, phone);
+    if (name) wallet.name = name;
+    if (phone) wallet.phone = phone;
+
+    await supabase.from('users').update({
+      name: wallet.name,
+      phone: wallet.phone,
+      updated_at: new Date().toISOString()
+    }).eq('id', userId);
+
+    return wallet;
+  }
+
   updateProfile(userId, { name, phone }) {
     const wallet = this.getWallet(userId, name, phone);
     if (name) wallet.name = name;
     if (phone) wallet.phone = phone;
+    // Fire-and-forget save
+    supabase.from('users').update({
+      name: wallet.name,
+      phone: wallet.phone,
+      updated_at: new Date().toISOString()
+    }).eq('id', userId).then(() => {}).catch(() => {});
     return wallet;
   }
 
@@ -41,6 +197,14 @@ class WalletManager {
       amount,
       date: new Date().toISOString()
     });
+    // Persist
+    this._saveBalanceToDb(userId);
+    supabase.from('transactions').insert({
+      user_id: userId,
+      type: 'DEPOSIT',
+      amount,
+      description: `Deposit ${amount} ETB`
+    }).then(() => {}).catch(() => {});
     return wallet;
   }
 
@@ -53,6 +217,13 @@ class WalletManager {
       amount,
       date: new Date().toISOString()
     });
+    this._saveBalanceToDb(userId);
+    supabase.from('transactions').insert({
+      user_id: userId,
+      type: 'WITHDRAW',
+      amount: -amount,
+      description: `Withdraw ${amount} ETB`
+    }).then(() => {}).catch(() => {});
     return { success: true, wallet };
   }
 
@@ -90,6 +261,18 @@ class WalletManager {
       player2Id: playerIds[1]
     });
 
+    // Persist balances
+    for (const pid of playerIds) {
+      this._saveBalanceToDb(pid);
+      supabase.from('transactions').insert({
+        user_id: pid,
+        type: 'ESCROW_LOCK',
+        amount: -stake,
+        room_id: roomId,
+        description: `Escrow lock ${stake} ETB for game ${roomId}`
+      }).then(() => {}).catch(() => {});
+    }
+
     return { success: true, pot };
   }
 
@@ -104,10 +287,11 @@ class WalletManager {
     for (const pid of playerIds) {
       const pWallet = this.getWallet(pid);
       pWallet.locked = Math.max(0, pWallet.locked - escrow.stakeAmount);
+      this._saveBalanceToDb(pid);
     }
 
     // Credit full pot to winner (5% platform fee)
-    const platformRake = Math.floor(escrow.pot * 0.05); // 5% house rake
+    const platformRake = Math.floor(escrow.pot * 0.05);
     const netWin = escrow.pot - platformRake;
 
     winnerWallet.balance += netWin;
@@ -119,6 +303,16 @@ class WalletManager {
       roomId,
       date: new Date().toISOString()
     });
+
+    // Persist
+    this._saveBalanceToDb(winnerId);
+    supabase.from('transactions').insert({
+      user_id: winnerId,
+      type: 'GAME_WIN',
+      amount: netWin,
+      room_id: roomId,
+      description: `Won ${netWin} ETB (pot: ${escrow.pot}, rake: ${platformRake})`
+    }).then(() => {}).catch(() => {});
 
     this.escrows.delete(roomId);
     return { winnerWallet, netWin, rake: platformRake };
@@ -133,6 +327,14 @@ class WalletManager {
       const pWallet = this.getWallet(pid);
       pWallet.balance += escrow.stakeAmount;
       pWallet.locked = Math.max(0, pWallet.locked - escrow.stakeAmount);
+      this._saveBalanceToDb(pid);
+      supabase.from('transactions').insert({
+        user_id: pid,
+        type: 'ESCROW_REFUND',
+        amount: escrow.stakeAmount,
+        room_id: roomId,
+        description: `Refund ${escrow.stakeAmount} ETB from game ${roomId}`
+      }).then(() => {}).catch(() => {});
     }
 
     this.escrows.delete(roomId);
@@ -140,4 +342,3 @@ class WalletManager {
 }
 
 module.exports = new WalletManager();
-
