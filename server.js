@@ -320,8 +320,9 @@ io.on('connection', (socket) => {
     socketPlayerMap.set(socket.id, { userId, name, roomId, gameType: 'SEKA' });
 
     socket.join(roomId);
-    socket.emit('seka_room_created', { roomId, expiresAt: room.expiresAt });
+    socket.emit('seka_room_created', { roomId, expiresAt: room.expiresAt, stakeAmount: room.stakeAmount });
     broadcastSekaRoomUpdate(room);
+    io.emit('rooms_updated');
   });
 
   // Join Seka Table
@@ -402,8 +403,11 @@ io.on('connection', (socket) => {
   socket.on('leave_seka_room', ({ roomId, userId }) => {
     const room = sekaRooms.get(roomId);
     if (room && room.status === 'WAITING') {
+      if (room.expireTimeout) clearTimeout(room.expireTimeout);
       walletManager.refundEscrow(room.roomId);
       sekaRooms.delete(roomId);
+      io.emit('rooms_updated');
+      if (userId) broadcastWallet(userId);
     }
   });
 

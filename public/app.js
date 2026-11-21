@@ -445,6 +445,7 @@ socket.on('error_msg', (msg) => {
 });
 
 socket.on('room_expired', ({ message }) => {
+  closeWaitingForOpponentModal();
   alert(message || '⏳ ጨዋታው በ1 ደቂቃ ውስጥ ተጋጣሚ ስላልገባ ፈርሷል (Game expired)');
   switchToLobbyView();
   refreshRoomsList();
@@ -474,16 +475,86 @@ socket.on('game_state', (state) => {
   renderGame(state);
 });
 
+// -------------------------------------------------------------
+// WAITING FOR OPPONENT / SEARCHING FOR PLAYERS MODAL LOGIC
+// -------------------------------------------------------------
+let waitingCountdownTimer = null;
+let currentWaitingRoomId = null;
+
+function showWaitingForOpponentModal(roomId, expiresAt, stakeAmount) {
+  currentWaitingRoomId = roomId;
+  const modal = document.getElementById('waitingForOpponentModal');
+  const tableIdEl = document.getElementById('waitingTableId');
+  const stakeEl = document.getElementById('waitingTableStake');
+  const countdownEl = document.getElementById('waitingCountdownText');
+
+  if (tableIdEl) tableIdEl.textContent = '#' + roomId.replace(/^seka_/, '');
+  if (stakeEl && stakeAmount) stakeEl.textContent = stakeAmount + ' ETB';
+  if (modal) modal.style.display = 'flex';
+
+  if (waitingCountdownTimer) clearInterval(waitingCountdownTimer);
+  const targetEnd = expiresAt || (Date.now() + 60 * 1000);
+
+  function updateTimer() {
+    const remaining = Math.max(0, Math.round((targetEnd - Date.now()) / 1000));
+    if (countdownEl) countdownEl.textContent = `⏳ ${remaining}s ይቀራል`;
+    if (remaining <= 0) {
+      clearInterval(waitingCountdownTimer);
+      waitingCountdownTimer = null;
+    }
+  }
+  updateTimer();
+  waitingCountdownTimer = setInterval(updateTimer, 1000);
+}
+
+function closeWaitingForOpponentModal() {
+  if (waitingCountdownTimer) {
+    clearInterval(waitingCountdownTimer);
+    waitingCountdownTimer = null;
+  }
+  currentWaitingRoomId = null;
+  const modal = document.getElementById('waitingForOpponentModal');
+  if (modal) modal.style.display = 'none';
+}
+
+const cancelWaitingRoomBtn = document.getElementById('cancelWaitingRoomBtn');
+if (cancelWaitingRoomBtn) {
+  cancelWaitingRoomBtn.addEventListener('click', () => {
+    if (currentWaitingRoomId) {
+      socket.emit('leave_seka_room', { roomId: currentWaitingRoomId, userId });
+    }
+    closeWaitingForOpponentModal();
+    playCardSound();
+    showSortToast('ጠረጴዛው ተሰርዟል፤ ውርርድዎ ተመልሷል');
+    refreshSekaRoomsList();
+  });
+}
+
 // Real-Time Game State Sync (Seka)
-socket.on('seka_room_created', ({ roomId }) => {
+socket.on('seka_room_created', ({ roomId, expiresAt, isBot, stakeAmount }) => {
   currentRoomId = roomId;
-  switchToGameView();
+  if (isBot) {
+    switchToGameView();
+  } else {
+    // Creator waits in lobby until another player joins (game MUST NOT start until opponent arrives)
+    const sekaStakeSelect = document.getElementById('sekaStakeSelect');
+    const stake = stakeAmount || (sekaStakeSelect ? Number(sekaStakeSelect.value) : 100);
+    showWaitingForOpponentModal(roomId, expiresAt, stake);
+    refreshSekaRoomsList();
+  }
 });
 
 socket.on('seka_game_state', (state) => {
   if (state.roomId !== currentRoomId) {
     playerOrderedCardIds = [];
     currentRoomId = state.roomId;
+  }
+  // The game ONLY starts when status becomes PLAYING!
+  if (state.status === 'PLAYING') {
+    closeWaitingForOpponentModal();
+    if (gameView.style.display === 'none') {
+      switchToGameView();
+    }
   }
   if (state.status === 'PLAYING' && state.myHand) {
     state.myHand = syncHandPreservingOrder(state.myHand);
@@ -655,8 +726,9 @@ window.joinRoom = function (roomId) {
 window.joinSekaRoom = function (roomId) {
   const sekaNameInput = document.getElementById('sekaPlayerNameInput');
   const sName = sekaNameInput && sekaNameInput.value ? sekaNameInput.value : playerName;
+  currentRoomId = roomId;
+  playCardSound();
   socket.emit('join_seka_room', { roomId, userId, name: sName });
-  switchToGameView();
 };
 
 function switchToGameView() {
@@ -700,6 +772,7 @@ function switchToLobbyView() {
   if (sekaLobbySection) sekaLobbySection.style.display = 'none';
   cutJokerModal.style.display = 'none';
   if (waitingJokerModal) waitingJokerModal.style.display = 'none';
+  closeWaitingForOpponentModal();
   gameResultModal.style.display = 'none';
   const winningHandDisplay = document.getElementById('winningHandDisplay');
   if (winningHandDisplay) winningHandDisplay.style.display = 'none';
