@@ -6,7 +6,7 @@
   <meta name="viewport"
     content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>CONQUER - Ethiopian Card Betting Game</title>
-  <link rel="stylesheet" href="styles.css?v=42">
+  <link rel="stylesheet" href="styles.css?v=43">
 </head>
 
 <body>
@@ -319,38 +319,38 @@
 
   <!-- CUT JOKER MODAL (Blind Cut before dealing) -->
   <div id="cutJokerModal" class="modal-overlay" style="display: none;">
-    <div class="modal-content" style="max-width: 520px; text-align: center;">
-      <div class="modal-title" style="font-size: 20px; color: var(--primary-gold); margin-bottom: 8px;">
+    <div class="modal-content" style="max-width: 520px; text-align: center; color: #0f172a;">
+      <div class="modal-title" style="font-size: 20px; font-weight: 900; color: #0f172a; margin-bottom: 8px;">
         🃏 ጆከር ሰይም (በጭፍን / Blind Cut)
       </div>
-      <p style="color: #cbd5e1; font-size: 14px; margin-bottom: 6px;">
+      <p style="color: #475569; font-size: 14px; margin-bottom: 6px; line-height: 1.5;">
         ካርታዎች ከመታደላቸው በፊት 28ኛዋ ካርታ ስትገለበጥ ጆከር የሚሆንበትን መንገድ ምረጥ፦
       </p>
 
       <!-- 4 Selection Buttons Grid -->
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 18px;">
         <button class="btn-primary" id="cutHighBtn"
-          style="padding: 14px; font-size: 15px; font-weight: bold; background: linear-gradient(135deg, #10b981, #059669); border: 2px solid #34d399; border-radius: 12px; cursor: pointer;">
+          style="padding: 14px; font-size: 15px; font-weight: bold; background: linear-gradient(135deg, #10b981, #059669); border: 2px solid #34d399; border-radius: 12px; cursor: pointer; color: #ffffff;">
           ⬆️ ከፍ (High)<br>
-          <span style="font-size: 11px; font-weight: normal; opacity: 0.9;">ከ28ኛዋ በላይ + ተመሳሳይ ከለር</span>
+          <span style="font-size: 11px; font-weight: normal; opacity: 0.95;">ከ28ኛዋ በላይ + ተመሳሳይ ከለር</span>
         </button>
 
         <button class="btn-primary" id="cutLowBtn"
-          style="padding: 14px; font-size: 15px; font-weight: bold; background: linear-gradient(135deg, #f97316, #ea580c); border: 2px solid #fb923c; border-radius: 12px; cursor: pointer;">
+          style="padding: 14px; font-size: 15px; font-weight: bold; background: linear-gradient(135deg, #f97316, #ea580c); border: 2px solid #fb923c; border-radius: 12px; cursor: pointer; color: #ffffff;">
           ⬇️ ዝቅ / ታች (Low)<br>
-          <span style="font-size: 11px; font-weight: normal; opacity: 0.9;">ከ28ኛዋ በታች + ተመሳሳይ ከለር</span>
+          <span style="font-size: 11px; font-weight: normal; opacity: 0.95;">ከ28ኛዋ በታች + ተመሳሳይ ከለር</span>
         </button>
 
         <button class="btn-primary" id="cutSameBtn"
-          style="padding: 14px; font-size: 15px; font-weight: bold; background: linear-gradient(135deg, #3b82f6, #1d4ed8); border: 2px solid #60a5fa; border-radius: 12px; cursor: pointer;">
+          style="padding: 14px; font-size: 15px; font-weight: bold; background: linear-gradient(135deg, #3b82f6, #1d4ed8); border: 2px solid #60a5fa; border-radius: 12px; cursor: pointer; color: #ffffff;">
           🎯 አንድ ላይ (Same)<br>
-          <span style="font-size: 11px; font-weight: normal; opacity: 0.9;">28ኛዋ ካርታ ራሷ + ተመሳሳይ ከለር</span>
+          <span style="font-size: 11px; font-weight: normal; opacity: 0.95;">28ኛዋ ካርታ ራሷ + ተመሳሳይ ከለር</span>
         </button>
 
         <button class="btn-primary" id="cutGonBtn"
-          style="padding: 14px; font-size: 15px; font-weight: bold; background: linear-gradient(135deg, #8b5cf6, #6d28d9); border: 2px solid #a78bfa; border-radius: 12px; cursor: pointer;">
+          style="padding: 14px; font-size: 15px; font-weight: bold; background: linear-gradient(135deg, #8b5cf6, #6d28d9); border: 2px solid #a78bfa; border-radius: 12px; cursor: pointer; color: #ffffff;">
           🔄 ጎን (Opposite)<br>
-          <span style="font-size: 11px; font-weight: normal; opacity: 0.9;">28ኛዋ ካርታ ቁጥር + ተቃራኒ ከለር</span>
+          <span style="font-size: 11px; font-weight: normal; opacity: 0.95;">28ኛዋ ካርታ ቁጥር + ተቃራኒ ከለር</span>
         </button>
       </div>
     </div>
@@ -358,12 +358,12 @@
 
   <!-- WAITING FOR JOKER MODAL (For Creator while Joiner chooses) -->
   <div id="waitingJokerModal" class="modal-overlay" style="display: none;">
-    <div class="modal-content" style="max-width: 420px; text-align: center;">
+    <div class="modal-content" style="max-width: 420px; text-align: center; color: #0f172a;">
       <div style="font-size: 38px; margin-bottom: 12px;">⏳</div>
-      <div class="modal-title" style="font-size: 18px; color: var(--primary-gold); margin-bottom: 8px;">
+      <div class="modal-title" style="font-size: 18px; font-weight: 900; color: #0f172a; margin-bottom: 8px;">
         ተጋባዡ ጆከር እየመረጠ ነው...
       </div>
-      <p style="color: #cbd5e1; font-size: 13px;">
+      <p style="color: #475569; font-size: 13px; line-height: 1.5;">
         ተቀላቅሎ የገባው ተጫዋች ካርታ ከመታደሉ በፊት ጆከሩን በጭፍን እየሰየመ ነው። ምርጫው እንዳበቃ 27ቱ ካርታዎች ታድለው ጨዋታው ይጀምራል!
       </p>
     </div>
@@ -373,7 +373,7 @@
   <div id="gameResultModal" class="modal-overlay" style="display: none;">
     <div class="modal-content" style="max-width: 600px; max-height: 85vh; overflow-y: auto;">
       <div class="modal-title" id="resultModalTitle">🏆 CONQUER WIN!</div>
-      <p id="resultModalDesc" style="color: #cbd5e1; font-size: 15px; margin: 12px 0;">
+      <p id="resultModalDesc" style="color: #334155; font-size: 15px; margin: 12px 0;">
         Player won the pot!
       </p>
       <!-- Display face-up winning hand and melds (በተለይ ቦት ሲያሸንፍ ካርታውን ወርዶ ማየት እንድትችል) -->
@@ -508,7 +508,7 @@
 
   <!-- Socket.io & App Script -->
   <script src="/socket.io/socket.io.js"></script>
-  <script src="app.js?v=43"></script>
+  <script src="app.js?v=44"></script>
 </body>
 
 </html>

@@ -201,7 +201,7 @@ class WalletManager {
       name: wallet.name,
       phone: wallet.phone,
       updated_at: new Date().toISOString()
-    }).eq('id', userId);
+    }).eq('id', wallet.id);
 
     return wallet;
   }

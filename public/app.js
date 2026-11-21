@@ -417,11 +417,39 @@ function updateAuthUI() {
   if (isUserRegistered) {
     if (sBtn) sBtn.style.display = 'none';
     if (loggedArea) loggedArea.style.display = 'flex';
-    if (walletUserDisplay) walletUserDisplay.textContent = playerName;
+    if (walletUserDisplay) {
+      walletUserDisplay.textContent = playerName;
+      walletUserDisplay.title = playerName;
+    }
   } else {
     if (sBtn) sBtn.style.display = 'inline-flex';
     if (loggedArea) loggedArea.style.display = 'none';
   }
+  if (playerNameInput) playerNameInput.value = playerName;
+  const sNameInp = document.getElementById('sekaPlayerNameInput');
+  if (sNameInp) sNameInp.value = playerName;
+}
+
+function applyWalletUpdate(wallet) {
+  if (!wallet) return;
+  if (walletBalanceDisplay && wallet.balance !== undefined) {
+    walletBalanceDisplay.textContent = `${wallet.balance.toLocaleString()} ETB`;
+  }
+  if (wallet.name && wallet.name !== 'Player' && (!playerName || playerName === 'Player' || playerName.startsWith('Player '))) {
+    playerName = wallet.name;
+    localStorage.setItem('conquer_user_name', playerName);
+  }
+  if (wallet.phone) {
+    userPhone = wallet.phone;
+    localStorage.setItem('conquer_user_phone', userPhone);
+    isUserRegistered = true;
+    localStorage.setItem('conquer_user_registered', 'true');
+  }
+  if (wallet.id && wallet.id !== userId) {
+    userId = wallet.id;
+    localStorage.setItem('conquer_user_id', userId);
+  }
+  updateAuthUI();
 }
 updateAuthUI();
 
@@ -570,11 +598,7 @@ if (registerForm) {
       body: JSON.stringify({ userId, name: playerName, phone: userPhone })
     }).then(r => r.json()).then(res => {
       if (res && res.wallet) {
-        if (res.wallet.id && res.wallet.id !== userId) {
-          userId = res.wallet.id;
-          localStorage.setItem('conquer_user_id', userId);
-        }
-        if (walletBalanceDisplay) walletBalanceDisplay.textContent = `${res.wallet.balance.toLocaleString()} ETB`;
+        applyWalletUpdate(res.wallet);
       }
     }).catch(() => { });
 
@@ -619,11 +643,11 @@ socket.on('connect', () => {
 });
 
 socket.on('wallet_update', (wallet) => {
-  walletBalanceDisplay.textContent = `${wallet.balance.toLocaleString()} ETB`;
+  applyWalletUpdate(wallet);
 });
 
 socket.on(`wallet_${userId}`, (wallet) => {
-  walletBalanceDisplay.textContent = `${wallet.balance.toLocaleString()} ETB`;
+  applyWalletUpdate(wallet);
 });
 
 socket.on('error_msg', (msg) => {
@@ -2744,11 +2768,11 @@ function renderGame(state) {
       };
       const choiceLabel = choiceMap[state.jokerChoice] || 'ከፍ';
       const isRed = state.jokerSuits.includes('♥') || state.jokerSuits.includes('♦');
-      const suitColor = isRed ? '#ef4444' : '#ffffff';
+      const suitColor = isRed ? '#dc2626' : '#0f172a';
       const jokersText = `${state.jokerRank}${state.jokerSuits[0]} ${state.jokerRank}${state.jokerSuits[1]}`;
 
       deckJokerCallBadge.style.display = 'block';
-      deckJokerCallBadge.innerHTML = `⭐ <span style="color: ${suitColor}; font-weight: 800;">${jokersText}</span> <span style="color: #f5b041;">(${choiceLabel})</span>`;
+      deckJokerCallBadge.innerHTML = `⭐ <strong>ጆከር:</strong> <span style="color: ${suitColor}; font-weight: 900; background: #ffffff; padding: 1px 6px; border-radius: 6px; margin: 0 3px;">${jokersText}</span> <span style="color: #fef08a; font-weight: 700;">(${choiceLabel})</span>`;
     } else {
       deckJokerCallBadge.style.display = 'none';
       deckJokerCallBadge.innerHTML = '';
@@ -3302,28 +3326,38 @@ function bindCardInteractions(hand) {
 
 function createCardHTML(card, isSelected = false, isBaseJoker = false, zIndex = 1, animClass = '', animDelay = '', extraStyle = '') {
   const isFalse = card.isFalseJoker || card.rank === 'FALSE' || card.rank === 'JK';
-  const isSekaWildJoker = (card.isJoker || card.rank === 'JOKER' || card.suit === '🃏') && !isFalse;
+  const isPrintedWildJoker = (card.rank === 'JOKER' || card.suit === '🃏' || card.suitName === 'joker') && !isFalse;
+  const isDesignatedJoker = !isPrintedWildJoker && !isFalse && (card.isMainJoker || card.isJoker);
   const isRed = card.suit === '♥' || card.suit === '♦' || card.color === 'red' || (isFalse && card.color === 'red');
   const colorClass = isRed ? 'red' : 'black';
   const selectedClass = isSelected ? 'selected' : '';
   const groupStartClass = card.isGroupStart ? 'group-start' : '';
   const delayStyle = animDelay ? `animation-delay: ${animDelay};` : '';
 
-  const displayRank = isFalse ? 'FALSE' : (isSekaWildJoker ? '🃏' : card.rank);
-  const displaySuit = isFalse ? '🃏' : (isSekaWildJoker ? 'JOKER' : card.suit);
-  const falseTextColor = isRed ? '#ef4444' : '#0f172a';
-  const cornerRankStyle = isFalse ? `style="font-size: 8px; font-weight: 900; color: ${falseTextColor};"` : (isSekaWildJoker ? `style="font-size: 11px; font-weight: 900;"` : '');
-  const centerStyle = (isFalse || isSekaWildJoker) ? 'style="font-size: 20px;"' : '';
-
-  // Golden Star (⭐) on designated jokers, FALSE badge on printed false jokers, WILD on Seka jokers
+  let displayRank = card.rank;
+  let cornerSuit = card.suit;
+  let centerHTML = `<div class="card-center-suit">${card.suit}</div>`;
   let starHTML = '';
+
   if (isFalse) {
+    displayRank = 'FALSE';
+    cornerSuit = '';
+    centerHTML = `<div class="card-center-suit" style="font-size: 22px;">🃏</div>`;
     starHTML = `<div class="card-false-badge ${isRed ? 'red' : 'black'}">FALSE</div>`;
-  } else if (isSekaWildJoker) {
-    starHTML = `<div class="card-joker-star" style="font-size: 10px; width: auto; padding: 1px 4px;">🃏 WILD</div>`;
-  } else if (card.isMainJoker || card.isJoker) {
+  } else if (isPrintedWildJoker) {
+    // Seka 54-card deck printed Wild Joker
+    displayRank = 'JK';
+    cornerSuit = '★';
+    centerHTML = `<div class="card-center-suit" style="font-size: 22px;">🃏</div><div class="card-wild-label">WILD</div>`;
+    starHTML = `<div class="card-joker-star">⭐</div>`;
+  } else if (isDesignatedJoker) {
+    // Conquer natural card designated as wild Joker (e.g. 7♠ or 7♣)
+    displayRank = card.rank;
+    cornerSuit = card.suit;
+    centerHTML = `<div class="card-center-suit">${card.suit}</div>`;
     starHTML = `<div class="card-joker-star">⭐</div>`;
   }
+
   const baseBadge = isBaseJoker ? `<div class="card-base-badge">BASE ⭐</div>` : '';
   const tetayBadge = card.isTetay ? `<div class="card-tetay-badge">ተጣይ 🔻</div>` : '';
 
@@ -3332,10 +3366,10 @@ function createCardHTML(card, isSelected = false, isBaseJoker = false, zIndex = 
       ${starHTML}
       ${tetayBadge}
       <div class="card-corner top-left">
-        <div class="corner-rank" ${cornerRankStyle}>${displayRank}</div>
-        <div class="corner-suit">${isFalse ? '' : (isSekaWildJoker ? '' : displaySuit)}</div>
+        <div class="corner-rank">${displayRank}</div>
+        <div class="corner-suit">${cornerSuit}</div>
       </div>
-      <div class="card-center-suit" ${centerStyle}>${displaySuit}</div>
+      ${centerHTML}
       ${baseBadge}
     </div>
   `;
