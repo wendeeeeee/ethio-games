@@ -3518,6 +3518,13 @@ returnToLobbyBtn.addEventListener('click', () => {
   switchToLobbyView();
 });
 
+const closeResultModalBtn = document.getElementById('closeResultModalBtn');
+if (closeResultModalBtn) {
+  closeResultModalBtn.addEventListener('click', () => {
+    gameResultModal.style.display = 'none';
+  });
+}
+
 function renderOpponentCards(count, isInitialDeal = false, isFinished = false, winningMelds = null, winningDiscard = null) {
   // If game is finished and opponent has winning melds, lay them face-up on table!
   if (isFinished && winningMelds && winningMelds.length > 0) {

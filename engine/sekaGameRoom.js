@@ -295,7 +295,7 @@ class SekaGameRoom {
     const remainingHand = hand.filter((_, idx) => idx !== cardIndex);
     const winCheck = validateSekaWinningHand(hand, cardToDiscard);
 
-    if (winCheck.valid && melds) {
+    if (winCheck.valid) {
       // Confirmed Win!
       hand.splice(cardIndex, 1);
       this.discardPile.push(cardToDiscard);
@@ -368,7 +368,7 @@ class SekaGameRoom {
     if (!winCheck.valid) {
       return {
         success: false,
-        message: 'ካርታዎችህ 2 ትሪስ (ጦር) እና 1 ኳትሪስ (ጦር) አላሟሉም!'
+        message: 'ካርታዎችህ 2 ትሪስ እና 1 ኳትሪስ አላሟሉም!'
       };
     }
 
