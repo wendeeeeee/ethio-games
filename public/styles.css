@@ -166,16 +166,11 @@ body.in-game {
 }
 
 body.in-game .app-header {
+  display: flex !important;
   background: #064e3b !important;
   border-bottom: 1px solid #065f46 !important;
   color: #f8fafc !important;
-}
-
-/* Hide navigation bar on mobile during game to maximize screen space */
-@media (max-width: 768px), (max-height: 550px) {
-  body.in-game .app-header {
-    display: none !important;
-  }
+  z-index: 100;
 }
 
 /* Seka In-Table Win Display Styling */
@@ -1763,21 +1758,32 @@ select:focus {
 /* --- Mobile Landscape & Small Tablets (max-width: 768px) --- */
 @media (max-width: 768px) {
   .app-header {
-    padding: 4px 8px;
-    flex-wrap: wrap;
-    gap: 4px;
+    padding: 4px 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: nowrap;
+    gap: 6px;
   }
 
   .logo-icon {
-    font-size: 22px;
+    font-size: 20px;
   }
 
   .logo-title {
-    font-size: 16px;
+    font-size: 15px;
   }
 
   .logo-title span {
-    font-size: 10px !important;
+    display: none !important;
+  }
+
+  .user-logged-in-area {
+    gap: 6px;
+    display: flex;
+    align-items: center;
+    flex-wrap: nowrap;
+  }
   }
 
   .wallet-badge {
@@ -2162,39 +2168,97 @@ select:focus {
   }
 
   .app-header {
-    padding: 4px 8px;
-    height: 38px;
+    padding: 3px 6px !important;
+    height: 40px !important;
+    min-height: 40px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 3px !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
     flex-shrink: 0;
   }
 
+  .app-header::-webkit-scrollbar {
+    display: none;
+  }
+
+  .logo-area {
+    gap: 3px !important;
+    flex-shrink: 0 !important;
+  }
+
   .logo-icon {
-    font-size: 18px;
+    font-size: 16px !important;
   }
 
   .logo-title {
-    font-size: 15px;
+    font-size: 13px !important;
+    font-weight: 800 !important;
+    white-space: nowrap !important;
+  }
+
+  .logo-title span {
+    display: none !important;
   }
 
   .wallet-badge {
-    padding: 3px 6px;
-    gap: 4px;
-    font-size: 11px;
+    padding: 2px 4px !important;
+    gap: 4px !important;
+    font-size: 11px !important;
+    flex-shrink: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    flex-wrap: nowrap !important;
+  }
+
+  .user-logged-in-area {
+    gap: 4px !important;
+    display: flex !important;
+    align-items: center !important;
+    flex-shrink: 0 !important;
+    flex-wrap: nowrap !important;
   }
 
   .user-profile-badge {
-    padding: 2px 6px;
-    font-size: 11px;
-    max-width: 80px;
+    padding: 2px 5px !important;
+    font-size: 10px !important;
+    max-width: 72px !important;
+    white-space: nowrap !important;
+    flex-shrink: 0 !important;
   }
 
   #walletUserDisplay {
-    max-width: 55px;
-    font-size: 11px;
+    max-width: 48px !important;
+    font-size: 10px !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+
+  .wallet-balance-wrap {
+    font-size: 10px !important;
+    font-weight: 800 !important;
+    white-space: nowrap !important;
+    gap: 2px !important;
+    flex-shrink: 0 !important;
+  }
+
+  #walletBalanceDisplay {
+    font-size: 10px !important;
+    white-space: nowrap !important;
   }
 
   .header-logout-btn {
-    padding: 3px 6px;
-    font-size: 10px;
+    padding: 3px 6px !important;
+    font-size: 10px !important;
+    font-weight: 700 !important;
+    white-space: nowrap !important;
+    border-radius: 12px !important;
+    flex-shrink: 0 !important;
   }
 
   .card-wild-label {
@@ -2204,14 +2268,20 @@ select:focus {
   }
 
   .deposit-btn {
-    padding: 3px 7px;
-    font-size: 10px;
+    padding: 3px 6px !important;
+    font-size: 10px !important;
+    font-weight: 700 !important;
+    white-space: nowrap !important;
+    border-radius: 12px !important;
+    flex-shrink: 0 !important;
   }
 
   .sound-toggle-btn {
-    width: 26px;
-    height: 26px;
-    font-size: 12px;
+    width: 22px !important;
+    height: 22px !important;
+    font-size: 10px !important;
+    padding: 0 !important;
+    flex-shrink: 0 !important;
   }
 
   /* Game Table: fills visible viewport without clipping */
@@ -2483,6 +2553,53 @@ select:focus {
   .ground-meld-actions .btn-primary {
     padding: 5px 8px !important;
     font-size: 10px !important;
+  }
+
+  /* Seka In-Table Win Area on Mobile */
+  .seka-table-win-area {
+    width: 98% !important;
+    padding: 8px 10px !important;
+    margin: 4px auto !important;
+    border-radius: 12px !important;
+  }
+
+  .seka-win-title {
+    font-size: 14px !important;
+  }
+
+  .seka-win-subtitle {
+    font-size: 11px !important;
+  }
+
+  .seka-win-cards-row {
+    gap: 4px !important;
+  }
+
+  .seka-meld-badge-group {
+    padding: 4px 6px !important;
+    gap: 2px !important;
+  }
+
+  .seka-meld-badge-label {
+    font-size: 9px !important;
+  }
+
+  .seka-win-cards-row .card {
+    width: 32px !important;
+    height: 46px !important;
+    padding: 2px 3px !important;
+  }
+
+  .seka-win-cards-row .card .corner-rank {
+    font-size: 9px !important;
+  }
+
+  .seka-win-cards-row .card .corner-suit {
+    font-size: 8px !important;
+  }
+
+  .seka-win-cards-row .card .card-center-suit {
+    font-size: 14px !important;
   }
 }
 

@@ -1630,6 +1630,8 @@ function switchToGameView() {
   selectedCardId = null;
   const sekaTableWinArea = document.getElementById('sekaTableWinArea');
   if (sekaTableWinArea) sekaTableWinArea.style.display = 'none';
+  const discardBtn = document.getElementById('discardBtn');
+  if (discardBtn) discardBtn.style.display = 'inline-block';
   lobbyView.style.display = 'none';
   gameView.style.display = 'block';
 }
@@ -3563,6 +3565,8 @@ function renderGame(state) {
     pokeTimerBanner.style.display = 'none';
     if (pokeBtn) pokeBtn.style.display = 'none';
     if (weredBtn) weredBtn.style.display = 'none';
+    const dBtn = document.getElementById('discardBtn');
+    if (dBtn) dBtn.style.display = 'inline-block';
     const sWinBtn = document.getElementById('sekaWinBtn');
     if (sWinBtn) {
       sWinBtn.style.display = 'inline-block';
@@ -3571,6 +3575,8 @@ function renderGame(state) {
   } else {
     const sWinBtn = document.getElementById('sekaWinBtn');
     if (sWinBtn) sWinBtn.style.display = 'none';
+    const dBtn = document.getElementById('discardBtn');
+    if (dBtn) dBtn.style.display = 'inline-block';
     if (weredBtn) weredBtn.style.display = 'inline-block';
     if (pokeBtn) pokeBtn.style.display = 'inline-block';
 
