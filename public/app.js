@@ -1193,8 +1193,8 @@ const DEPOSIT_METHODS = {
 
 function updateDepositUI() {
   const methodInfo = DEPOSIT_METHODS[selectedDepositMethod] || DEPOSIT_METHODS.telebirr;
-  if (depositPhoneVal) depositPhoneVal.textContent = `${methodInfo.phone} 📋`;
-  if (depositAccountNameVal) depositAccountNameVal.textContent = methodInfo.accountName;
+  if (depositPhoneVal) depositPhoneVal.textContent = methodInfo.phone;
+  if (depositAccountNameVal) depositAccountNameVal.innerHTML = `${methodInfo.accountName} <span class="verified-icon">✓</span>`;
   if (depositInstructions) depositInstructions.innerHTML = methodInfo.instruction;
   if (depositBtnText) {
     depositBtnText.textContent = `${selectedDepositAmount.toLocaleString()} ETB በ ${methodInfo.name} አስገባ`;
@@ -1322,13 +1322,43 @@ if (depositCustomAmountInput) {
 }
 
 // Copy phone / account number on tap
+function copyDepositPhone() {
+  const methodInfo = DEPOSIT_METHODS[selectedDepositMethod] || DEPOSIT_METHODS.telebirr;
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(methodInfo.phone).then(() => {
+      showSortToast(`📋 ${methodInfo.phone} ተኮርጅቷል (Copied)!`);
+      const copyBtn = document.getElementById('copyTelebirrBtn');
+      if (copyBtn) {
+        copyBtn.textContent = '✅ ተኮርጇል';
+        setTimeout(() => { copyBtn.textContent = '📋 ኮፒ'; }, 2000);
+      }
+    }).catch(() => { });
+  }
+}
+
 if (depositPhoneVal) {
-  depositPhoneVal.addEventListener('click', () => {
-    const methodInfo = DEPOSIT_METHODS[selectedDepositMethod] || DEPOSIT_METHODS.telebirr;
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(methodInfo.phone).then(() => {
-        showSortToast(`📋 ${methodInfo.phone} ተኮርጅቷል (Copied)!`);
-      }).catch(() => { });
+  depositPhoneVal.addEventListener('click', copyDepositPhone);
+}
+
+const copyTelebirrBtn = document.getElementById('copyTelebirrBtn');
+if (copyTelebirrBtn) {
+  copyTelebirrBtn.addEventListener('click', copyDepositPhone);
+}
+
+// Paste TXN ID
+const pasteTxnBtn = document.getElementById('pasteTxnBtn');
+if (pasteTxnBtn && depositTxnIdInput) {
+  pasteTxnBtn.addEventListener('click', async () => {
+    try {
+      if (navigator.clipboard && navigator.clipboard.readText) {
+        const text = await navigator.clipboard.readText();
+        if (text) {
+          depositTxnIdInput.value = text.trim();
+          showSortToast('📋 Transaction ID ተለጥፏል!');
+        }
+      }
+    } catch (e) {
+      depositTxnIdInput.focus();
     }
   });
 }
