@@ -358,17 +358,31 @@ app.get('/favicon.ico', (req, res) => res.status(204).end());
 
 // REST API for User Registration & Profile
 app.post('/api/user/register', async (req, res) => {
-  const { userId, name, phone } = req.body;
-  if (!userId) return res.status(400).json({ success: false, message: 'userId is required' });
-  const lowerName = (name || '').trim().toLowerCase();
-  if (!name || name.trim().length < 2 || lowerName === 'player' || lowerName.startsWith('player ') || lowerName === 'ተጫዋች' || lowerName.startsWith('ተጫዋች') || lowerName.startsWith('user_')) {
-    return res.status(400).json({ success: false, message: 'እባክዎ ትክክለኛ ስም ያስገቡ (Player ወይም ተጫዋች መጠቀም አይቻልም)' });
+  const { userId, name, phone, password } = req.body;
+  try {
+    const wallet = await walletManager.registerUser({
+      name,
+      phone,
+      password: password || '1234',
+      userId
+    });
+    res.json({ success: true, wallet });
+  } catch (err) {
+    console.error('[User Register Error]:', err.message);
+    res.status(400).json({ success: false, message: err.message });
   }
-  if (!phone || phone.trim().length < 9) {
-    return res.status(400).json({ success: false, message: 'እባክዎ ትክክለኛ ስልክ ቁጥር ያስገቡ' });
+});
+
+// REST API for User Login
+app.post('/api/user/login', async (req, res) => {
+  const { phone, password } = req.body;
+  try {
+    const wallet = await walletManager.loginUser({ phone, password });
+    res.json({ success: true, wallet });
+  } catch (err) {
+    console.error('[User Login Error]:', err.message);
+    res.status(400).json({ success: false, message: err.message });
   }
-  const wallet = await walletManager.updateProfileAsync(userId, { name: name.trim(), phone: phone.trim() });
-  res.json({ success: true, wallet });
 });
 
 app.get('/api/user/profile/:userId', async (req, res) => {

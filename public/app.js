@@ -421,17 +421,19 @@ if (walletUserDisplay) walletUserDisplay.textContent = playerName;
 const initialSekaNameInput = document.getElementById('sekaPlayerNameInput');
 if (initialSekaNameInput) initialSekaNameInput.value = playerName;
 
-// Auth Header Elements (Sign Up & Logout)
+// Auth Header Elements (Login, Sign Up & Logout)
+const headerLoginBtn = document.getElementById('headerLoginBtn');
 const headerSignupBtn = document.getElementById('headerSignupBtn');
 const headerLogoutBtn = document.getElementById('headerLogoutBtn');
 const userLoggedInArea = document.getElementById('userLoggedInArea');
+const userLoggedOutArea = document.getElementById('userLoggedOutArea');
 
 function updateAuthUI() {
-  const sBtn = document.getElementById('headerSignupBtn');
+  const loggedOutArea = document.getElementById('userLoggedOutArea');
   const loggedArea = document.getElementById('userLoggedInArea');
   const dBtn = document.getElementById('depositBtn');
   if (isUserRegistered) {
-    if (sBtn) sBtn.style.display = 'none';
+    if (loggedOutArea) loggedOutArea.style.display = 'none';
     if (loggedArea) loggedArea.style.display = 'flex';
     if (dBtn) dBtn.style.display = 'inline-flex';
     if (walletUserDisplay) {
@@ -439,7 +441,7 @@ function updateAuthUI() {
       walletUserDisplay.title = playerName;
     }
   } else {
-    if (sBtn) sBtn.style.display = 'inline-flex';
+    if (loggedOutArea) loggedOutArea.style.display = 'flex';
     if (loggedArea) loggedArea.style.display = 'none';
     if (dBtn) dBtn.style.display = 'none';
   }
@@ -508,33 +510,82 @@ if (headerLogoutBtn) {
 }
 
 // -------------------------------------------------------------
-// USER REGISTRATION & PROFILE MODAL LOGIC
+// USER AUTH (LOGIN & REGISTRATION) MODAL LOGIC
 // -------------------------------------------------------------
 const registerModal = document.getElementById('registerModal');
 const openProfileBtn = document.getElementById('openProfileBtn');
 const closeRegModalBtn = document.getElementById('closeRegModalBtn');
+
+const tabBtnLogin = document.getElementById('tabBtnLogin');
+const tabBtnRegister = document.getElementById('tabBtnRegister');
+const loginForm = document.getElementById('loginForm');
 const registerForm = document.getElementById('registerForm');
+
+const loginPhoneInput = document.getElementById('loginPhoneInput');
+const loginPassInput = document.getElementById('loginPassInput');
+const loginErrorMsg = document.getElementById('loginErrorMsg');
+const submitLoginBtn = document.getElementById('submitLoginBtn');
+const switchToRegisterLink = document.getElementById('switchToRegisterLink');
+
 const regNameInput = document.getElementById('regNameInput');
 const regPhoneInput = document.getElementById('regPhoneInput');
+const regPassInput = document.getElementById('regPassInput');
+const regConfirmPassInput = document.getElementById('regConfirmPassInput');
 const regErrorMsg = document.getElementById('regErrorMsg');
 const submitRegBtn = document.getElementById('submitRegBtn');
+const switchToLoginLink = document.getElementById('switchToLoginLink');
+
+function setAuthMode(mode) {
+  if (loginErrorMsg) loginErrorMsg.style.display = 'none';
+  if (regErrorMsg) regErrorMsg.style.display = 'none';
+
+  if (mode === 'login') {
+    if (tabBtnLogin) {
+      tabBtnLogin.style.background = '#fff';
+      tabBtnLogin.style.color = '#0f172a';
+      tabBtnLogin.style.boxShadow = '0 2px 6px rgba(0,0,0,0.06)';
+    }
+    if (tabBtnRegister) {
+      tabBtnRegister.style.background = 'transparent';
+      tabBtnRegister.style.color = '#64748b';
+      tabBtnRegister.style.boxShadow = 'none';
+    }
+    if (loginForm) loginForm.style.display = 'flex';
+    if (registerForm) registerForm.style.display = 'none';
+    setTimeout(() => { if (loginPhoneInput) loginPhoneInput.focus(); }, 100);
+  } else {
+    if (tabBtnRegister) {
+      tabBtnRegister.style.background = '#fff';
+      tabBtnRegister.style.color = '#0f172a';
+      tabBtnRegister.style.boxShadow = '0 2px 6px rgba(0,0,0,0.06)';
+    }
+    if (tabBtnLogin) {
+      tabBtnLogin.style.background = 'transparent';
+      tabBtnLogin.style.color = '#64748b';
+      tabBtnLogin.style.boxShadow = 'none';
+    }
+    if (registerForm) registerForm.style.display = 'flex';
+    if (loginForm) loginForm.style.display = 'none';
+    setTimeout(() => { if (regNameInput) regNameInput.focus(); }, 100);
+  }
+}
+
+function openLoginModal() {
+  if (!registerModal) return;
+  setAuthMode('login');
+  if (loginPhoneInput && userPhone) loginPhoneInput.value = userPhone;
+  if (loginPassInput) loginPassInput.value = '';
+  registerModal.style.display = 'flex';
+}
 
 function openRegistrationModal() {
   if (!registerModal) return;
-  regNameInput.value = (playerName && !isGenericName(playerName)) ? playerName : '';
-  regPhoneInput.value = userPhone || '';
-  if (regErrorMsg) {
-    regErrorMsg.style.display = 'none';
-    regErrorMsg.textContent = '';
-  }
+  setAuthMode('register');
+  if (regNameInput) regNameInput.value = '';
+  if (regPhoneInput) regPhoneInput.value = userPhone || '';
+  if (regPassInput) regPassInput.value = '';
+  if (regConfirmPassInput) regConfirmPassInput.value = '';
   registerModal.style.display = 'flex';
-  setTimeout(() => {
-    if (!regNameInput.value) {
-      regNameInput.focus();
-    } else if (regPhoneInput) {
-      regPhoneInput.focus();
-    }
-  }, 100);
 }
 
 function closeRegistrationModal() {
@@ -542,6 +593,31 @@ function closeRegistrationModal() {
   registerModal.style.display = 'none';
 }
 
+if (tabBtnLogin) {
+  tabBtnLogin.addEventListener('click', () => setAuthMode('login'));
+}
+if (tabBtnRegister) {
+  tabBtnRegister.addEventListener('click', () => setAuthMode('register'));
+}
+if (switchToRegisterLink) {
+  switchToRegisterLink.addEventListener('click', (e) => {
+    e.preventDefault();
+    setAuthMode('register');
+  });
+}
+if (switchToLoginLink) {
+  switchToLoginLink.addEventListener('click', (e) => {
+    e.preventDefault();
+    setAuthMode('login');
+  });
+}
+
+if (headerLoginBtn) {
+  headerLoginBtn.addEventListener('click', openLoginModal);
+}
+if (headerSignupBtn) {
+  headerSignupBtn.addEventListener('click', openRegistrationModal);
+}
 if (closeRegModalBtn) {
   closeRegModalBtn.addEventListener('click', closeRegistrationModal);
 }
@@ -565,89 +641,200 @@ function normalizeEthPhone(phoneStr) {
   return cleaned;
 }
 
-function validateRegistration(name, phone) {
-  if (!name || name.trim().length < 2) {
-    return { valid: false, message: 'እባክዎ ስምዎን ያስገቡ (ቢያንስ 2 ፊደል) / Please enter your name' };
-  }
-  const cleanName = name.trim();
-  if (isGenericName(cleanName)) {
-    return { valid: false, message: 'እባክዎ ትክክለኛ የራስዎን ስም ያስገቡ (Player ወይም ተጫዋች መጠቀም አይቻልም)' };
-  }
-  if (!phone || phone.trim().length === 0) {
-    return { valid: false, message: 'እባክዎ ስልክ ቁጥርዎን ያስገቡ / Phone number is required' };
-  }
-  const cleanPhone = normalizeEthPhone(phone);
-  // Ethiopian mobile numbers: 09XXXXXXXX or 07XXXXXXXX (10 digits)
-  const ethRegex = /^0(9|7)\d{8}$/;
-  if (!ethRegex.test(cleanPhone)) {
-    return { valid: false, message: 'እባክዎ ትክክለኛ የኢትዮጵያ ስልክ ቁጥር ያስገቡ (ምሳሌ፡ 0912345678 ወይም 0712345678)' };
-  }
-  return { valid: true, cleanName, cleanPhone };
-}
-
-if (registerForm) {
-  registerForm.addEventListener('submit', (e) => {
+// -------------------------------------------------------------
+// 1. LOGIN SUBMIT HANDLER
+// -------------------------------------------------------------
+if (loginForm) {
+  loginForm.addEventListener('submit', async (e) => {
     e.preventDefault();
+    const rawPhone = (loginPhoneInput ? loginPhoneInput.value : '').trim();
+    const rawPass = (loginPassInput ? loginPassInput.value : '').trim();
 
     // Check for Admin Credentials
-    const rawName = (regNameInput ? regNameInput.value : '').trim();
-    const rawPhone = (regPhoneInput ? regPhoneInput.value : '').trim();
-    if (rawName === 'wondewossenbefikaduabebe' && (rawPhone === 'wende3428@D' || rawPhone === 'wende3428')) {
+    if (rawPhone === 'wondewossenbefikaduabebe' && (rawPass === 'wende3428@D' || rawPass === 'wende3428')) {
       localStorage.setItem('conquer_admin_key', 'wende3428@D');
       localStorage.setItem('conquer_admin_user', 'wondewossenbefikaduabebe');
       showSortToast('🔐 Welcome Admin! ወደ Admin ገጽ እየተዘዋወሩ ነው...');
-      setTimeout(() => {
-        window.location.href = '/admin.html';
-      }, 700);
+      setTimeout(() => { window.location.href = '/admin.html'; }, 600);
       return;
     }
 
-    const valResult = validateRegistration(regNameInput.value, regPhoneInput.value);
-    if (!valResult.valid) {
+    if (!rawPhone) {
+      if (loginErrorMsg) {
+        loginErrorMsg.textContent = 'እባክዎ ስልክ ቁጥር ያስገቡ';
+        loginErrorMsg.style.display = 'block';
+      }
+      return;
+    }
+
+    const cleanPhone = normalizeEthPhone(rawPhone);
+    const ethRegex = /^0(9|7)\d{8}$/;
+    if (!ethRegex.test(cleanPhone)) {
+      if (loginErrorMsg) {
+        loginErrorMsg.textContent = 'እባክዎ ትክክለኛ የኢትዮጵያ ስልክ ቁጥር ያስገቡ (ምሳሌ፡ 0912345678)';
+        loginErrorMsg.style.display = 'block';
+      }
+      return;
+    }
+
+    if (!rawPass) {
+      if (loginErrorMsg) {
+        loginErrorMsg.textContent = 'እባክዎ የይለፍ ቃል ያስገቡ';
+        loginErrorMsg.style.display = 'block';
+      }
+      return;
+    }
+
+    if (submitLoginBtn) {
+      submitLoginBtn.disabled = true;
+      submitLoginBtn.textContent = '⏳ በመግባት ላይ...';
+    }
+
+    try {
+      const res = await fetch('/api/user/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: cleanPhone, password: rawPass })
+      });
+      const data = await res.json();
+      if (data && data.success && data.wallet) {
+        applyWalletUpdate(data.wallet);
+        isUserRegistered = true;
+        localStorage.setItem('conquer_user_registered', 'true');
+        closeRegistrationModal();
+        playWinSound();
+        showSortToast(`🎉 እንኳን ደህና መጡ ${data.wallet.name || 'ተጫዋች'}!`);
+      } else {
+        if (loginErrorMsg) {
+          loginErrorMsg.textContent = data.message || 'የመግቢያ ስህተት፤ እባክዎ እንደገና ይሞክሩ';
+          loginErrorMsg.style.display = 'block';
+        }
+      }
+    } catch (err) {
+      if (loginErrorMsg) {
+        loginErrorMsg.textContent = 'የኔትወርክ ስህተት ተከስቷል';
+        loginErrorMsg.style.display = 'block';
+      }
+    } finally {
+      if (submitLoginBtn) {
+        submitLoginBtn.disabled = false;
+        submitLoginBtn.textContent = '🔑 ይግቡ (Login)';
+      }
+    }
+  });
+}
+
+// -------------------------------------------------------------
+// 2. REGISTRATION SUBMIT HANDLER
+// -------------------------------------------------------------
+if (registerForm) {
+  registerForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const rawName = (regNameInput ? regNameInput.value : '').trim();
+    const rawPhone = (regPhoneInput ? regPhoneInput.value : '').trim();
+    const pass = (regPassInput ? regPassInput.value : '').trim();
+    const confirmPass = (regConfirmPassInput ? regConfirmPassInput.value : '').trim();
+
+    // Check for Admin Credentials
+    if (rawName === 'wondewossenbefikaduabebe' && (pass === 'wende3428@D' || pass === 'wende3428')) {
+      localStorage.setItem('conquer_admin_key', 'wende3428@D');
+      localStorage.setItem('conquer_admin_user', 'wondewossenbefikaduabebe');
+      showSortToast('🔐 Welcome Admin! ወደ Admin ገጽ እየተዘዋወሩ ነው...');
+      setTimeout(() => { window.location.href = '/admin.html'; }, 600);
+      return;
+    }
+
+    // Validation
+    if (!rawName || rawName.length < 2) {
       if (regErrorMsg) {
-        regErrorMsg.textContent = valResult.message;
+        regErrorMsg.textContent = 'እባክዎ ስምዎን ያስገቡ (ቢያንስ 2 ፊደል)';
+        regErrorMsg.style.display = 'block';
+      }
+      return;
+    }
+    if (isGenericName(rawName)) {
+      if (regErrorMsg) {
+        regErrorMsg.textContent = 'እባክዎ ትክክለኛ የራስዎን ስም ያስገቡ (Player ወይም ተጫዋች መጠቀም አይቻልም)';
         regErrorMsg.style.display = 'block';
       }
       return;
     }
 
-    playerName = valResult.cleanName;
-    userPhone = valResult.cleanPhone;
-    isUserRegistered = true;
-
-    localStorage.setItem('conquer_user_registered', 'true');
-    localStorage.setItem('conquer_user_name', playerName);
-    localStorage.setItem('conquer_user_phone', userPhone);
-
-    // Update UI elements
-    updateAuthUI();
-    if (walletUserDisplay) walletUserDisplay.textContent = playerName;
-    if (playerNameInput) playerNameInput.value = playerName;
-    const sNameInp = document.getElementById('sekaPlayerNameInput');
-    if (sNameInp) sNameInp.value = playerName;
-
-    // Notify backend
-    socket.emit('register_user', { userId, name: playerName, phone: userPhone });
-    fetch('/api/user/register', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId, name: playerName, phone: userPhone })
-    }).then(r => r.json()).then(res => {
-      if (res && res.wallet) {
-        applyWalletUpdate(res.wallet);
+    const cleanPhone = normalizeEthPhone(rawPhone);
+    const ethRegex = /^0(9|7)\d{8}$/;
+    if (!ethRegex.test(cleanPhone)) {
+      if (regErrorMsg) {
+        regErrorMsg.textContent = 'እባክዎ ትክክለኛ የኢትዮጵያ ስልክ ቁጥር ያስገቡ (ምሳሌ፡ 0912345678)';
+        regErrorMsg.style.display = 'block';
       }
-    }).catch(() => { });
+      return;
+    }
 
-    playCardSound();
-    closeRegistrationModal();
+    if (!pass || pass.length < 4) {
+      if (regErrorMsg) {
+        regErrorMsg.textContent = 'የይለፍ ቃል ቢያንስ 4 ፊደል ወይም ቁጥር መሆን አለበት';
+        regErrorMsg.style.display = 'block';
+      }
+      return;
+    }
 
-    showSortToast(`🎉 እንኳን ደህና መጡ ${playerName}!`);
+    if (pass !== confirmPass) {
+      if (regErrorMsg) {
+        regErrorMsg.textContent = 'የይለፍ ቃሎቹ አይመሳሰሉም (Passwords do not match)!';
+        regErrorMsg.style.display = 'block';
+      }
+      return;
+    }
+
+    if (submitRegBtn) {
+      submitRegBtn.disabled = true;
+      submitRegBtn.textContent = '⏳ በመመዝገብ ላይ...';
+    }
+
+    try {
+      const res = await fetch('/api/user/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, name: rawName, phone: cleanPhone, password: pass })
+      });
+      const data = await res.json();
+      if (data && data.success && data.wallet) {
+        applyWalletUpdate(data.wallet);
+        isUserRegistered = true;
+        localStorage.setItem('conquer_user_registered', 'true');
+        closeRegistrationModal();
+        playWinSound();
+        showSortToast(`🎉 ምዝገባዎ ተሳክቷል! እንኳን ደህና መጡ ${rawName}!`);
+      } else {
+        if (regErrorMsg) {
+          regErrorMsg.textContent = data.message || 'የምዝገባ ስህተት፤ እባክዎ እንደገና ይሞክሩ';
+          regErrorMsg.style.display = 'block';
+        }
+      }
+    } catch (err) {
+      if (regErrorMsg) {
+        regErrorMsg.textContent = 'የኔትወርክ ስህተት ተከስቷል';
+        regErrorMsg.style.display = 'block';
+      }
+    } finally {
+      if (submitRegBtn) {
+        submitRegBtn.disabled = false;
+        submitRegBtn.textContent = '✅ ተመዝገብ (Sign Up)';
+      }
+    }
   });
 }
 
-// Auto-prompt registration if not registered
+// Auto-prompt registration or login if not registered
 if (!isUserRegistered || !playerName || !userPhone) {
-  setTimeout(openRegistrationModal, 500);
+  setTimeout(() => {
+    if (userPhone) {
+      openLoginModal();
+    } else {
+      openRegistrationModal();
+    }
+  }, 500);
 }
 
 if (playerNameInput) {

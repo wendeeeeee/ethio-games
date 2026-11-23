@@ -21,10 +21,15 @@
     <div class="wallet-badge">
       <button class="sound-toggle-btn" id="soundToggleBtn" title="Toggle Sound (ድምፅ)">🔊</button>
 
-      <!-- Unregistered user: Shows Sign Up Button -->
-      <button class="header-signup-btn" id="headerSignupBtn" title="ይመዝገቡ (Sign Up)">
-        👤 Sign Up / ይመዝገቡ
-      </button>
+      <!-- Unregistered user: Shows Login & Sign Up Buttons -->
+      <div id="userLoggedOutArea" style="display: flex; gap: 8px; align-items: center;">
+        <button class="header-login-btn" id="headerLoginBtn" title="ይግቡ (Login)" style="background: #f1f5f9; color: #0f172a; border: 1.5px solid #cbd5e1; padding: 7px 14px; border-radius: 10px; font-weight: 700; font-size: 13px; cursor: pointer;">
+          🔑 Login
+        </button>
+        <button class="header-signup-btn" id="headerSignupBtn" title="ይመዝገቡ (Sign Up)">
+          📝 Sign Up
+        </button>
+      </div>
 
       <!-- Registered user: Shows User Profile, Balance & Logout Button -->
       <div id="userLoggedInArea" class="user-logged-in-area" style="display: none;">
@@ -388,38 +393,87 @@
     </div>
   </div>
 
-  <!-- USER REGISTRATION & PROFILE MODAL -->
+  <!-- USER AUTH (LOGIN & REGISTRATION) MODAL -->
   <div id="registerModal" class="modal-overlay" style="display: none;">
     <div class="modal-content"
-      style="max-width: 420px; text-align: center; border: 2px solid #e2e8f0; background: #ffffff; color: #0f172a; border-radius: 20px; padding: 28px 24px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);">
+      style="max-width: 420px; text-align: center; border: 2px solid #e2e8f0; background: #ffffff; color: #0f172a; border-radius: 20px; padding: 24px 22px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);">
       <button class="modal-close-btn" id="closeRegModalBtn" title="ዝጋ (Close)"
         style="position: absolute; top: 12px; right: 14px; background: #f1f5f9; border: 1px solid #e2e8f0; color: #64748b; width: 32px; height: 32px; border-radius: 50%; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center;">✕</button>
 
-      <div style="margin-bottom: 16px;">
-        <div style="font-size: 44px; margin-bottom: 6px;">📝</div>
-        <div style="font-size: 20px; font-weight: 900; color: #0f172a; margin-bottom: 4px;">
-          ይመዝገቡ (Sign Up / Login)
-        </div>
-        <p style="font-size: 13px; color: #64748b; margin: 0; line-height: 1.5;">
-          ስምዎን እና ስልክ ቁጥርዎን ያስገቡ። ቀደም ሲል ከተመዘገቡ ስልክ ቁጥርዎን ሲያስገቡ የነበረው ሂሳብዎ ይጫናል!
-        </p>
+      <!-- Auth Switcher Tabs -->
+      <div class="auth-tabs" style="display: flex; gap: 6px; background: #f1f5f9; padding: 4px; border-radius: 12px; margin-bottom: 18px;">
+        <button type="button" id="tabBtnLogin" class="auth-tab-btn active" style="flex: 1; padding: 9px; font-size: 14px; font-weight: 800; border: none; border-radius: 9px; cursor: pointer; background: #fff; color: #0f172a; box-shadow: 0 2px 6px rgba(0,0,0,0.06);">
+          🔑 ይግቡ (Login)
+        </button>
+        <button type="button" id="tabBtnRegister" class="auth-tab-btn" style="flex: 1; padding: 9px; font-size: 14px; font-weight: 800; border: none; border-radius: 9px; cursor: pointer; background: transparent; color: #64748b;">
+          📝 ይመዝገቡ (Sign Up)
+        </button>
       </div>
 
-      <form id="registerForm" onsubmit="return false;" style="display: flex; flex-direction: column; gap: 14px;">
+      <!-- 1. LOGIN FORM -->
+      <form id="loginForm" onsubmit="return false;" style="display: flex; flex-direction: column; gap: 14px;">
         <div style="text-align: left;">
           <label style="font-size: 13px; font-weight: 700; color: #334155; display: block; margin-bottom: 6px;">
-            👤 ስም (Name) <span style="color: #ef4444;">*</span>
+            📱 ስልክ ቁጥር (Phone Number) <span style="color: #ef4444;">*</span>
           </label>
-          <input type="text" id="regNameInput" placeholder="ስምህን አስገባ" required autocomplete="name"
-            style="width: 100%; padding: 12px 14px; background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 10px; color: #0f172a; font-size: 14px; box-sizing: border-box; transition: border-color 0.2s;">
+          <input type="tel" id="loginPhoneInput" placeholder="09... ወይም 07..." required autocomplete="tel"
+            style="width: 100%; padding: 12px 14px; background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 10px; color: #0f172a; font-size: 14px; box-sizing: border-box;">
         </div>
 
         <div style="text-align: left;">
           <label style="font-size: 13px; font-weight: 700; color: #334155; display: block; margin-bottom: 6px;">
-            📱 ስልክ ቁጥር (Phone) <span style="color: #ef4444;">*</span>
+            🔒 የይለፍ ቃል (Password) <span style="color: #ef4444;">*</span>
+          </label>
+          <input type="password" id="loginPassInput" placeholder="የይለፍ ቃል ያስገቡ" required autocomplete="current-password"
+            style="width: 100%; padding: 12px 14px; background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 10px; color: #0f172a; font-size: 14px; box-sizing: border-box;">
+        </div>
+
+        <div id="loginErrorMsg"
+          style="display: none; color: #dc2626; font-size: 12px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 8px 12px; text-align: left;">
+        </div>
+
+        <button type="submit" class="btn-primary" id="submitLoginBtn"
+          style="padding: 13px; font-size: 15px; font-weight: 800; background: linear-gradient(135deg, #3b82f6, #2563eb); color: #fff; border: 2px solid #60a5fa; border-radius: 12px; cursor: pointer; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.25); margin-top: 4px;">
+          🔑 ይግቡ (Login)
+        </button>
+
+        <div style="font-size: 13px; color: #64748b; margin-top: 6px;">
+          አካውንት የለዎትም? <a href="#" id="switchToRegisterLink" style="color: #2563eb; font-weight: 800; text-decoration: none;">ይመዝገቡ (Sign Up)</a>
+        </div>
+      </form>
+
+      <!-- 2. REGISTRATION FORM -->
+      <form id="registerForm" onsubmit="return false;" style="display: none; flex-direction: column; gap: 14px;">
+        <div style="text-align: left;">
+          <label style="font-size: 13px; font-weight: 700; color: #334155; display: block; margin-bottom: 6px;">
+            👤 ስም (First Name) <span style="color: #ef4444;">*</span>
+          </label>
+          <input type="text" id="regNameInput" placeholder="ስምህን አስገባ" required autocomplete="given-name"
+            style="width: 100%; padding: 12px 14px; background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 10px; color: #0f172a; font-size: 14px; box-sizing: border-box;">
+        </div>
+
+        <div style="text-align: left;">
+          <label style="font-size: 13px; font-weight: 700; color: #334155; display: block; margin-bottom: 6px;">
+            📱 ስልክ ቁጥር (Phone Number) <span style="color: #ef4444;">*</span>
           </label>
           <input type="tel" id="regPhoneInput" placeholder="09... ወይም 07..." required autocomplete="tel"
-            style="width: 100%; padding: 12px 14px; background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 10px; color: #0f172a; font-size: 14px; box-sizing: border-box; transition: border-color 0.2s;">
+            style="width: 100%; padding: 12px 14px; background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 10px; color: #0f172a; font-size: 14px; box-sizing: border-box;">
+        </div>
+
+        <div style="text-align: left;">
+          <label style="font-size: 13px; font-weight: 700; color: #334155; display: block; margin-bottom: 6px;">
+            🔒 የይለፍ ቃል (Password) <span style="color: #ef4444;">*</span>
+          </label>
+          <input type="password" id="regPassInput" placeholder="ቢያንስ 4 ፊደል ወይም ቁጥር" required autocomplete="new-password"
+            style="width: 100%; padding: 12px 14px; background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 10px; color: #0f172a; font-size: 14px; box-sizing: border-box;">
+        </div>
+
+        <div style="text-align: left;">
+          <label style="font-size: 13px; font-weight: 700; color: #334155; display: block; margin-bottom: 6px;">
+            🔒 የይለፍ ቃል ማረጋገጫ (Confirm Password) <span style="color: #ef4444;">*</span>
+          </label>
+          <input type="password" id="regConfirmPassInput" placeholder="የይለፍ ቃልዎን በድጋሚ ያስገቡ" required autocomplete="new-password"
+            style="width: 100%; padding: 12px 14px; background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 10px; color: #0f172a; font-size: 14px; box-sizing: border-box;">
         </div>
 
         <div id="regErrorMsg"
@@ -428,13 +482,17 @@
 
         <button type="submit" class="btn-primary" id="submitRegBtn"
           style="padding: 13px; font-size: 15px; font-weight: 800; background: linear-gradient(135deg, #10b981, #059669); color: #fff; border: 2px solid #34d399; border-radius: 12px; cursor: pointer; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25); margin-top: 4px;">
-          ✅ Sign Up / Login (ይግቡ)
+          ✅ ተመዝገብ (Sign Up)
         </button>
 
-        <div style="text-align: center; margin-top: 6px;">
-          <a href="/admin.html" style="font-size: 12px; color: #64748b; text-decoration: none; font-weight: 600;">🛡️ ወደ Admin ገጽ ይግቡ (Admin Login)</a>
+        <div style="font-size: 13px; color: #64748b; margin-top: 6px;">
+          ቀድሞ አካውንት አለዎት? <a href="#" id="switchToLoginLink" style="color: #059669; font-weight: 800; text-decoration: none;">ይግቡ (Login)</a>
         </div>
       </form>
+
+      <div style="text-align: center; margin-top: 14px; padding-top: 10px; border-top: 1px solid #e2e8f0;">
+        <a href="/admin.html" style="font-size: 12px; color: #94a3b8; text-decoration: none; font-weight: 600;">🛡️ ወደ Admin ገጽ ይግቡ (Admin Login)</a>
+      </div>
     </div>
   </div>
 
@@ -603,7 +661,7 @@
 
   <!-- Socket.io & App Script -->
   <script src="/socket.io/socket.io.js"></script>
-  <script src="app.js?v=50"></script>
+  <script src="app.js?v=51"></script>
 </body>
 
 </html>

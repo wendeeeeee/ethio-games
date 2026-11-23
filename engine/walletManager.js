@@ -1,7 +1,17 @@
 // engine/walletManager.js
-// Supabase-backed wallet manager — persists users & balances to the database
+// Supabase-backed wallet manager — persists users & balances to the database with local fallback
 
+const crypto = require('crypto');
+const fs = require('fs');
+const path = require('path');
 const { supabase } = require('./supabaseClient');
+
+const USERS_FILE = path.join(__dirname, '..', 'data', 'users.json');
+
+function hashPassword(password) {
+  if (!password) return '';
+  return crypto.createHash('sha256').update(password + '_conquer_salt_2024').digest('hex');
+}
 
 class WalletManager {
   constructor() {
@@ -9,13 +19,174 @@ class WalletManager {
     this.wallets = new Map();
     // Escrow pots by roomId: { roomId: { amount, players: [] } }
     this.escrows = new Map();
+    this.usersList = [];
+    this._loadUsersFromFile();
+  }
+
+  _loadUsersFromFile() {
+    try {
+      if (fs.existsSync(USERS_FILE)) {
+        const raw = fs.readFileSync(USERS_FILE, 'utf8');
+        this.usersList = JSON.parse(raw);
+        // Pre-populate wallets cache
+        this.usersList.forEach(u => {
+          this.wallets.set(u.id, {
+            id: u.id,
+            name: u.name,
+            phone: u.phone,
+            balance: u.balance !== undefined ? u.balance : 1000,
+            locked: u.locked || 0,
+            transactions: []
+          });
+        });
+      }
+    } catch (e) {
+      this.usersList = [];
+    }
+  }
+
+  _saveUsersToFile() {
+    try {
+      fs.writeFileSync(USERS_FILE, JSON.stringify(this.usersList, null, 2), 'utf8');
+    } catch (e) {
+      console.error('[WalletManager] Error saving users:', e.message);
+    }
+  }
+
+  async registerUser({ name, phone, password, userId }) {
+    const cleanPhone = (phone || '').trim();
+    const cleanName = (name || '').trim();
+    if (!cleanPhone) throw new Error('ስልክ ቁጥር ያስፈልጋል');
+    if (!cleanName || this._isGenericName(cleanName)) throw new Error('እባክዎ ትክክለኛ ስም ያስገቡ (Player ወይም ተጫዋች መጠቀም አይቻልም)');
+    if (!password || password.length < 4) throw new Error('የይለፍ ቃል ቢያንስ 4 ፊደል ወይም ቁጥር መሆን አለበት');
+
+    // Check local file
+    const existingLocal = this.usersList.find(u => u.phone === cleanPhone);
+    if (existingLocal) {
+      throw new Error('ይህ ስልክ ቁጥር ቀድሞ ተመዝግቧል! እባክዎ ይግቡ (Login)');
+    }
+
+    // Check in Supabase
+    try {
+      const { data: existingRemote } = await supabase
+        .from('users')
+        .select('*')
+        .eq('phone', cleanPhone)
+        .maybeSingle();
+      if (existingRemote) {
+        throw new Error('ይህ ስልክ ቁጥር ቀድሞ ተመዝግቧል! እባክዎ ይግቡ (Login)');
+      }
+    } catch (e) {
+      if (e.message && e.message.includes('ቀድሞ ተመዝግቧል')) throw e;
+    }
+
+    const newId = userId || ('user_' + Date.now() + '_' + Math.floor(100 + Math.random() * 900));
+    const passHash = hashPassword(password);
+    const userRecord = {
+      id: newId,
+      name: cleanName,
+      phone: cleanPhone,
+      passwordHash: passHash,
+      balance: 1000,
+      locked: 0,
+      createdAt: new Date().toISOString()
+    };
+
+    this.usersList.unshift(userRecord);
+    this._saveUsersToFile();
+
+    const wallet = {
+      id: newId,
+      name: cleanName,
+      phone: cleanPhone,
+      balance: 1000,
+      locked: 0,
+      transactions: []
+    };
+    this.wallets.set(newId, wallet);
+
+    // Save to Supabase
+    supabase.from('users').insert({
+      id: newId,
+      name: cleanName,
+      phone: cleanPhone,
+      balance: 1000,
+      locked: 0
+    }).then(() => { }).catch(() => { });
+
+    // Welcome bonus log
+    supabase.from('transactions').insert({
+      user_id: newId,
+      type: 'WELCOME_BONUS',
+      amount: 1000,
+      description: 'የአዲስ ተጫዋች ቦነስ (Welcome bonus)'
+    }).then(() => { }).catch(() => { });
+
+    return wallet;
+  }
+
+  async loginUser({ phone, password }) {
+    const cleanPhone = (phone || '').trim();
+    if (!cleanPhone) throw new Error('እባክዎ ስልክ ቁጥር ያስገቡ');
+    if (!password) throw new Error('እባክዎ የይለፍ ቃል ያስገቡ');
+
+    const passHash = hashPassword(password);
+
+    // 1. Check local file
+    let user = this.usersList.find(u => u.phone === cleanPhone);
+
+    // 2. Check Supabase if not found locally
+    if (!user) {
+      try {
+        const { data: remote } = await supabase
+          .from('users')
+          .select('*')
+          .eq('phone', cleanPhone)
+          .maybeSingle();
+        if (remote) {
+          user = {
+            id: remote.id,
+            name: remote.name,
+            phone: remote.phone,
+            passwordHash: passHash, // Set initial password
+            balance: remote.balance !== undefined ? remote.balance : 1000,
+            locked: remote.locked || 0,
+            createdAt: remote.created_at
+          };
+          this.usersList.unshift(user);
+          this._saveUsersToFile();
+        }
+      } catch (e) { }
+    }
+
+    if (!user) {
+      throw new Error('በዚህ ስልክ ቁጥር የተመዘገበ አካውንት የለም! እባክዎ ይመዝገቡ (Sign Up)');
+    }
+
+    // Verify password
+    if (user.passwordHash && user.passwordHash !== passHash) {
+      throw new Error('የተሳሳተ የይለፍ ቃል (Incorrect password)! እባክዎ እንደገና ይሞክሩ');
+    }
+
+    // Cache wallet
+    const wallet = {
+      id: user.id,
+      name: user.name,
+      phone: user.phone,
+      balance: user.balance !== undefined ? user.balance : 1000,
+      locked: user.locked || 0,
+      transactions: []
+    };
+    this.wallets.set(wallet.id, wallet);
+
+    return wallet;
   }
 
   _isGenericName(name) {
     if (!name) return true;
     const l = name.trim().toLowerCase();
     return l === 'player' || l.startsWith('player ') || l === 'player1' || l === 'player 1' ||
-           l === 'ተጫዋች' || l.startsWith('ተጫዋች') || l.startsWith('user_');
+      l === 'ተጫዋች' || l.startsWith('ተጫዋች') || l.startsWith('user_');
   }
 
   // Get or create a user wallet (checks Supabase first, then cache)
@@ -224,7 +395,7 @@ class WalletManager {
       name: wallet.name,
       phone: wallet.phone,
       updated_at: new Date().toISOString()
-    }).eq('id', userId).then(() => {}).catch(() => {});
+    }).eq('id', userId).then(() => { }).catch(() => { });
     return wallet;
   }
 
@@ -243,7 +414,7 @@ class WalletManager {
       type: 'DEPOSIT',
       amount,
       description: `Deposit ${amount} ETB`
-    }).then(() => {}).catch(() => {});
+    }).then(() => { }).catch(() => { });
     return wallet;
   }
 
@@ -262,7 +433,7 @@ class WalletManager {
       type: 'WITHDRAW',
       amount: -amount,
       description: `Withdraw ${amount} ETB`
-    }).then(() => {}).catch(() => {});
+    }).then(() => { }).catch(() => { });
     return { success: true, wallet };
   }
 
@@ -309,7 +480,7 @@ class WalletManager {
         amount: -stake,
         room_id: roomId,
         description: `Escrow lock ${stake} ETB for game ${roomId}`
-      }).then(() => {}).catch(() => {});
+      }).then(() => { }).catch(() => { });
     }
 
     return { success: true, pot };
@@ -351,7 +522,7 @@ class WalletManager {
       amount: netWin,
       room_id: roomId,
       description: `Won ${netWin} ETB (pot: ${escrow.pot}, rake: ${platformRake})`
-    }).then(() => {}).catch(() => {});
+    }).then(() => { }).catch(() => { });
 
     this.escrows.delete(roomId);
     return { winnerWallet, netWin, rake: platformRake };
@@ -373,7 +544,7 @@ class WalletManager {
         amount: escrow.stakeAmount,
         room_id: roomId,
         description: `Refund ${escrow.stakeAmount} ETB from game ${roomId}`
-      }).then(() => {}).catch(() => {});
+      }).then(() => { }).catch(() => { });
     }
 
     this.escrows.delete(roomId);
