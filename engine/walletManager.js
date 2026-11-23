@@ -214,10 +214,6 @@ class WalletManager {
     };
     this.wallets.set(user.id, wallet);
 
-    // Provide self-references so either destructuring or direct access works everywhere
-    wallet.wallet = wallet;
-    wallet.user = user;
-
     return wallet;
   }
 
