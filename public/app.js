@@ -370,7 +370,7 @@ function updateTurnDisplay(state) {
   }
   const isMyTurn = s.isMyTurn !== undefined ? s.isMyTurn : (s.currentTurnPlayerId === userId);
   const oppName = s.opponentName || (s.creator && s.creator.id !== userId ? s.creator.name : (s.joiner && s.joiner.id !== userId ? s.joiner.name : 'Opponent'));
-  
+
   // Real-time second calculation immune to device clock skew (strictly capped at 60s)
   if (!s._clientReceivedAt || s._lastTurnPlayerId !== s.currentTurnPlayerId || s._lastTurnState !== s.turnState) {
     s._clientReceivedAt = Date.now();
@@ -421,9 +421,11 @@ const userLoggedInArea = document.getElementById('userLoggedInArea');
 function updateAuthUI() {
   const sBtn = document.getElementById('headerSignupBtn');
   const loggedArea = document.getElementById('userLoggedInArea');
+  const dBtn = document.getElementById('depositBtn');
   if (isUserRegistered) {
     if (sBtn) sBtn.style.display = 'none';
     if (loggedArea) loggedArea.style.display = 'flex';
+    if (dBtn) dBtn.style.display = 'inline-flex';
     if (walletUserDisplay) {
       walletUserDisplay.textContent = playerName;
       walletUserDisplay.title = playerName;
@@ -431,6 +433,7 @@ function updateAuthUI() {
   } else {
     if (sBtn) sBtn.style.display = 'inline-flex';
     if (loggedArea) loggedArea.style.display = 'none';
+    if (dBtn) dBtn.style.display = 'none';
   }
   if (playerNameInput) playerNameInput.value = playerName;
   const sNameInp = document.getElementById('sekaPlayerNameInput');
@@ -791,16 +794,16 @@ socket.on('seka_game_state', (state) => {
   }
 
   // Check if player intentionally left the table temporarily
-  const userIsTemporarilyAway = isTemporarilyOut || 
-                                (activeGameReturnRoomId === state.roomId) ||
-                                (state.temporarilyLeft && state.temporarilyLeft[userId]);
+  const userIsTemporarilyAway = isTemporarilyOut ||
+    (activeGameReturnRoomId === state.roomId) ||
+    (state.temporarilyLeft && state.temporarilyLeft[userId]);
 
   // The game ONLY starts when status becomes PLAYING!
   if (state.status === 'PLAYING') {
     closeWaitingForOpponentModal();
     if (userIsTemporarilyAway) {
-      const deadline = state.temporarilyLeft && state.temporarilyLeft[userId] 
-        ? state.temporarilyLeft[userId].deadline 
+      const deadline = state.temporarilyLeft && state.temporarilyLeft[userId]
+        ? state.temporarilyLeft[userId].deadline
         : (Date.now() + 60 * 1000);
       showActiveGameReturnBanner(state.roomId, deadline);
     } else {
@@ -930,16 +933,195 @@ if (playSekaBotBtn) {
   });
 }
 
-// Deposit Button
+// -------------------------------------------------------------
+// DEPOSIT MODAL LOGIC
+// -------------------------------------------------------------
+const depositModal = document.getElementById('depositModal');
+const closeDepositModalBtn = document.getElementById('closeDepositModalBtn');
+const headerBalanceClick = document.getElementById('headerBalanceClick');
+const depositModalBalanceDisplay = document.getElementById('depositModalBalanceDisplay');
+const depositCustomAmountInput = document.getElementById('depositCustomAmountInput');
+const confirmDepositBtn = document.getElementById('confirmDepositBtn');
+const depositBtnText = document.getElementById('depositBtnText');
+const depositPhoneVal = document.getElementById('depositPhoneVal');
+const depositAccountNameVal = document.getElementById('depositAccountNameVal');
+const depositInstructions = document.getElementById('depositInstructions');
+const depositErrorMsg = document.getElementById('depositErrorMsg');
+
+let selectedDepositMethod = 'telebirr';
+let selectedDepositAmount = 100;
+
+const DEPOSIT_METHODS = {
+  telebirr: {
+    name: 'Telebirr',
+    phone: '0911002233',
+    accountName: 'Ethio Games / Conquer',
+    instruction: 'በቴሌብር መተግበሪያ ወደ <strong>0911002233</strong> ይላኩ። ከዚያ ከታች ያለውን <strong>«አሁን አስገባ»</strong> የሚለውን ይጫኑ!'
+  },
+  cbebirr: {
+    name: 'CBE Birr',
+    phone: '1000123456789',
+    accountName: 'Ethio Games',
+    instruction: 'በ CBE Birr ወይም ንግድ ባንክ ወደ <strong>1000123456789</strong> ያስገቡ። ከዚያ ከታች ያለውን ይጫኑ!'
+  },
+  bank: {
+    name: 'Bank / Chapa',
+    phone: '1000987654321',
+    accountName: 'Ethio Games Ltd',
+    instruction: 'በቀጥታ በባንክ ወይም በኦንላይን ፔይመንት ያስገቡ። ወዲያውኑ ገቢ ይሆናል!'
+  }
+};
+
+function updateDepositUI() {
+  const methodInfo = DEPOSIT_METHODS[selectedDepositMethod] || DEPOSIT_METHODS.telebirr;
+  if (depositPhoneVal) depositPhoneVal.textContent = `${methodInfo.phone} 📋`;
+  if (depositAccountNameVal) depositAccountNameVal.textContent = methodInfo.accountName;
+  if (depositInstructions) depositInstructions.innerHTML = methodInfo.instruction;
+  if (depositBtnText) {
+    depositBtnText.textContent = `${selectedDepositAmount.toLocaleString()} ETB በ ${methodInfo.name} አስገባ`;
+  }
+}
+
+function openDepositModal() {
+  if (!depositModal) return;
+  if (!isUserRegistered || !playerName || !userPhone) {
+    showSortToast('⚠️ ገንዘብ ለማስገባት እባክዎ መጀመሪያ ይመዝገቡ (Sign Up)!');
+    openRegistrationModal();
+    return;
+  }
+  if (depositModalBalanceDisplay && walletBalanceDisplay) {
+    depositModalBalanceDisplay.textContent = walletBalanceDisplay.textContent;
+  }
+  if (depositErrorMsg) {
+    depositErrorMsg.style.display = 'none';
+    depositErrorMsg.textContent = '';
+  }
+  updateDepositUI();
+  depositModal.style.display = 'flex';
+}
+
+function closeDepositModal() {
+  if (!depositModal) return;
+  depositModal.style.display = 'none';
+}
+
 if (depositBtn) {
-  depositBtn.addEventListener('click', async () => {
-    await fetch('/api/wallet/deposit', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId, amount: 500 })
-    });
+  depositBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    openDepositModal();
+  });
+}
+
+if (headerBalanceClick) {
+  headerBalanceClick.addEventListener('click', () => {
+    openDepositModal();
+  });
+}
+
+if (closeDepositModalBtn) {
+  closeDepositModalBtn.addEventListener('click', closeDepositModal);
+}
+
+if (depositModal) {
+  depositModal.addEventListener('click', (e) => {
+    if (e.target === depositModal) {
+      closeDepositModal();
+    }
+  });
+}
+
+// Payment method tabs
+const depositMethodTabs = document.querySelectorAll('#depositMethodTabs .deposit-tab-btn');
+depositMethodTabs.forEach(btn => {
+  btn.addEventListener('click', () => {
+    depositMethodTabs.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    selectedDepositMethod = btn.getAttribute('data-method') || 'telebirr';
+    updateDepositUI();
     playCardSound();
-    socket.emit('register_user', { userId, name: playerName, phone: userPhone });
+  });
+});
+
+// Amount preset buttons
+const amountPresetBtns = document.querySelectorAll('#depositAmountPresets .amount-preset-btn');
+amountPresetBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    amountPresetBtns.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const amt = Number(btn.getAttribute('data-amount')) || 100;
+    selectedDepositAmount = amt;
+    if (depositCustomAmountInput) depositCustomAmountInput.value = amt;
+    updateDepositUI();
+    playCardSound();
+  });
+});
+
+if (depositCustomAmountInput) {
+  depositCustomAmountInput.addEventListener('input', () => {
+    const amt = Number(depositCustomAmountInput.value) || 0;
+    selectedDepositAmount = amt;
+    amountPresetBtns.forEach(b => {
+      b.classList.toggle('active', Number(b.getAttribute('data-amount')) === amt);
+    });
+    updateDepositUI();
+  });
+}
+
+// Copy phone / account number on tap
+if (depositPhoneVal) {
+  depositPhoneVal.addEventListener('click', () => {
+    const methodInfo = DEPOSIT_METHODS[selectedDepositMethod] || DEPOSIT_METHODS.telebirr;
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(methodInfo.phone).then(() => {
+        showSortToast(`📋 ${methodInfo.phone} ተኮርጅቷል (Copied)!`);
+      }).catch(() => { });
+    }
+  });
+}
+
+// Submit Deposit
+if (confirmDepositBtn) {
+  confirmDepositBtn.addEventListener('click', async () => {
+    const amt = Number(depositCustomAmountInput ? depositCustomAmountInput.value : selectedDepositAmount) || 0;
+    if (amt <= 0) {
+      if (depositErrorMsg) {
+        depositErrorMsg.textContent = 'እባክዎ ከ 0 በላይ የሆነ የገንዘብ መጠን ያስገቡ';
+        depositErrorMsg.style.display = 'block';
+      }
+      return;
+    }
+
+    confirmDepositBtn.disabled = true;
+    confirmDepositBtn.textContent = '⏳ በማስገባት ላይ...';
+
+    try {
+      const res = await fetch('/api/wallet/deposit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, amount: amt, method: selectedDepositMethod })
+      });
+      const data = await res.json();
+      if (data && (data.success || data.balance !== undefined)) {
+        const wallet = data.wallet || data;
+        applyWalletUpdate(wallet);
+        playWinSound();
+        showSortToast(`🎉 ${amt.toLocaleString()} ETB በ ${DEPOSIT_METHODS[selectedDepositMethod].name} በተሳካ ሁኔታ ገቢ ተደርጓል!`);
+        closeDepositModal();
+      } else {
+        if (depositErrorMsg) {
+          depositErrorMsg.textContent = data.message || 'ስህተት ተከስቷል፤ እባክዎ እንደገና ይሞክሩ';
+          depositErrorMsg.style.display = 'block';
+        }
+      }
+    } catch (e) {
+      if (depositErrorMsg) {
+        depositErrorMsg.textContent = 'የኔትወርክ ስህተት ተከስቷል';
+        depositErrorMsg.style.display = 'block';
+      }
+    } finally {
+      confirmDepositBtn.disabled = false;
+      updateDepositUI();
+    }
   });
 }
 
@@ -1170,8 +1352,8 @@ cutGonBtn.addEventListener('click', () => {
 
 function handleDrawAction(source) {
   if (!currentGameState || currentGameState.status !== 'PLAYING') return;
-  const isMyTurn = currentGameState.isMyTurn !== undefined 
-    ? currentGameState.isMyTurn 
+  const isMyTurn = currentGameState.isMyTurn !== undefined
+    ? currentGameState.isMyTurn
     : (currentGameState.currentTurnPlayerId === userId);
 
   if (!isMyTurn) {

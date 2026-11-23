@@ -40,9 +40,14 @@ app.get('/api/wallet/:userId', (req, res) => {
 });
 
 app.post('/api/wallet/deposit', (req, res) => {
-  const { userId, amount } = req.body;
-  const wallet = walletManager.deposit(userId, Number(amount) || 100);
-  res.json(wallet);
+  const { userId, amount, method } = req.body;
+  const num = Number(amount);
+  if (!userId || !num || num <= 0) {
+    return res.status(400).json({ success: false, message: 'እባክዎ ትክክለኛ የገንዘብ መጠን ያስገቡ (Invalid amount)' });
+  }
+  const wallet = walletManager.deposit(userId, num);
+  io.emit(`wallet_${userId}`, wallet);
+  res.json({ success: true, wallet });
 });
 
 // Fast favicon response to prevent 404

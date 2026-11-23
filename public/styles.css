@@ -84,20 +84,22 @@ body {
 }
 
 .deposit-btn {
-  background: #d97706;
+  background: linear-gradient(135deg, #f59e0b, #d97706);
   color: #ffffff;
-  border: none;
-  padding: 4px 10px;
+  border: 1px solid #fef08a;
+  padding: 4px 12px;
   border-radius: 20px;
-  font-weight: bold;
+  font-weight: 800;
   cursor: pointer;
   font-size: 12px;
-  transition: transform 0.2s, background 0.2s;
+  box-shadow: 0 2px 6px rgba(217, 119, 6, 0.3);
+  transition: transform 0.2s, background 0.2s, box-shadow 0.2s;
 }
 
 .deposit-btn:hover {
-  background: #b45309;
-  transform: scale(1.05);
+  background: linear-gradient(135deg, #d97706, #b45309);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(217, 119, 6, 0.4);
 }
 
 .sound-toggle-btn {
@@ -376,11 +378,13 @@ body.in-game .game-table {
     min-height: 55vh;
     padding: 16px 8px;
   }
+
   .home-two-boxes {
     grid-template-columns: 1fr;
     gap: 16px;
     max-width: 380px;
   }
+
   .home-game-card {
     padding: 20px 16px;
     min-height: auto;
@@ -2744,8 +2748,13 @@ body.in-game .user-profile-badge {
 }
 
 @keyframes pulse-urgent {
-  0% { transform: scale(1); }
-  100% { transform: scale(1.08); }
+  0% {
+    transform: scale(1);
+  }
+
+  100% {
+    transform: scale(1.08);
+  }
 }
 
 /* Active Game Floating Return Banner (Sticky at top when user leaves to lobby) */
@@ -2766,8 +2775,15 @@ body.in-game .user-profile-badge {
 }
 
 @keyframes slideDownBanner {
-  from { opacity: 0; transform: translate(-50%, -20px); }
-  to { opacity: 1; transform: translate(-50%, 0); }
+  from {
+    opacity: 0;
+    transform: translate(-50%, -20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
 }
 
 .return-banner-content {
@@ -2810,4 +2826,294 @@ body.in-game .user-profile-badge {
 
 .btn-return-game:hover {
   background: #059669;
+}
+
+/* ============================================================
+   DEPOSIT MODAL STYLES
+   ============================================================ */
+.deposit-modal-content {
+  position: relative;
+  max-width: 440px;
+  width: 92vw;
+  box-sizing: border-box;
+  padding: 26px 20px;
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 22px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
+  color: #0f172a;
+  text-align: center;
+  animation: modalScaleIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.deposit-modal-header {
+  margin-bottom: 16px;
+}
+
+.deposit-icon {
+  font-size: 40px;
+  margin-bottom: 4px;
+}
+
+.deposit-title {
+  font-size: 20px;
+  font-weight: 900;
+  color: #0f172a;
+  margin-bottom: 4px;
+}
+
+.deposit-subtitle {
+  font-size: 13px;
+  color: #64748b;
+  margin: 0 0 10px 0;
+  line-height: 1.4;
+}
+
+.deposit-current-balance {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  padding: 5px 14px;
+  border-radius: 20px;
+  font-size: 13px;
+  color: #334155;
+}
+
+.deposit-current-balance strong {
+  color: #16a34a;
+  font-size: 14px;
+}
+
+/* Payment Method Tabs */
+.deposit-method-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.deposit-tab-btn {
+  background: #f8fafc;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 10px 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #475569;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.2s ease;
+}
+
+.deposit-tab-btn .tab-icon {
+  font-size: 18px;
+}
+
+.deposit-tab-btn.active[data-method="telebirr"] {
+  background: rgba(37, 99, 235, 0.08);
+  border-color: #2563eb;
+  color: #1d4ed8;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.15);
+}
+
+.deposit-tab-btn.active[data-method="cbebirr"] {
+  background: rgba(147, 51, 234, 0.08);
+  border-color: #9333ea;
+  color: #7e22ce;
+  box-shadow: 0 2px 8px rgba(147, 51, 234, 0.15);
+}
+
+.deposit-tab-btn.active[data-method="bank"] {
+  background: rgba(16, 185, 129, 0.08);
+  border-color: #10b981;
+  color: #047857;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.15);
+}
+
+/* Amount Presets */
+.deposit-amount-section {
+  text-align: left;
+  margin-bottom: 16px;
+}
+
+.deposit-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  color: #334155;
+  margin-bottom: 8px;
+}
+
+.deposit-amount-presets {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.amount-preset-btn {
+  background: #ffffff;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 10px;
+  padding: 8px 4px;
+  font-size: 13px;
+  font-weight: 800;
+  color: #0f172a;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.amount-preset-btn:hover {
+  border-color: #f59e0b;
+  background: rgba(245, 158, 11, 0.06);
+}
+
+.amount-preset-btn.active {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  border-color: #b45309;
+  color: #ffffff;
+  box-shadow: 0 2px 6px rgba(217, 119, 6, 0.3);
+}
+
+.deposit-custom-amount-wrap {
+  display: flex;
+  align-items: center;
+  background: #f8fafc;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 12px;
+  overflow: hidden;
+  transition: border-color 0.2s;
+}
+
+.deposit-custom-amount-wrap:focus-within {
+  border-color: #d97706;
+}
+
+.currency-prefix {
+  padding: 10px 14px;
+  background: #e2e8f0;
+  font-size: 13px;
+  font-weight: 800;
+  color: #475569;
+}
+
+#depositCustomAmountInput {
+  flex: 1;
+  border: none;
+  background: transparent;
+  padding: 10px 12px;
+  font-size: 16px;
+  font-weight: 800;
+  color: #0f172a;
+  outline: none;
+}
+
+/* Payment Info Card */
+.deposit-info-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 12px 14px;
+  margin-bottom: 16px;
+  text-align: left;
+}
+
+.deposit-info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+
+.info-label {
+  color: #64748b;
+  font-weight: 600;
+}
+
+.info-value {
+  color: #0f172a;
+  font-weight: 800;
+}
+
+.info-value.copyable {
+  color: #2563eb;
+  cursor: pointer;
+  background: rgba(37, 99, 235, 0.08);
+  padding: 2px 8px;
+  border-radius: 6px;
+  user-select: all;
+  transition: background 0.15s;
+}
+
+.info-value.copyable:hover {
+  background: rgba(37, 99, 235, 0.18);
+}
+
+.deposit-instructions {
+  font-size: 11px;
+  color: #64748b;
+  margin: 6px 0 0 0;
+  line-height: 1.4;
+  border-top: 1px dashed #e2e8f0;
+  padding-top: 6px;
+}
+
+/* Submit Button */
+.deposit-submit-btn {
+  width: 100%;
+  padding: 14px;
+  font-size: 16px;
+  font-weight: 800;
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: #ffffff;
+  border: 2px solid #34d399;
+  border-radius: 14px;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3);
+  transition: all 0.2s;
+}
+
+.deposit-submit-btn:hover {
+  background: #059669;
+  transform: translateY(-1px);
+}
+
+.deposit-submit-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Deposit Modal Mobile Responsive */
+@media (max-width: 480px) {
+  .deposit-modal-content {
+    width: 95%;
+    max-height: 90vh;
+    padding: 16px;
+    border-radius: 16px;
+  }
+  .deposit-method-tabs {
+    gap: 6px;
+  }
+  .deposit-tab-btn {
+    padding: 8px 10px;
+    font-size: 11px;
+  }
+  .deposit-amount-presets {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+  .deposit-info-card {
+    padding: 12px;
+  }
+  .deposit-submit-btn {
+    padding: 12px;
+    font-size: 15px;
+  }
 }

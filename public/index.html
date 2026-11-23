@@ -6,7 +6,7 @@
   <meta name="viewport"
     content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>CONQUER - Ethiopian Card Betting Game</title>
-  <link rel="stylesheet" href="styles.css?v=44">
+  <link rel="stylesheet" href="styles.css?v=46">
 </head>
 
 <body>
@@ -31,16 +31,15 @@
         <div class="user-profile-badge" id="openProfileBtn" title="የተጫዋች ስም">
           <span>👤 <span id="walletUserDisplay"></span></span>
         </div>
-        <div class="wallet-balance-wrap">
+        <div class="wallet-balance-wrap" id="headerBalanceClick" style="cursor: pointer;" title="ገንዘብ አስገባ (Deposit)">
           <span>💰</span>
           <span id="walletBalanceDisplay">1,000 ETB</span>
         </div>
+        <button class="deposit-btn" id="depositBtn" title="ገንዘብ አስገባ (Deposit)">+ Deposit</button>
         <button class="header-logout-btn" id="headerLogoutBtn" title="ውጣ (Logout)">
           🚪 Logout
         </button>
       </div>
-
-      <button class="deposit-btn" id="depositBtn" style="display: none;">+ Deposit</button>
     </div>
   </header>
 
@@ -176,7 +175,8 @@
           POT: 200 ETB
         </div>
         <div style="display: flex; align-items: center; gap: 8px;">
-          <div class="turn-timer-badge" id="turnTimerBadge" title="የካርታ መጣያ ቀሪ ጊዜ">⏳ <span id="turnSecondsVal">60</span>s</div>
+          <div class="turn-timer-badge" id="turnTimerBadge" title="የካርታ መጣያ ቀሪ ጊዜ">⏳ <span
+              id="turnSecondsVal">60</span>s</div>
           <button class="sound-toggle-btn" id="soundToggleBtnTable" title="Toggle Sound (ድምፅ)">🔊</button>
           <button class="poke-btn" id="pokeBtn" style="display: none;">
             <span>⏰</span> POKE (30s)
@@ -434,6 +434,76 @@
     </div>
   </div>
 
+  <!-- DEPOSIT MODAL -->
+  <div id="depositModal" class="modal-overlay" style="display: none;">
+    <div class="modal-content deposit-modal-content">
+      <button class="modal-close-btn" id="closeDepositModalBtn" title="ዝጋ (Close)">✕</button>
+
+      <div class="deposit-modal-header">
+        <div class="deposit-icon">💰</div>
+        <div class="deposit-title">ገንዘብ አስገባ (Deposit)</div>
+        <p class="deposit-subtitle">ቀሪ ሂሳብዎን በቴሌብር (Telebirr) ወይም በንግድ ባንክ (CBE Birr) ይሙሉ</p>
+        <div class="deposit-current-balance">
+          <span>የአሁን ቀሪ ሂሳብ:</span>
+          <strong id="depositModalBalanceDisplay">1,000 ETB</strong>
+        </div>
+      </div>
+
+      <!-- Payment Method Selection -->
+      <div class="deposit-method-tabs" id="depositMethodTabs">
+        <button type="button" class="deposit-tab-btn active" data-method="telebirr">
+          <span class="tab-icon">📱</span> Telebirr
+        </button>
+        <button type="button" class="deposit-tab-btn" data-method="cbebirr">
+          <span class="tab-icon">🏦</span> CBE Birr
+        </button>
+        <button type="button" class="deposit-tab-btn" data-method="bank">
+          <span class="tab-icon">💳</span> Bank / Chapa
+        </button>
+      </div>
+
+      <!-- Quick Preset Amounts -->
+      <div class="deposit-amount-section">
+        <label class="deposit-label">የገንዘብ መጠን ይምረጡ (Select Amount)</label>
+        <div class="deposit-amount-presets" id="depositAmountPresets">
+          <button type="button" class="amount-preset-btn" data-amount="50">+50</button>
+          <button type="button" class="amount-preset-btn active" data-amount="100">+100</button>
+          <button type="button" class="amount-preset-btn" data-amount="250">+250</button>
+          <button type="button" class="amount-preset-btn" data-amount="500">+500</button>
+          <button type="button" class="amount-preset-btn" data-amount="1000">+1,000</button>
+          <button type="button" class="amount-preset-btn" data-amount="2000">+2,000</button>
+        </div>
+
+        <div class="deposit-custom-amount-wrap">
+          <span class="currency-prefix">ETB</span>
+          <input type="number" id="depositCustomAmountInput" placeholder="መጠን አስገባ" value="100" min="10" max="50000" step="10">
+        </div>
+      </div>
+
+      <!-- Payment Details Box -->
+      <div class="deposit-info-card" id="depositInfoCard">
+        <div class="deposit-info-row">
+          <span class="info-label">የመክፈያ ስልክ (Phone):</span>
+          <span class="info-value copyable" id="depositPhoneVal" title="ኮፒ ለማድረግ ይጫኑ">0911002233 📋</span>
+        </div>
+        <div class="deposit-info-row">
+          <span class="info-label">የተቀባይ ስም (Account):</span>
+          <span class="info-value" id="depositAccountNameVal">Ethio Games</span>
+        </div>
+        <p class="deposit-instructions" id="depositInstructions">
+          ገንዘቡን ከላኩ በኋላ ከታች ያለውን <strong>«አሁን አስገባ (Deposit Now)»</strong> የሚለውን ይጫኑ። ወዲያውኑ ወደ አካውንትዎ ገቢ ይሆናል!
+        </p>
+      </div>
+
+      <div id="depositErrorMsg" style="display: none; color: #dc2626; font-size: 12px; margin-bottom: 10px; padding: 6px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px;"></div>
+
+      <!-- Action Button -->
+      <button class="btn-primary deposit-submit-btn" id="confirmDepositBtn">
+        💰 <span id="depositBtnText">100 ETB በ Telebirr አስገባ</span>
+      </button>
+    </div>
+  </div>
+
   <!-- WAITING FOR OPPONENT / SEARCHING FOR PLAYERS MODAL -->
   <div id="waitingForOpponentModal" class="modal-overlay" style="display: none;">
     <div class="modal-content"
@@ -508,7 +578,7 @@
 
   <!-- Socket.io & App Script -->
   <script src="/socket.io/socket.io.js"></script>
-  <script src="app.js?v=45"></script>
+  <script src="app.js?v=47"></script>
 </body>
 
 </html>
