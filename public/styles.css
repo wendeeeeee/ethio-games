@@ -971,6 +971,8 @@ select:focus {
 .corner-suit {
   font-size: 15px;
   margin-top: 2px;
+  font-family: 'Segoe UI Symbol', 'Apple Color Emoji', 'Segoe UI', sans-serif;
+  line-height: 1;
 }
 
 .card-center-suit {
@@ -981,6 +983,8 @@ select:focus {
   left: 50%;
   transform: translate(-50%, -50%);
   opacity: 0.85;
+  font-family: 'Segoe UI Symbol', 'Apple Color Emoji', 'Segoe UI', sans-serif;
+  pointer-events: none;
 }
 
 /* Realistic Dealing Motion Animation (One by One from Deck) */
@@ -1113,6 +1117,11 @@ select:focus {
 
 .fan .card.black {
   color: #0f172a !important;
+}
+
+.fan .card .card-center-suit {
+  font-size: 22px !important;
+  opacity: 0.55 !important;
 }
 
 .fan .card:hover {
@@ -1714,63 +1723,66 @@ select:focus {
   }
 
   .fan .card {
-    width: 74px !important;
-    height: 106px !important;
-    left: -37px !important;
-    border-radius: 9px !important;
+    width: 72px !important;
+    height: 104px !important;
+    left: -36px !important;
+    border-radius: 8px !important;
   }
 
   .fan .card .corner-rank {
-    font-size: 16px !important;
+    font-size: 18px !important;
+    font-weight: 900 !important;
   }
 
   .fan .card .corner-suit {
-    font-size: 13px !important;
+    font-size: 16px !important;
   }
 
   .fan .card .card-center-suit {
-    font-size: 32px !important;
-  }
-
-  .fan .card .card-corner {
-    width: 18px !important;
+    font-size: 24px !important;
+    opacity: 0.55 !important;
   }
 
   .card {
-    width: 80px;
-    height: 116px;
+    width: 78px;
+    height: 112px;
   }
 
-  .card-center-suit {
-    font-size: 34px;
+  .card .corner-rank {
+    font-size: 18px;
   }
 
-  .corner-rank {
+  .card .corner-suit {
     font-size: 16px;
   }
 
-  .corner-suit {
-    font-size: 13px;
+  .card-center-suit {
+    font-size: 32px;
+  }
+
+  #groundCardContainer .card {
+    width: 78px !important;
+    height: 112px !important;
+  }
+
+  .stock-deck-top {
+    width: 78px !important;
+    height: 112px !important;
+  }
+
+  .base-joker-underneath .card {
+    width: 78px !important;
+    height: 112px !important;
+  }
+
+  .deck-stack-wrapper {
+    width: 105px;
+    height: 115px;
   }
 
   .card-back {
     width: 52px;
     height: 74px;
-  }
-
-  #groundCardContainer .card {
-    width: 70px !important;
-    height: 100px !important;
-  }
-
-  .stock-deck-top {
-    width: 62px !important;
-    height: 88px !important;
-  }
-
-  .deck-stack-wrapper {
-    width: 74px;
-    height: 95px;
   }
 }
 
