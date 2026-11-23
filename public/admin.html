@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="am">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Admin Dashboard — Conquer & Seka Deposits</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=Noto+Sans+Ethiopic:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+    body {
+      font-family: 'Plus Jakarta Sans', 'Noto Sans Ethiopic', sans-serif;
+      background: #0f172a;
+      color: #f8fafc;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    header {
+      background: #1e293b;
+      border-bottom: 1px solid #334155;
+      padding: 14px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+    .header-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 800;
+      font-size: 18px;
+      color: #fbbf24;
+    }
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .btn-secondary {
+      background: #334155;
+      color: #f8fafc;
+      border: 1px solid #475569;
+      padding: 8px 14px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn-secondary:hover {
+      background: #475569;
+    }
+
+    /* Auth Screen */
+    #authOverlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.95);
+      backdrop-filter: blur(8px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      z-index: 100;
+    }
+    .auth-card {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 20px;
+      padding: 32px 28px;
+      max-width: 380px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+    }
+    .auth-title {
+      font-size: 22px;
+      font-weight: 800;
+      color: #fbbf24;
+      margin-bottom: 8px;
+    }
+    .auth-subtitle {
+      font-size: 13px;
+      color: #94a3b8;
+      margin-bottom: 24px;
+    }
+    .pin-input {
+      width: 100%;
+      background: #0f172a;
+      border: 2px solid #334155;
+      border-radius: 12px;
+      padding: 14px;
+      color: #fff;
+      font-size: 18px;
+      font-weight: 700;
+      text-align: center;
+      letter-spacing: 2px;
+      outline: none;
+      margin-bottom: 16px;
+    }
+    .pin-input:focus {
+      border-color: #3b82f6;
+    }
+    .btn-login {
+      width: 100%;
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+      color: #000;
+      border: none;
+      padding: 14px;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 0 4px 14px rgba(245, 158, 11, 0.35);
+    }
+    .auth-err {
+      color: #ef4444;
+      font-size: 12px;
+      margin-top: 10px;
+      display: none;
+    }
+
+    /* Main Container */
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 20px;
+      width: 100%;
+      flex: 1;
+    }
+
+    /* Stats Banner */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 14px;
+      margin-bottom: 24px;
+    }
+    .stat-card {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 14px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .stat-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: #94a3b8;
+    }
+    .stat-val {
+      font-size: 24px;
+      font-weight: 900;
+      color: #f8fafc;
+    }
+    .stat-val.pending {
+      color: #f59e0b;
+    }
+    .stat-val.approved {
+      color: #10b981;
+    }
+
+    /* Tabs */
+    .tabs-bar {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 18px;
+      border-bottom: 1px solid #334155;
+      padding-bottom: 10px;
+    }
+    .tab-btn {
+      background: transparent;
+      border: none;
+      color: #94a3b8;
+      font-size: 14px;
+      font-weight: 700;
+      padding: 8px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+    .tab-btn.active {
+      background: #334155;
+      color: #fbbf24;
+    }
+    .tab-badge {
+      background: #ef4444;
+      color: #fff;
+      font-size: 11px;
+      padding: 1px 7px;
+      border-radius: 12px;
+      font-weight: 800;
+    }
+
+    /* Deposit Cards */
+    .deposit-list {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .deposit-card {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 16px;
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      transition: transform 0.2s, border-color 0.2s;
+    }
+    .deposit-card.pending {
+      border-left: 5px solid #f59e0b;
+    }
+    .deposit-card.approved {
+      border-left: 5px solid #10b981;
+      opacity: 0.85;
+    }
+    .deposit-card.rejected {
+      border-left: 5px solid #ef4444;
+      opacity: 0.65;
+    }
+    .card-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 10px;
+    }
+    .card-user-info {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .user-name {
+      font-size: 17px;
+      font-weight: 800;
+      color: #f8fafc;
+    }
+    .user-phone {
+      font-size: 13px;
+      color: #94a3b8;
+      font-family: monospace;
+    }
+    .amount-badge {
+      background: rgba(245, 158, 11, 0.15);
+      border: 1px solid rgba(245, 158, 11, 0.3);
+      color: #fbbf24;
+      padding: 6px 14px;
+      border-radius: 10px;
+      font-size: 18px;
+      font-weight: 900;
+    }
+    .card-txn-row {
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 10px;
+      padding: 10px 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+    }
+    .txn-text {
+      font-family: monospace;
+      font-size: 14px;
+      font-weight: 700;
+      color: #38bdf8;
+      word-break: break-all;
+    }
+    .btn-copy {
+      background: #334155;
+      border: none;
+      color: #cbd5e1;
+      padding: 5px 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .btn-copy:hover {
+      background: #475569;
+    }
+    .card-meta {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      color: #64748b;
+    }
+    .card-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 4px;
+    }
+    .btn-approve {
+      flex: 2;
+      background: #10b981;
+      color: #fff;
+      border: none;
+      padding: 12px;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 800;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: background 0.2s;
+    }
+    .btn-approve:hover {
+      background: #059669;
+    }
+    .btn-reject {
+      flex: 1;
+      background: #334155;
+      color: #ef4444;
+      border: 1px solid rgba(239, 68, 68, 0.4);
+      padding: 12px;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: background 0.2s;
+    }
+    .btn-reject:hover {
+      background: rgba(239, 68, 68, 0.15);
+    }
+
+    /* Empty state */
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: #64748b;
+    }
+    .empty-icon {
+      font-size: 48px;
+      margin-bottom: 12px;
+    }
+    .empty-text {
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    /* Toast */
+    #toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #10b981;
+      color: #fff;
+      padding: 12px 24px;
+      border-radius: 30px;
+      font-weight: 700;
+      font-size: 14px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+      display: none;
+      z-index: 200;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Auth Screen -->
+  <div id="authOverlay">
+    <div class="auth-card">
+      <div style="font-size: 40px; margin-bottom: 8px;">🔐</div>
+      <div class="auth-title">Admin Dashboard</div>
+      <div class="auth-subtitle">የተቀማጭ ገንዘብ (Deposit) ማረጋገጫ ገጽ ለመክፈት ሚስጥር ቁጥር (PIN) ያስገቡ</div>
+      <input type="password" id="pinInput" class="pin-input" placeholder="PIN ያስገቡ" maxlength="30" autofocus>
+      <button class="btn-login" id="loginBtn">ግባ (Login)</button>
+      <div id="authErr" class="auth-err">የተሳሳተ PIN ነው! እባክዎ እንደገና ይሞክሩ።</div>
+    </div>
+  </div>
+
+  <header>
+    <div class="header-logo">
+      <span>🛡️ Conquer & Seka Admin</span>
+    </div>
+    <div class="header-actions">
+      <button class="btn-secondary" id="refreshBtn" title="እንደገና ጫን">🔄 Refresh</button>
+      <a href="/" class="btn-secondary" title="ወደ ጨዋታው ተመለስ">🎮 Game</a>
+      <button class="btn-secondary" id="logoutBtn" style="color: #ef4444;" title="ውጣ">🚪</button>
+    </div>
+  </header>
+
+  <div class="container">
+    <!-- Stats Row -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <span class="stat-label">ያልተረጋገጡ (Pending)</span>
+        <span class="stat-val pending" id="statPendingCount">0</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">የተረጋገጠ ጠቅላላ (Approved)</span>
+        <span class="stat-val approved" id="statApprovedSum">0 ETB</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">ጠቅላላ ጥያቄዎች (Total)</span>
+        <span class="stat-val" id="statTotalCount">0</span>
+      </div>
+    </div>
+
+    <!-- Tabs Bar -->
+    <div class="tabs-bar">
+      <button class="tab-btn active" data-tab="pending" id="tabPendingBtn">
+        ⏳ በመጠባበቅ ላይ <span class="tab-badge" id="pendingBadge" style="display:none;">0</span>
+      </button>
+      <button class="tab-btn" data-tab="all" id="tabAllBtn">
+        📜 ሁሉም ታሪክ (History)
+      </button>
+    </div>
+
+    <!-- Deposit List -->
+    <div class="deposit-list" id="depositList">
+      <div class="empty-state">
+        <div class="empty-icon">⏳</div>
+        <div class="empty-text">ጥያቄዎችን በማምጣት ላይ...</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast"></div>
+
+  <!-- Audio Chime for new deposits -->
+  <audio id="chimeAudio" preload="auto">
+    <source src="data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YU9vT18AAAA=" type="audio/wav">
+  </audio>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    let adminKey = localStorage.getItem('conquer_admin_key') || '';
+    let currentTab = 'pending';
+    let depositsData = [];
+    const socket = io();
+
+    const authOverlay = document.getElementById('authOverlay');
+    const pinInput = document.getElementById('pinInput');
+    const loginBtn = document.getElementById('loginBtn');
+    const authErr = document.getElementById('authErr');
+    const depositList = document.getElementById('depositList');
+    const refreshBtn = document.getElementById('refreshBtn');
+    const logoutBtn = document.getElementById('logoutBtn');
+    const tabPendingBtn = document.getElementById('tabPendingBtn');
+    const tabAllBtn = document.getElementById('tabAllBtn');
+    const pendingBadge = document.getElementById('pendingBadge');
+    const statPendingCount = document.getElementById('statPendingCount');
+    const statApprovedSum = document.getElementById('statApprovedSum');
+    const statTotalCount = document.getElementById('statTotalCount');
+    const toast = document.getElementById('toast');
+
+    function showToast(msg) {
+      if (!toast) return;
+      toast.textContent = msg;
+      toast.style.display = 'block';
+      setTimeout(() => { toast.style.display = 'none'; }, 3000);
+    }
+
+    // Auto-login if key is already stored
+    if (adminKey) {
+      verifyKey(adminKey);
+    }
+
+    loginBtn.addEventListener('click', () => {
+      const pin = pinInput.value.trim();
+      if (!pin) return;
+      verifyKey(pin);
+    });
+
+    pinInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') loginBtn.click();
+    });
+
+    async function verifyKey(key) {
+      try {
+        const res = await fetch(`/api/admin/deposits/pending?adminKey=${encodeURIComponent(key)}`);
+        if (res.ok) {
+          adminKey = key;
+          localStorage.setItem('conquer_admin_key', adminKey);
+          authOverlay.style.display = 'none';
+          loadDeposits();
+        } else {
+          authErr.style.display = 'block';
+          localStorage.removeItem('conquer_admin_key');
+        }
+      } catch (e) {
+        authErr.style.display = 'block';
+      }
+    }
+
+    logoutBtn.addEventListener('click', () => {
+      localStorage.removeItem('conquer_admin_key');
+      adminKey = '';
+      authOverlay.style.display = 'flex';
+      pinInput.value = '';
+    });
+
+    tabPendingBtn.addEventListener('click', () => {
+      currentTab = 'pending';
+      tabPendingBtn.classList.add('active');
+      tabAllBtn.classList.remove('active');
+      renderDeposits();
+    });
+
+    tabAllBtn.addEventListener('click', () => {
+      currentTab = 'all';
+      tabAllBtn.classList.add('active');
+      tabPendingBtn.classList.remove('active');
+      renderDeposits();
+    });
+
+    refreshBtn.addEventListener('click', () => {
+      loadDeposits();
+    });
+
+    async function loadDeposits() {
+      if (!adminKey) return;
+      try {
+        const url = `/api/admin/deposits/all?adminKey=${encodeURIComponent(adminKey)}`;
+        const res = await fetch(url);
+        const data = await res.json();
+        if (data && data.deposits) {
+          depositsData = data.deposits;
+          updateStats();
+          renderDeposits();
+        }
+      } catch (e) {
+        console.error('Failed to load deposits', e);
+      }
+    }
+
+    function updateStats() {
+      const pending = depositsData.filter(d => d.status === 'PENDING');
+      const approved = depositsData.filter(d => d.status === 'APPROVED');
+      const approvedSum = approved.reduce((sum, d) => sum + (Number(d.amount) || 0), 0);
+
+      statPendingCount.textContent = pending.length;
+      statApprovedSum.textContent = `${approvedSum.toLocaleString()} ETB`;
+      statTotalCount.textContent = depositsData.length;
+
+      if (pending.length > 0) {
+        pendingBadge.textContent = pending.length;
+        pendingBadge.style.display = 'inline-block';
+      } else {
+        pendingBadge.style.display = 'none';
+      }
+    }
+
+    function renderDeposits() {
+      let list = depositsData;
+      if (currentTab === 'pending') {
+        list = depositsData.filter(d => d.status === 'PENDING');
+      }
+
+      if (list.length === 0) {
+        depositList.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-icon">${currentTab === 'pending' ? '🎉' : '📂'}</div>
+            <div class="empty-text">${currentTab === 'pending' ? 'ምንም ያልተረጋገጠ የDeposit ጥያቄ የለም!' : 'ምንም የDeposit ታሪክ የለም'}</div>
+          </div>
+        `;
+        return;
+      }
+
+      depositList.innerHTML = list.map(d => {
+        const date = new Date(d.createdAt).toLocaleString('am-ET', {
+          month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+        });
+        const methodIcons = { telebirr: '📱 Telebirr', cbebirr: '🏦 CBE Birr', bank: '💳 Bank' };
+        const methodLabel = methodIcons[d.method] || d.method;
+        const statusClass = (d.status || 'pending').toLowerCase();
+
+        return `
+          <div class="deposit-card ${statusClass}" id="card_${d.id}">
+            <div class="card-top">
+              <div class="card-user-info">
+                <div class="user-name">👤 ${escapeHtml(d.userName || 'Unknown')}</div>
+                <div class="user-phone">📞 ${escapeHtml(d.userPhone || d.userId || '')}</div>
+              </div>
+              <div class="amount-badge">
+                ${Number(d.amount).toLocaleString()} ETB
+              </div>
+            </div>
+
+            <div class="card-txn-row">
+              <span class="txn-text" id="txn_${d.id}">${escapeHtml(d.transactionId)}</span>
+              <button class="btn-copy" onclick="copyTxn('${d.id}', '${escapeHtml(d.transactionId)}')">📋 Copy TXN</button>
+            </div>
+
+            <div class="card-meta">
+              <span>${methodLabel}</span>
+              <span>📅 ${date}</span>
+            </div>
+
+            ${d.status === 'PENDING' ? `
+              <div class="card-actions">
+                <button class="btn-approve" onclick="approveDeposit('${d.id}')">
+                  ✅ አጽድቅ (Approve)
+                </button>
+                <button class="btn-reject" onclick="rejectDeposit('${d.id}')">
+                  ❌ ሰርዝ (Reject)
+                </button>
+              </div>
+            ` : `
+              <div style="font-size: 12px; font-weight: 700; color: ${d.status === 'APPROVED' ? '#10b981' : '#ef4444'};">
+                ${d.status === 'APPROVED' ? '✅ ተረጋግጦ ገቢ ሆኗል' : '❌ ተቀባይነት አላገኘም'}: ${escapeHtml(d.adminNote || '')}
+              </div>
+            `}
+          </div>
+        `;
+      }).join('');
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    window.copyTxn = function(id, text) {
+      navigator.clipboard.writeText(text).then(() => {
+        showToast(`📋 ${text} ተኮርጅቷል!`);
+      }).catch(() => {});
+    };
+
+    window.approveDeposit = async function(id) {
+      const card = document.getElementById(`card_${id}`);
+      if (!confirm('ይህ ተጠቃሚ ገንዘቡን በትክክል መላኩን አረጋግጠዋል? ወደ balance-ሱ ይጨመር?')) return;
+
+      try {
+        const res = await fetch('/api/admin/deposit/approve', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ depositId: id, adminKey })
+        });
+        const data = await res.json();
+        if (data && data.success) {
+          showToast('🎉 Deposit በተሳካ ሁኔታ ጸድቋል!');
+          loadDeposits();
+        } else {
+          alert(`ስህተት፡ ${data.message || 'Error'}`);
+        }
+      } catch (e) {
+        alert('የኔትወርክ ስህተት ተከስቷል');
+      }
+    };
+
+    window.rejectDeposit = async function(id) {
+      const reason = prompt('ለምን ውድቅ እንደተደረገ ምክንያት ያስገቡ (ለምሳሌ: Transaction ID አልተገኘም):', 'Transaction ID አልተገኘም / ትክክል አይደለም');
+      if (reason === null) return;
+
+      try {
+        const res = await fetch('/api/admin/deposit/reject', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ depositId: id, adminKey, reason })
+        });
+        const data = await res.json();
+        if (data && data.success) {
+          showToast('Deposit ውድቅ ተደርጓል');
+          loadDeposits();
+        } else {
+          alert(`ስህተት፡ ${data.message || 'Error'}`);
+        }
+      } catch (e) {
+        alert('የኔትወርክ ስህተት ተከስቷል');
+      }
+    };
+
+    // Socket listeners for real-time updates
+    socket.on('new_deposit_request', (deposit) => {
+      showToast(`🔔 አዲስ የDeposit ጥያቄ ደርሷል፦ ${deposit.amount} ETB (${deposit.userName || 'ተጠቃሚ'})`);
+      loadDeposits();
+    });
+
+    socket.on('deposit_status_changed', () => {
+      loadDeposits();
+    });
+
+    // Auto-poll every 10 seconds just in case
+    setInterval(loadDeposits, 10000);
+  </script>
+</body>
+</html>

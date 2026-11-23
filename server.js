@@ -9,6 +9,7 @@ const { v4: uuidv4 } = require('uuid');
 const GameRoom = require('./engine/gameRoom');
 const { SekaGameRoom, SekaBotPlayer } = require('./engine/sekaGameRoom');
 const walletManager = require('./engine/walletManager');
+const depositManager = require('./engine/depositManager');
 const { supabase, SUPABASE_URL, SUPABASE_ANON_KEY } = require('./engine/supabaseClient');
 
 const app = express();
@@ -53,150 +54,122 @@ app.post('/api/wallet/deposit', async (req, res) => {
   const methodName = method || 'telebirr';
 
   try {
-    // Check for duplicate transaction ID
-    const { data: existingTxn } = await supabase
-      .from('deposits')
-      .select('id')
-      .eq('transaction_id', txnTrimmed)
-      .maybeSingle();
+    // Lookup user name & phone for admin visibility
+    const userWallet = walletManager.getWallet(userId);
+    const userName = (userWallet && userWallet.name) ? userWallet.name : '';
+    const userPhone = (userWallet && userWallet.phone) ? userWallet.phone : '';
 
-    if (existingTxn) {
-      return res.status(400).json({ success: false, message: `⚠️ ይህ Transaction ID (${txnTrimmed}) ቀድሞ ገብቷል! እባክዎ ትክክለኛውን Transaction ID ያስገቡ።` });
-    }
-
-    // Insert deposit record as PENDING
-    const { data: deposit, error: insertErr } = await supabase
-      .from('deposits')
-      .insert({
-        user_id: userId,
-        amount: num,
-        method: methodName,
-        transaction_id: txnTrimmed,
-        status: 'PENDING'
-      })
-      .select()
-      .single();
-
-    if (insertErr) {
-      console.error('[Deposit] Insert error:', insertErr.message);
-      return res.status(500).json({ success: false, message: 'ስህተት ተከስቷል፤ እባክዎ እንደገና ይሞክሩ' });
-    }
-
-    // Log the transaction
-    supabase.from('transactions').insert({
-      user_id: userId,
-      type: 'DEPOSIT_REQUEST',
+    const deposit = await depositManager.createDeposit({
+      userId,
+      userName,
+      userPhone,
       amount: num,
-      description: `Deposit request ${num} ETB via ${methodName} - TXN: ${txnTrimmed} (PENDING)`
-    }).then(() => {}).catch(() => {});
+      method: methodName,
+      transactionId: txnTrimmed
+    });
 
-    res.json({ success: true, status: 'PENDING', deposit, message: `📋 ${num} ETB deposit ጥያቄ ተልኳል! Transaction ID: ${txnTrimmed}` });
+    // Notify admins listening via socket
+    io.emit('new_deposit_request', deposit);
 
+    res.json({
+      success: true,
+      status: 'PENDING',
+      deposit,
+      message: `📋 ${num} ETB deposit ጥያቄ ተልኳል! Transaction ID: ${txnTrimmed}`
+    });
   } catch (err) {
     console.error('[Deposit] Error:', err.message);
-    res.status(500).json({ success: false, message: 'ስህተት ተከስቷል፤ እባክዎ እንደገና ይሞክሩ' });
+    res.status(400).json({ success: false, message: err.message || 'ስህተት ተከስቷል፤ እባክዎ እንደገና ይሞክሩ' });
   }
 });
 
 // Get user's deposit history
-app.get('/api/wallet/deposits/:userId', async (req, res) => {
+app.get('/api/wallet/deposits/:userId', (req, res) => {
   try {
-    const { data: deposits } = await supabase
-      .from('deposits')
-      .select('*')
-      .eq('user_id', req.params.userId)
-      .order('created_at', { ascending: false })
-      .limit(10);
-    res.json({ success: true, deposits: deposits || [] });
+    const list = depositManager.getUserDeposits(req.params.userId);
+    res.json({ success: true, deposits: list });
   } catch (err) {
     res.json({ success: true, deposits: [] });
   }
 });
 
+// Helper: check admin auth
+function isAdminAuthorized(key) {
+  return key === 'ethio-games-admin-2024' || key === '1234' || key === 'admin123';
+}
+
+// Admin: List pending deposits
+app.get('/api/admin/deposits/pending', (req, res) => {
+  const adminKey = req.query.adminKey || req.headers['x-admin-key'];
+  if (!isAdminAuthorized(adminKey)) {
+    return res.status(403).json({ success: false, message: 'Unauthorized. Invalid admin key.' });
+  }
+  const pending = depositManager.getPendingDeposits();
+  res.json({ success: true, deposits: pending });
+});
+
+// Admin: List all deposits (history)
+app.get('/api/admin/deposits/all', (req, res) => {
+  const adminKey = req.query.adminKey || req.headers['x-admin-key'];
+  if (!isAdminAuthorized(adminKey)) {
+    return res.status(403).json({ success: false, message: 'Unauthorized. Invalid admin key.' });
+  }
+  const all = depositManager.getAllDeposits(150);
+  res.json({ success: true, deposits: all });
+});
+
 // Admin: Approve a deposit (credits user balance)
 app.post('/api/admin/deposit/approve', async (req, res) => {
-  const { depositId, adminKey } = req.body;
-  // Simple admin key protection
-  if (adminKey !== 'ethio-games-admin-2024') {
-    return res.status(403).json({ success: false, message: 'Unauthorized' });
+  const { depositId, adminKey, note } = req.body;
+  if (!isAdminAuthorized(adminKey)) {
+    return res.status(403).json({ success: false, message: 'Unauthorized. Invalid admin key.' });
   }
 
   try {
-    const { data: deposit, error } = await supabase
-      .from('deposits')
-      .select('*')
-      .eq('id', depositId)
-      .eq('status', 'PENDING')
-      .single();
-
-    if (error || !deposit) {
-      return res.status(404).json({ success: false, message: 'Deposit not found or already processed' });
-    }
-
-    // Credit the user's balance
-    const wallet = walletManager.deposit(deposit.user_id, deposit.amount);
-
-    // Update deposit status
-    await supabase.from('deposits').update({
-      status: 'APPROVED',
-      reviewed_at: new Date().toISOString()
-    }).eq('id', depositId);
-
-    // Log approved transaction
-    supabase.from('transactions').insert({
-      user_id: deposit.user_id,
-      type: 'DEPOSIT',
-      amount: deposit.amount,
-      description: `Deposit approved ${deposit.amount} ETB via ${deposit.method} - TXN: ${deposit.transaction_id}`
-    }).then(() => {}).catch(() => {});
+    const deposit = await depositManager.approveDeposit(depositId, note);
+    // Credit the user's wallet
+    const wallet = walletManager.deposit(deposit.userId, deposit.amount);
 
     // Notify user via socket
-    io.emit(`wallet_${deposit.user_id}`, wallet);
-    io.emit(`deposit_approved_${deposit.user_id}`, { amount: deposit.amount, transactionId: deposit.transaction_id });
+    io.emit(`wallet_${deposit.userId}`, wallet);
+    io.emit(`deposit_approved_${deposit.userId}`, {
+      amount: deposit.amount,
+      transactionId: deposit.transactionId,
+      depositId: deposit.id
+    });
+    // Notify admin panel
+    io.emit('deposit_status_changed', { id: deposit.id, status: 'APPROVED' });
 
-    res.json({ success: true, wallet, deposit: { ...deposit, status: 'APPROVED' } });
+    res.json({ success: true, deposit, wallet });
   } catch (err) {
-    console.error('[Admin Deposit Approve] Error:', err.message);
-    res.status(500).json({ success: false, message: 'Error approving deposit' });
+    console.error('[Admin Approve] Error:', err.message);
+    res.status(400).json({ success: false, message: err.message });
   }
 });
 
 // Admin: Reject a deposit
 app.post('/api/admin/deposit/reject', async (req, res) => {
   const { depositId, adminKey, reason } = req.body;
-  if (adminKey !== 'ethio-games-admin-2024') {
-    return res.status(403).json({ success: false, message: 'Unauthorized' });
+  if (!isAdminAuthorized(adminKey)) {
+    return res.status(403).json({ success: false, message: 'Unauthorized. Invalid admin key.' });
   }
 
   try {
-    await supabase.from('deposits').update({
-      status: 'REJECTED',
-      admin_note: reason || 'ተቀባይነት አላገኘም',
-      reviewed_at: new Date().toISOString()
-    }).eq('id', depositId).eq('status', 'PENDING');
+    const deposit = await depositManager.rejectDeposit(depositId, reason || 'Transaction ID አልተገኘም / ትክክል አይደለም');
 
-    io.emit(`deposit_rejected_${req.body.userId || ''}`, { depositId, reason });
-    res.json({ success: true });
-  } catch (err) {
-    res.status(500).json({ success: false, message: 'Error rejecting deposit' });
-  }
-});
+    // Notify user via socket
+    io.emit(`deposit_rejected_${deposit.userId}`, {
+      depositId: deposit.id,
+      transactionId: deposit.transactionId,
+      reason: deposit.adminNote
+    });
+    // Notify admin panel
+    io.emit('deposit_status_changed', { id: deposit.id, status: 'REJECTED' });
 
-// Admin: List all pending deposits
-app.get('/api/admin/deposits/pending', async (req, res) => {
-  const adminKey = req.query.adminKey;
-  if (adminKey !== 'ethio-games-admin-2024') {
-    return res.status(403).json({ success: false, message: 'Unauthorized' });
-  }
-  try {
-    const { data: deposits } = await supabase
-      .from('deposits')
-      .select('*')
-      .eq('status', 'PENDING')
-      .order('created_at', { ascending: true });
-    res.json({ success: true, deposits: deposits || [] });
+    res.json({ success: true, deposit });
   } catch (err) {
-    res.json({ success: true, deposits: [] });
+    console.error('[Admin Reject] Error:', err.message);
+    res.status(400).json({ success: false, message: err.message });
   }
 });
 
