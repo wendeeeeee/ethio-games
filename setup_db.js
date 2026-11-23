@@ -28,9 +28,24 @@ const statements = [
     description TEXT DEFAULT '',
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
   )`,
+  // Create deposits table (tracks deposit requests with transaction IDs)
+  `CREATE TABLE IF NOT EXISTS deposits (
+    id SERIAL PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    amount INTEGER NOT NULL DEFAULT 0,
+    method TEXT NOT NULL DEFAULT 'telebirr',
+    transaction_id TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'PENDING',
+    admin_note TEXT DEFAULT '',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    reviewed_at TIMESTAMPTZ DEFAULT NULL
+  )`,
   // Indexes
   `CREATE INDEX IF NOT EXISTS idx_transactions_user_id ON transactions(user_id)`,
-  `CREATE INDEX IF NOT EXISTS idx_users_phone ON users(phone)`
+  `CREATE INDEX IF NOT EXISTS idx_users_phone ON users(phone)`,
+  `CREATE INDEX IF NOT EXISTS idx_deposits_user_id ON deposits(user_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_deposits_status ON deposits(status)`,
+  `CREATE INDEX IF NOT EXISTS idx_deposits_transaction_id ON deposits(transaction_id)`
 ];
 
 (async () => {

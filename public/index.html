@@ -6,7 +6,7 @@
   <meta name="viewport"
     content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>CONQUER - Ethiopian Card Betting Game</title>
-  <link rel="stylesheet" href="styles.css?v=46">
+  <link rel="stylesheet" href="styles.css?v=47">
 </head>
 
 <body>
@@ -495,7 +495,22 @@
         </p>
       </div>
 
+      <!-- Transaction ID Input -->
+      <div class="deposit-txn-section">
+        <label class="deposit-label">🧾 Transaction ID (የክፍያ ማረጋገጫ ቁጥር)</label>
+        <div class="deposit-txn-input-wrap">
+          <input type="text" id="depositTxnIdInput" placeholder="ለምሳሌ: FT24XYZ789012" autocomplete="off" maxlength="40">
+        </div>
+        <p class="deposit-txn-hint">ገንዘቡን ከላኩ በኋላ Transaction ID / Reference Number ያስገቡ</p>
+      </div>
+
       <div id="depositErrorMsg" style="display: none; color: #dc2626; font-size: 12px; margin-bottom: 10px; padding: 6px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px;"></div>
+
+      <!-- Pending Deposits List -->
+      <div id="depositPendingList" class="deposit-pending-list" style="display: none;">
+        <label class="deposit-label">📋 ያልተረጋገጡ ጥያቄዎች (Pending Deposits)</label>
+        <div id="depositPendingItems"></div>
+      </div>
 
       <!-- Action Button -->
       <button class="btn-primary deposit-submit-btn" id="confirmDepositBtn">
@@ -578,7 +593,7 @@
 
   <!-- Socket.io & App Script -->
   <script src="/socket.io/socket.io.js"></script>
-  <script src="app.js?v=47"></script>
+  <script src="app.js?v=48"></script>
 </body>
 
 </html>

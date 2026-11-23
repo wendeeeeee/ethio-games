@@ -671,6 +671,19 @@ socket.on(`wallet_${userId}`, (wallet) => {
   applyWalletUpdate(wallet);
 });
 
+// Deposit approved notification
+socket.on(`deposit_approved_${userId}`, (data) => {
+  showSortToast(`🎉 ${data.amount.toLocaleString()} ETB deposit ተረጋግጧል! ወደ balance ገብቷል!`);
+  playWinSound();
+  loadPendingDeposits();
+});
+
+// Deposit rejected notification
+socket.on(`deposit_rejected_${userId}`, (data) => {
+  showSortToast(`❌ Deposit ተቀባይነት አላገኘም: ${data.reason || 'ምክንያት አልተገለጸም'}`);
+  loadPendingDeposits();
+});
+
 socket.on('error_msg', (msg) => {
   alert(`⚠️ ${msg}`);
 });
@@ -947,6 +960,9 @@ const depositPhoneVal = document.getElementById('depositPhoneVal');
 const depositAccountNameVal = document.getElementById('depositAccountNameVal');
 const depositInstructions = document.getElementById('depositInstructions');
 const depositErrorMsg = document.getElementById('depositErrorMsg');
+const depositTxnIdInput = document.getElementById('depositTxnIdInput');
+const depositPendingList = document.getElementById('depositPendingList');
+const depositPendingItems = document.getElementById('depositPendingItems');
 
 let selectedDepositMethod = 'telebirr';
 let selectedDepositAmount = 100;
@@ -956,19 +972,19 @@ const DEPOSIT_METHODS = {
     name: 'Telebirr',
     phone: '0911002233',
     accountName: 'Ethio Games / Conquer',
-    instruction: 'በቴሌብር መተግበሪያ ወደ <strong>0911002233</strong> ይላኩ። ከዚያ ከታች ያለውን <strong>«አሁን አስገባ»</strong> የሚለውን ይጫኑ!'
+    instruction: 'በቴሌብር መተግበሪያ ወደ <strong>0911002233</strong> ይላኩ። ከዚያ Transaction ID ያስገቡና <strong>«አሁን አስገባ»</strong> ይጫኑ!'
   },
   cbebirr: {
     name: 'CBE Birr',
     phone: '1000123456789',
     accountName: 'Ethio Games',
-    instruction: 'በ CBE Birr ወይም ንግድ ባንክ ወደ <strong>1000123456789</strong> ያስገቡ። ከዚያ ከታች ያለውን ይጫኑ!'
+    instruction: 'በ CBE Birr ወይም ንግድ ባንክ ወደ <strong>1000123456789</strong> ያስገቡ። Transaction ID ያስገቡና <strong>«አሁን አስገባ»</strong> ይጫኑ!'
   },
   bank: {
     name: 'Bank / Chapa',
     phone: '1000987654321',
     accountName: 'Ethio Games Ltd',
-    instruction: 'በቀጥታ በባንክ ወይም በኦንላይን ፔይመንት ያስገቡ። ወዲያውኑ ገቢ ይሆናል!'
+    instruction: 'በቀጥታ በባንክ ወይም በኦንላይን ፔይመንት ያስገቡ። Reference Number ያስገቡና <strong>«አሁን አስገባ»</strong> ይጫኑ!'
   }
 };
 
@@ -996,8 +1012,43 @@ function openDepositModal() {
     depositErrorMsg.style.display = 'none';
     depositErrorMsg.textContent = '';
   }
+  if (depositTxnIdInput) depositTxnIdInput.value = '';
   updateDepositUI();
+  loadPendingDeposits();
   depositModal.style.display = 'flex';
+}
+
+async function loadPendingDeposits() {
+  if (!depositPendingList || !depositPendingItems) return;
+  try {
+    const res = await fetch(`/api/wallet/deposits/${userId}`);
+    const data = await res.json();
+    if (data.deposits && data.deposits.length > 0) {
+      depositPendingItems.innerHTML = data.deposits.map(d => {
+        const statusColors = { PENDING: '#f59e0b', APPROVED: '#10b981', REJECTED: '#ef4444' };
+        const statusText = { PENDING: '⏳ በመጠባበቅ', APPROVED: '✅ ተረጋግጧል', REJECTED: '❌ ተቀባይነት አላገኘም' };
+        const statusColor = statusColors[d.status] || '#64748b';
+        const statusLabel = statusText[d.status] || d.status;
+        const date = new Date(d.created_at).toLocaleDateString('am-ET', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+        return `<div class="deposit-pending-item" style="border-left: 3px solid ${statusColor};">
+          <div class="pending-item-top">
+            <span class="pending-amount">${d.amount.toLocaleString()} ETB</span>
+            <span class="pending-status" style="color: ${statusColor};">${statusLabel}</span>
+          </div>
+          <div class="pending-item-bottom">
+            <span class="pending-method">${d.method === 'telebirr' ? '📱' : d.method === 'cbebirr' ? '🏦' : '💳'} ${d.method}</span>
+            <span class="pending-txn">TXN: ${d.transaction_id}</span>
+            <span class="pending-date">${date}</span>
+          </div>
+        </div>`;
+      }).join('');
+      depositPendingList.style.display = 'block';
+    } else {
+      depositPendingList.style.display = 'none';
+    }
+  } catch (e) {
+    depositPendingList.style.display = 'none';
+  }
 }
 
 function closeDepositModal() {
@@ -1083,11 +1134,24 @@ if (depositPhoneVal) {
 if (confirmDepositBtn) {
   confirmDepositBtn.addEventListener('click', async () => {
     const amt = Number(depositCustomAmountInput ? depositCustomAmountInput.value : selectedDepositAmount) || 0;
+    const txnId = depositTxnIdInput ? depositTxnIdInput.value.trim() : '';
+
+    // Validate amount
     if (amt <= 0) {
       if (depositErrorMsg) {
         depositErrorMsg.textContent = 'እባክዎ ከ 0 በላይ የሆነ የገንዘብ መጠን ያስገቡ';
         depositErrorMsg.style.display = 'block';
       }
+      return;
+    }
+
+    // Validate Transaction ID
+    if (!txnId || txnId.length < 4) {
+      if (depositErrorMsg) {
+        depositErrorMsg.textContent = '⚠️ እባክዎ Transaction ID / የክፍያ ማረጋገጫ ቁጥር ያስገቡ (ቢያንስ 4 ፊደል)';
+        depositErrorMsg.style.display = 'block';
+      }
+      if (depositTxnIdInput) depositTxnIdInput.focus();
       return;
     }
 
@@ -1098,15 +1162,24 @@ if (confirmDepositBtn) {
       const res = await fetch('/api/wallet/deposit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, amount: amt, method: selectedDepositMethod })
+        body: JSON.stringify({ userId, amount: amt, method: selectedDepositMethod, transactionId: txnId })
       });
       const data = await res.json();
-      if (data && (data.success || data.balance !== undefined)) {
-        const wallet = data.wallet || data;
-        applyWalletUpdate(wallet);
+      if (data && data.success) {
+        if (data.wallet) {
+          applyWalletUpdate(data.wallet);
+        }
         playWinSound();
-        showSortToast(`🎉 ${amt.toLocaleString()} ETB በ ${DEPOSIT_METHODS[selectedDepositMethod].name} በተሳካ ሁኔታ ገቢ ተደርጓል!`);
-        closeDepositModal();
+        if (data.status === 'PENDING') {
+          showSortToast(`📋 ${amt.toLocaleString()} ETB deposit ጥያቄ ተልኳል! TXN: ${txnId}\nአስተዳዳሪ ሲያረጋግጥ balance ይጨመራል።`);
+        } else {
+          showSortToast(`🎉 ${amt.toLocaleString()} ETB በ ${DEPOSIT_METHODS[selectedDepositMethod].name} በተሳካ ሁኔታ ገቢ ተደርጓል!`);
+        }
+        if (depositTxnIdInput) depositTxnIdInput.value = '';
+        loadPendingDeposits();
+        if (depositModalBalanceDisplay && walletBalanceDisplay) {
+          depositModalBalanceDisplay.textContent = walletBalanceDisplay.textContent;
+        }
       } else {
         if (depositErrorMsg) {
           depositErrorMsg.textContent = data.message || 'ስህተት ተከስቷል፤ እባክዎ እንደገና ይሞክሩ';

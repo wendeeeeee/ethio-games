@@ -3090,6 +3090,101 @@ body.in-game .user-profile-badge {
   transform: none;
 }
 
+/* Transaction ID Input */
+.deposit-txn-section {
+  margin-bottom: 14px;
+}
+
+.deposit-txn-input-wrap {
+  display: flex;
+  align-items: center;
+  background: #fff;
+  border: 2px solid #cbd5e1;
+  border-radius: 12px;
+  padding: 2px;
+  transition: border-color 0.2s;
+}
+
+.deposit-txn-input-wrap:focus-within {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+#depositTxnIdInput {
+  flex: 1;
+  border: none;
+  outline: none;
+  padding: 10px 12px;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  background: transparent;
+  color: #0f172a;
+}
+
+#depositTxnIdInput::placeholder {
+  color: #94a3b8;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+
+.deposit-txn-hint {
+  font-size: 11px;
+  color: #64748b;
+  margin: 6px 0 0 4px;
+}
+
+/* Pending Deposits List */
+.deposit-pending-list {
+  margin-bottom: 14px;
+}
+
+.deposit-pending-item {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+}
+
+.pending-item-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.pending-amount {
+  font-weight: 700;
+  font-size: 14px;
+  color: #0f172a;
+}
+
+.pending-status {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.pending-item-bottom {
+  display: flex;
+  gap: 10px;
+  font-size: 11px;
+  color: #64748b;
+  flex-wrap: wrap;
+}
+
+.pending-method {
+  font-weight: 500;
+}
+
+.pending-txn {
+  font-family: monospace;
+  font-size: 10px;
+  background: #e2e8f0;
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
 /* Deposit Modal Mobile Responsive */
 @media (max-width: 480px) {
   .deposit-modal-content {

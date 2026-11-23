@@ -39,15 +39,165 @@ app.get('/api/wallet/:userId', (req, res) => {
   res.json(wallet);
 });
 
-app.post('/api/wallet/deposit', (req, res) => {
-  const { userId, amount, method } = req.body;
+app.post('/api/wallet/deposit', async (req, res) => {
+  const { userId, amount, method, transactionId } = req.body;
   const num = Number(amount);
   if (!userId || !num || num <= 0) {
     return res.status(400).json({ success: false, message: 'እባክዎ ትክክለኛ የገንዘብ መጠን ያስገቡ (Invalid amount)' });
   }
-  const wallet = walletManager.deposit(userId, num);
-  io.emit(`wallet_${userId}`, wallet);
-  res.json({ success: true, wallet });
+  if (!transactionId || transactionId.trim().length < 4) {
+    return res.status(400).json({ success: false, message: 'እባክዎ Transaction ID ያስገቡ (ቢያንስ 4 ፊደል)' });
+  }
+
+  const txnTrimmed = transactionId.trim();
+  const methodName = method || 'telebirr';
+
+  try {
+    // Check for duplicate transaction ID
+    const { data: existingTxn } = await supabase
+      .from('deposits')
+      .select('id')
+      .eq('transaction_id', txnTrimmed)
+      .maybeSingle();
+
+    if (existingTxn) {
+      return res.status(400).json({ success: false, message: `⚠️ ይህ Transaction ID (${txnTrimmed}) ቀድሞ ገብቷል! እባክዎ ትክክለኛውን Transaction ID ያስገቡ።` });
+    }
+
+    // Insert deposit record as PENDING
+    const { data: deposit, error: insertErr } = await supabase
+      .from('deposits')
+      .insert({
+        user_id: userId,
+        amount: num,
+        method: methodName,
+        transaction_id: txnTrimmed,
+        status: 'PENDING'
+      })
+      .select()
+      .single();
+
+    if (insertErr) {
+      console.error('[Deposit] Insert error:', insertErr.message);
+      return res.status(500).json({ success: false, message: 'ስህተት ተከስቷል፤ እባክዎ እንደገና ይሞክሩ' });
+    }
+
+    // Log the transaction
+    supabase.from('transactions').insert({
+      user_id: userId,
+      type: 'DEPOSIT_REQUEST',
+      amount: num,
+      description: `Deposit request ${num} ETB via ${methodName} - TXN: ${txnTrimmed} (PENDING)`
+    }).then(() => {}).catch(() => {});
+
+    res.json({ success: true, status: 'PENDING', deposit, message: `📋 ${num} ETB deposit ጥያቄ ተልኳል! Transaction ID: ${txnTrimmed}` });
+
+  } catch (err) {
+    console.error('[Deposit] Error:', err.message);
+    res.status(500).json({ success: false, message: 'ስህተት ተከስቷል፤ እባክዎ እንደገና ይሞክሩ' });
+  }
+});
+
+// Get user's deposit history
+app.get('/api/wallet/deposits/:userId', async (req, res) => {
+  try {
+    const { data: deposits } = await supabase
+      .from('deposits')
+      .select('*')
+      .eq('user_id', req.params.userId)
+      .order('created_at', { ascending: false })
+      .limit(10);
+    res.json({ success: true, deposits: deposits || [] });
+  } catch (err) {
+    res.json({ success: true, deposits: [] });
+  }
+});
+
+// Admin: Approve a deposit (credits user balance)
+app.post('/api/admin/deposit/approve', async (req, res) => {
+  const { depositId, adminKey } = req.body;
+  // Simple admin key protection
+  if (adminKey !== 'ethio-games-admin-2024') {
+    return res.status(403).json({ success: false, message: 'Unauthorized' });
+  }
+
+  try {
+    const { data: deposit, error } = await supabase
+      .from('deposits')
+      .select('*')
+      .eq('id', depositId)
+      .eq('status', 'PENDING')
+      .single();
+
+    if (error || !deposit) {
+      return res.status(404).json({ success: false, message: 'Deposit not found or already processed' });
+    }
+
+    // Credit the user's balance
+    const wallet = walletManager.deposit(deposit.user_id, deposit.amount);
+
+    // Update deposit status
+    await supabase.from('deposits').update({
+      status: 'APPROVED',
+      reviewed_at: new Date().toISOString()
+    }).eq('id', depositId);
+
+    // Log approved transaction
+    supabase.from('transactions').insert({
+      user_id: deposit.user_id,
+      type: 'DEPOSIT',
+      amount: deposit.amount,
+      description: `Deposit approved ${deposit.amount} ETB via ${deposit.method} - TXN: ${deposit.transaction_id}`
+    }).then(() => {}).catch(() => {});
+
+    // Notify user via socket
+    io.emit(`wallet_${deposit.user_id}`, wallet);
+    io.emit(`deposit_approved_${deposit.user_id}`, { amount: deposit.amount, transactionId: deposit.transaction_id });
+
+    res.json({ success: true, wallet, deposit: { ...deposit, status: 'APPROVED' } });
+  } catch (err) {
+    console.error('[Admin Deposit Approve] Error:', err.message);
+    res.status(500).json({ success: false, message: 'Error approving deposit' });
+  }
+});
+
+// Admin: Reject a deposit
+app.post('/api/admin/deposit/reject', async (req, res) => {
+  const { depositId, adminKey, reason } = req.body;
+  if (adminKey !== 'ethio-games-admin-2024') {
+    return res.status(403).json({ success: false, message: 'Unauthorized' });
+  }
+
+  try {
+    await supabase.from('deposits').update({
+      status: 'REJECTED',
+      admin_note: reason || 'ተቀባይነት አላገኘም',
+      reviewed_at: new Date().toISOString()
+    }).eq('id', depositId).eq('status', 'PENDING');
+
+    io.emit(`deposit_rejected_${req.body.userId || ''}`, { depositId, reason });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Error rejecting deposit' });
+  }
+});
+
+// Admin: List all pending deposits
+app.get('/api/admin/deposits/pending', async (req, res) => {
+  const adminKey = req.query.adminKey;
+  if (adminKey !== 'ethio-games-admin-2024') {
+    return res.status(403).json({ success: false, message: 'Unauthorized' });
+  }
+  try {
+    const { data: deposits } = await supabase
+      .from('deposits')
+      .select('*')
+      .eq('status', 'PENDING')
+      .order('created_at', { ascending: true });
+    res.json({ success: true, deposits: deposits || [] });
+  } catch (err) {
+    res.json({ success: true, deposits: [] });
+  }
 });
 
 // Fast favicon response to prevent 404
