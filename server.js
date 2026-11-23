@@ -378,7 +378,11 @@ app.post('/api/user/login', async (req, res) => {
   const { phone, password } = req.body;
   try {
     const wallet = await walletManager.loginUser({ phone, password });
-    res.json({ success: true, wallet });
+    res.json({
+      success: true,
+      wallet,
+      user: { id: wallet.id, name: wallet.name, phone: wallet.phone, balance: wallet.balance }
+    });
   } catch (err) {
     console.error('[User Login Error]:', err.message);
     res.status(400).json({ success: false, message: err.message });

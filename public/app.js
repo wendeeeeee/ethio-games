@@ -14,17 +14,10 @@ function isGenericName(name) {
     l === 'ተጫዋች' || l.startsWith('ተጫዋች') || l.startsWith('user_');
 }
 
-let storedName = localStorage.getItem('conquer_user_name');
-let playerName = (storedName && !isGenericName(storedName)) ? storedName : '';
+let storedName = localStorage.getItem('conquer_user_name') || '';
 let userPhone = localStorage.getItem('conquer_user_phone') || '';
-let isUserRegistered = localStorage.getItem('conquer_user_registered') === 'true' && Boolean(playerName) && Boolean(userPhone);
-if (!isUserRegistered || isGenericName(storedName)) {
-  localStorage.removeItem('conquer_user_registered');
-  if (isGenericName(storedName)) {
-    localStorage.removeItem('conquer_user_name');
-    playerName = '';
-  }
-}
+let isUserRegistered = localStorage.getItem('conquer_user_registered') === 'true' && Boolean(userPhone);
+let playerName = storedName || (isUserRegistered ? 'ተጫዋች' : '');
 let socket = io();
 let currentRoomId = null;
 let currentGameState = null;
@@ -450,25 +443,33 @@ function updateAuthUI() {
 
 function applyWalletUpdate(wallet) {
   if (!wallet) return;
-  if (walletBalanceDisplay && wallet.balance !== undefined) {
-    walletBalanceDisplay.textContent = `${wallet.balance.toLocaleString()} ETB`;
+  const w = (wallet.wallet && typeof wallet.wallet === 'object' && (wallet.wallet.id || wallet.wallet.phone)) ? wallet.wallet : wallet;
+  if (walletBalanceDisplay && w.balance !== undefined) {
+    walletBalanceDisplay.textContent = `${Number(w.balance).toLocaleString()} ETB`;
   }
-  if (wallet.name && !isGenericName(wallet.name) && (!playerName || isGenericName(playerName))) {
-    playerName = wallet.name;
+  if (w.name) {
+    playerName = w.name;
     localStorage.setItem('conquer_user_name', playerName);
   }
-  if (wallet.phone) {
-    userPhone = wallet.phone;
+  if (w.phone) {
+    userPhone = w.phone;
     localStorage.setItem('conquer_user_phone', userPhone);
   }
-  if (playerName && userPhone) {
-    isUserRegistered = true;
-    localStorage.setItem('conquer_user_registered', 'true');
-  }
-  if (wallet.id && wallet.id !== userId) {
-    userId = wallet.id;
+  if (w.id) {
+    userId = w.id;
     localStorage.setItem('conquer_user_id', userId);
   }
+  if (userPhone) {
+    isUserRegistered = true;
+    localStorage.setItem('conquer_user_registered', 'true');
+    if (!playerName) {
+      playerName = 'ተጫዋች';
+      localStorage.setItem('conquer_user_name', playerName);
+    }
+  }
+  const sNameInp = document.getElementById('sekaPlayerNameInput');
+  if (sNameInp && playerName) sNameInp.value = playerName;
+  if (playerNameInput && playerName) playerNameInput.value = playerName;
   updateAuthUI();
 }
 updateAuthUI();
@@ -591,6 +592,23 @@ function closeRegistrationModal() {
   registerModal.style.display = 'none';
 }
 
+function requireAuth(actionMessage) {
+  if (isUserRegistered && userPhone) {
+    if (!playerName) {
+      playerName = 'ተጫዋች';
+      localStorage.setItem('conquer_user_name', playerName);
+    }
+    return true;
+  }
+  if (actionMessage) showSortToast(actionMessage);
+  if (userPhone) {
+    openLoginModal();
+  } else {
+    openRegistrationModal();
+  }
+  return false;
+}
+
 if (tabBtnLogin) {
   tabBtnLogin.addEventListener('click', () => setAuthMode('login'));
 }
@@ -695,13 +713,34 @@ if (loginForm) {
         body: JSON.stringify({ phone: cleanPhone, password: rawPass })
       });
       const data = await res.json();
-      if (data && data.success && data.wallet) {
-        applyWalletUpdate(data.wallet);
+      if (data && data.success) {
+        const w = (data.wallet && (data.wallet.id || data.wallet.phone)) ? data.wallet : (data.wallet?.wallet || data.user || data.wallet || {});
+        const wId = w.id || data.user?.id;
+        const wName = w.name || data.user?.name || 'ተጫዋች';
+        const wPhone = w.phone || data.user?.phone || cleanPhone;
+        const wBal = w.balance !== undefined ? w.balance : (data.user?.balance !== undefined ? data.user.balance : 1000);
+
+        if (wId) {
+          userId = wId;
+          localStorage.setItem('conquer_user_id', userId);
+        }
+        playerName = wName;
+        userPhone = wPhone;
         isUserRegistered = true;
+        localStorage.setItem('conquer_user_name', playerName);
+        localStorage.setItem('conquer_user_phone', userPhone);
         localStorage.setItem('conquer_user_registered', 'true');
+
+        applyWalletUpdate({
+          id: userId,
+          name: playerName,
+          phone: userPhone,
+          balance: wBal
+        });
+
         closeRegistrationModal();
         playWinSound();
-        showSortToast(`🎉 እንኳን ደህና መጡ ${data.wallet.name || 'ተጫዋች'}!`);
+        showSortToast(`🎉 እንኳን ደህና መጡ ${playerName}!`);
       } else {
         if (loginErrorMsg) {
           loginErrorMsg.textContent = data.message || 'የመግቢያ ስህተት፤ እባክዎ እንደገና ይሞክሩ';
@@ -798,9 +837,28 @@ if (registerForm) {
       });
       const data = await res.json();
       if (data && data.success && data.wallet) {
-        applyWalletUpdate(data.wallet);
+        const w = (data.wallet && (data.wallet.id || data.wallet.phone)) ? data.wallet : (data.wallet?.wallet || data.user || data.wallet || {});
+        const wId = w.id || userId;
+        const wName = w.name || rawName;
+        const wPhone = w.phone || cleanPhone;
+        const wBal = w.balance !== undefined ? w.balance : 1000;
+
+        userId = wId;
+        playerName = wName;
+        userPhone = wPhone;
         isUserRegistered = true;
+        localStorage.setItem('conquer_user_id', userId);
+        localStorage.setItem('conquer_user_name', playerName);
+        localStorage.setItem('conquer_user_phone', userPhone);
         localStorage.setItem('conquer_user_registered', 'true');
+
+        applyWalletUpdate({
+          id: userId,
+          name: playerName,
+          phone: userPhone,
+          balance: wBal
+        });
+
         closeRegistrationModal();
         playWinSound();
         showSortToast(`🎉 ምዝገባዎ ተሳክቷል! እንኳን ደህና መጡ ${rawName}!`);
@@ -825,7 +883,7 @@ if (registerForm) {
 }
 
 // Auto-prompt registration or login if not registered
-if (!isUserRegistered || !playerName || !userPhone) {
+if (!isUserRegistered || !userPhone) {
   setTimeout(() => {
     if (userPhone) {
       openLoginModal();
@@ -1063,9 +1121,7 @@ const closeConquerModalBtn = document.getElementById('closeConquerModalBtn');
 if (homeSekaBtn) {
   homeSekaBtn.addEventListener('click', () => {
     playCardSound();
-    if (!isUserRegistered || !playerName || !userPhone) {
-      showSortToast('⚠️ ሴካ ለመጫወት እባክዎ መጀመሪያ ስም እና ስልክ ቁጥር ያስገቡ!');
-      openRegistrationModal();
+    if (!requireAuth('⚠️ ሴካ ለመጫወት እባክዎ መጀመሪያ ይግቡ ወይም ይመዝገቡ!')) {
       return;
     }
     if (homeGameSelectView) homeGameSelectView.style.display = 'none';
@@ -1094,9 +1150,7 @@ if (closeConquerModalBtn && conquerComingSoonModal) {
 if (goToSekaFromModalBtn && conquerComingSoonModal) {
   goToSekaFromModalBtn.addEventListener('click', () => {
     conquerComingSoonModal.style.display = 'none';
-    if (!isUserRegistered || !playerName || !userPhone) {
-      showSortToast('⚠️ ሴካ ለመጫወት እባክዎ መጀመሪያ ስም እና ስልክ ቁጥር ያስገቡ!');
-      openRegistrationModal();
+    if (!requireAuth('⚠️ ሴካ ለመጫወት እባክዎ መጀመሪያ ይግቡ ወይም ይመዝገቡ!')) {
       return;
     }
     if (homeGameSelectView) homeGameSelectView.style.display = 'none';
@@ -1118,9 +1172,7 @@ let isCreatingSekaRoom = false;
 if (createSekaRoomBtn) {
   createSekaRoomBtn.addEventListener('click', () => {
     if (isCreatingSekaRoom) return;
-    if (!isUserRegistered || !playerName || !userPhone) {
-      showSortToast('⚠️ ጨዋታ ለመፍጠር እባክዎ መጀመሪያ ይመዝገቡ (Sign Up)!');
-      openRegistrationModal();
+    if (!requireAuth('⚠️ ጨዋታ ለመፍጠር እባክዎ መጀመሪያ ይግቡ ወይም ይመዝገቡ!')) {
       return;
     }
     const sekaNameInput = document.getElementById('sekaPlayerNameInput');
@@ -1142,9 +1194,7 @@ if (createSekaRoomBtn) {
 // Play Seka vs Bot
 if (playSekaBotBtn) {
   playSekaBotBtn.addEventListener('click', () => {
-    if (!isUserRegistered || !playerName || !userPhone) {
-      showSortToast('⚠️ ከቦት ጋር ለመጫወት እባክዎ መጀመሪያ ይመዝገቡ (Sign Up)!');
-      openRegistrationModal();
+    if (!requireAuth('⚠️ ከቦት ጋር ለመጫወት እባክዎ መጀመሪያ ይግቡ ወይም ይመዝገቡ!')) {
       return;
     }
     const sekaNameInput = document.getElementById('sekaPlayerNameInput');
@@ -1201,9 +1251,7 @@ function updateDepositUI() {
 
 function openDepositModal() {
   if (!depositModal) return;
-  if (!isUserRegistered || !playerName || !userPhone) {
-    showSortToast('⚠️ ገንዘብ ለማስገባት እባክዎ መጀመሪያ ይመዝገቡ (Sign Up)!');
-    openRegistrationModal();
+  if (!requireAuth('⚠️ ገንዘብ ለማስገባት እባክዎ መጀመሪያ ይግቡ ወይም ይመዝገቡ!')) {
     return;
   }
   if (depositModalBalanceDisplay && walletBalanceDisplay) {
@@ -1432,9 +1480,7 @@ if (confirmDepositBtn) {
 // Create Room (Conquer)
 if (createRoomBtn) {
   createRoomBtn.addEventListener('click', () => {
-    if (!isUserRegistered || !playerName || !userPhone) {
-      showSortToast('⚠️ ጨዋታ ለመፍጠር እባክዎ መጀመሪያ ይመዝገቡ (Sign Up)!');
-      openRegistrationModal();
+    if (!requireAuth('⚠️ ጨዋታ ለመፍጠር እባክዎ መጀመሪያ ይግቡ ወይም ይመዝገቡ!')) {
       return;
     }
     const stakeAmount = Number(stakeSelect?.value) || 100;
@@ -1445,9 +1491,7 @@ if (createRoomBtn) {
 // Play Against Bot (Conquer)
 if (playBotBtn) {
   playBotBtn.addEventListener('click', () => {
-    if (!isUserRegistered || !playerName || !userPhone) {
-      showSortToast('⚠️ ከቦት ጋር ለመጫወት እባክዎ መጀመሪያ ይመዝገቡ (Sign Up)!');
-      openRegistrationModal();
+    if (!requireAuth('⚠️ ከቦት ጋር ለመጫወት እባክዎ መጀመሪያ ይግቡ ወይም ይመዝገቡ!')) {
       return;
     }
     const stakeAmount = Number(stakeSelect?.value) || 100;
@@ -1550,9 +1594,7 @@ if (!window.sekaRoomsAutoRefresh) {
 }
 
 window.joinRoom = function (roomId) {
-  if (!isUserRegistered || !playerName || !userPhone) {
-    showSortToast('⚠️ ጨዋታውን ለመቀላቀል እባክዎ መጀመሪያ ይመዝገቡ (Sign Up)!');
-    openRegistrationModal();
+  if (!requireAuth('⚠️ ጨዋታውን ለመቀላቀል እባክዎ መጀመሪያ ይግቡ ወይም ይመዝገቡ!')) {
     return;
   }
   socket.emit('join_room', { roomId, userId, name: playerName });
@@ -1560,9 +1602,7 @@ window.joinRoom = function (roomId) {
 };
 
 window.joinSekaRoom = function (roomId) {
-  if (!isUserRegistered || !playerName || !userPhone) {
-    showSortToast('⚠️ ጨዋታውን ለመቀላቀል እባክዎ መጀመሪያ ይመዝገቡ (Sign Up)!');
-    openRegistrationModal();
+  if (!requireAuth('⚠️ ጨዋታውን ለመቀላቀል እባክዎ መጀመሪያ ይግቡ ወይም ይመዝገቡ!')) {
     return;
   }
   const sekaNameInput = document.getElementById('sekaPlayerNameInput');
