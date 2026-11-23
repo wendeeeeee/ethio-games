@@ -217,6 +217,11 @@ class WalletManager {
     return { user, wallet };
   }
 
+  _isBot(userId) {
+    if (!userId || typeof userId !== 'string') return false;
+    return userId.startsWith('bot_') || userId.startsWith('seka_bot');
+  }
+
   _isGenericName(name) {
     if (!name) return true;
     const l = name.trim().toLowerCase();
@@ -226,6 +231,21 @@ class WalletManager {
 
   // Get or create a user wallet (checks Supabase first, then cache)
   async getWalletAsync(userId, name = '', phone = '') {
+    // Never persist bots to the database
+    if (this._isBot(userId)) {
+      if (!this.wallets.has(userId)) {
+        this.wallets.set(userId, {
+          id: userId,
+          name: name || 'Seka Bot (AI)',
+          phone: '',
+          balance: 1000000,
+          locked: 0,
+          transactions: []
+        });
+      }
+      return this.wallets.get(userId);
+    }
+
     // If phone is provided, check if a registered user with this phone exists in Supabase
     if (phone) {
       const norm = this._normPhone(phone);
@@ -340,6 +360,21 @@ class WalletManager {
 
   // Synchronous fallback (uses cache; for compatibility with existing code)
   getWallet(userId, name = '', phone = '') {
+    // Never persist bots to the database
+    if (this._isBot(userId)) {
+      if (!this.wallets.has(userId)) {
+        this.wallets.set(userId, {
+          id: userId,
+          name: name || 'Seka Bot (AI)',
+          phone: '',
+          balance: 1000000,
+          locked: 0,
+          transactions: []
+        });
+      }
+      return this.wallets.get(userId);
+    }
+
     if (!this.wallets.has(userId)) {
       const resolvedName = (name && !this._isGenericName(name)) ? name : '';
       this.wallets.set(userId, {
@@ -361,6 +396,7 @@ class WalletManager {
   }
 
   async _syncUserToDb(userId, name, phone) {
+    if (this._isBot(userId)) return;
     try {
       const { data: existing } = await supabase
         .from('users')
@@ -407,6 +443,7 @@ class WalletManager {
   }
 
   async _saveBalanceToDb(userId) {
+    if (this._isBot(userId)) return;
     const wallet = this.wallets.get(userId);
     if (!wallet) return;
     try {
@@ -521,14 +558,16 @@ class WalletManager {
 
     // Persist balances
     for (const pid of playerIds) {
-      this._saveBalanceToDb(pid);
-      supabase.from('transactions').insert({
-        user_id: pid,
-        type: 'ESCROW_LOCK',
-        amount: -stake,
-        room_id: roomId,
-        description: `Escrow lock ${stake} ETB for game ${roomId}`
-      }).then(() => { }).catch(() => { });
+      if (!this._isBot(pid)) {
+        this._saveBalanceToDb(pid);
+        supabase.from('transactions').insert({
+          user_id: pid,
+          type: 'ESCROW_LOCK',
+          amount: -stake,
+          room_id: roomId,
+          description: `Escrow lock ${stake} ETB for game ${roomId}`
+        }).then(() => { }).catch(() => { });
+      }
     }
 
     return { success: true, pot };
@@ -545,7 +584,9 @@ class WalletManager {
     for (const pid of playerIds) {
       const pWallet = this.getWallet(pid);
       pWallet.locked = Math.max(0, pWallet.locked - escrow.stakeAmount);
-      this._saveBalanceToDb(pid);
+      if (!this._isBot(pid)) {
+        this._saveBalanceToDb(pid);
+      }
     }
 
     // Credit full pot to winner (5% platform fee)
@@ -563,14 +604,16 @@ class WalletManager {
     });
 
     // Persist
-    this._saveBalanceToDb(winnerId);
-    supabase.from('transactions').insert({
-      user_id: winnerId,
-      type: 'GAME_WIN',
-      amount: netWin,
-      room_id: roomId,
-      description: `Won ${netWin} ETB (pot: ${escrow.pot}, rake: ${platformRake})`
-    }).then(() => { }).catch(() => { });
+    if (!this._isBot(winnerId)) {
+      this._saveBalanceToDb(winnerId);
+      supabase.from('transactions').insert({
+        user_id: winnerId,
+        type: 'GAME_WIN',
+        amount: netWin,
+        room_id: roomId,
+        description: `Won ${netWin} ETB (pot: ${escrow.pot}, rake: ${platformRake})`
+      }).then(() => { }).catch(() => { });
+    }
 
     this.escrows.delete(roomId);
     return { winnerWallet, netWin, rake: platformRake };
@@ -585,14 +628,16 @@ class WalletManager {
       const pWallet = this.getWallet(pid);
       pWallet.balance += escrow.stakeAmount;
       pWallet.locked = Math.max(0, pWallet.locked - escrow.stakeAmount);
-      this._saveBalanceToDb(pid);
-      supabase.from('transactions').insert({
-        user_id: pid,
-        type: 'ESCROW_REFUND',
-        amount: escrow.stakeAmount,
-        room_id: roomId,
-        description: `Refund ${escrow.stakeAmount} ETB from game ${roomId}`
-      }).then(() => { }).catch(() => { });
+      if (!this._isBot(pid)) {
+        this._saveBalanceToDb(pid);
+        supabase.from('transactions').insert({
+          user_id: pid,
+          type: 'ESCROW_REFUND',
+          amount: escrow.stakeAmount,
+          room_id: roomId,
+          description: `Refund ${escrow.stakeAmount} ETB from game ${roomId}`
+        }).then(() => { }).catch(() => { });
+      }
     }
 
     this.escrows.delete(roomId);
