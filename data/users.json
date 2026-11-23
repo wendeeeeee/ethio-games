@@ -1,0 +1,11 @@
+[
+  {
+    "id": "user_test_exp_1",
+    "name": "TestPlayer",
+    "phone": "0988776655",
+    "passwordHash": "2c37b0c5064f128e974c54fe830ad41d77dcce4c738b8eed27f3e7afed118048",
+    "balance": 1000,
+    "locked": 0,
+    "createdAt": "2026-11-23T08:34:14.879Z"
+  }
+]
