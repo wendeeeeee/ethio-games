@@ -387,10 +387,11 @@
     <div class="auth-card">
       <div style="font-size: 40px; margin-bottom: 8px;">🔐</div>
       <div class="auth-title">Admin Dashboard</div>
-      <div class="auth-subtitle">የተቀማጭ ገንዘብ (Deposit) ማረጋገጫ ገጽ ለመክፈት ሚስጥር ቃል (Password) ያስገቡ</div>
-      <input type="password" id="pinInput" class="pin-input" placeholder="Password ያስገቡ" maxlength="40" autofocus>
+      <div class="auth-subtitle">የተቀማጭ ገንዘብ (Deposit) ማረጋገጫ ገጽ ለመክፈት Username እና Password ያስገቡ</div>
+      <input type="text" id="adminUserInput" class="pin-input" placeholder="Username" autocomplete="username" style="margin-bottom: 12px; font-size: 15px; letter-spacing: normal;" autofocus>
+      <input type="password" id="pinInput" class="pin-input" placeholder="Password" maxlength="50" autocomplete="current-password">
       <button class="btn-login" id="loginBtn">ግባ (Login)</button>
-      <div id="authErr" class="auth-err">የተሳሳተ Password ነው! እባክዎ እንደገና ይሞክሩ።</div>
+      <div id="authErr" class="auth-err">የተሳሳተ Username ወይም Password ነው! እባክዎ እንደገና ይሞክሩ።</div>
     </div>
   </div>
 
@@ -456,6 +457,7 @@
     const socket = io();
 
     const authOverlay = document.getElementById('authOverlay');
+    const adminUserInput = document.getElementById('adminUserInput');
     const pinInput = document.getElementById('pinInput');
     const loginBtn = document.getElementById('loginBtn');
     const authErr = document.getElementById('authErr');
@@ -482,11 +484,43 @@
       verifyKey(adminKey);
     }
 
-    loginBtn.addEventListener('click', () => {
-      const pin = pinInput.value.trim();
-      if (!pin) return;
-      verifyKey(pin);
+    loginBtn.addEventListener('click', async () => {
+      const username = adminUserInput ? adminUserInput.value.trim() : '';
+      const password = pinInput.value.trim();
+      if (!username || !password) {
+        authErr.textContent = 'እባክዎ Username እና Password ያስገቡ';
+        authErr.style.display = 'block';
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/admin/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+        const data = await res.json();
+        if (data && data.success) {
+          adminKey = data.adminKey;
+          localStorage.setItem('conquer_admin_key', adminKey);
+          localStorage.setItem('conquer_admin_user', username);
+          authOverlay.style.display = 'none';
+          loadDeposits();
+        } else {
+          authErr.textContent = 'የተሳሳተ Username ወይም Password ነው!';
+          authErr.style.display = 'block';
+        }
+      } catch (e) {
+        authErr.textContent = 'የኔትወርክ ስህተት ተከስቷል';
+        authErr.style.display = 'block';
+      }
     });
+
+    if (adminUserInput) {
+      adminUserInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter' && pinInput) pinInput.focus();
+      });
+    }
 
     pinInput.addEventListener('keypress', (e) => {
       if (e.key === 'Enter') loginBtn.click();

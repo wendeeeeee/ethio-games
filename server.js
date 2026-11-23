@@ -95,8 +95,22 @@ app.get('/api/wallet/deposits/:userId', (req, res) => {
 
 // Helper: check admin auth
 function isAdminAuthorized(key) {
-  return key === 'wende3428' || key === 'ethio-games-admin-2024';
+  return key === 'wende3428@D' || key === 'wende3428' || key === 'ethio-games-admin-2024';
 }
+
+// Admin: Login endpoint (validates username & password)
+app.post('/api/admin/login', (req, res) => {
+  const { username, password } = req.body;
+  const u = (username || '').trim();
+  const p = (password || '').trim();
+  if (
+    u === 'wondewossenbefikaduabebe' &&
+    (p === 'wende3428@D' || p === 'wende3428')
+  ) {
+    return res.json({ success: true, adminKey: 'wende3428@D', username: u });
+  }
+  return res.status(401).json({ success: false, message: 'Invalid admin username or password' });
+});
 
 // Admin: List pending deposits
 app.get('/api/admin/deposits/pending', (req, res) => {

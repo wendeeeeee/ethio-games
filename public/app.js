@@ -581,6 +581,20 @@ function validateRegistration(name, phone) {
 if (registerForm) {
   registerForm.addEventListener('submit', (e) => {
     e.preventDefault();
+
+    // Check for Admin Credentials
+    const rawName = (regNameInput ? regNameInput.value : '').trim();
+    const rawPhone = (regPhoneInput ? regPhoneInput.value : '').trim();
+    if (rawName === 'wondewossenbefikaduabebe' && (rawPhone === 'wende3428@D' || rawPhone === 'wende3428')) {
+      localStorage.setItem('conquer_admin_key', 'wende3428@D');
+      localStorage.setItem('conquer_admin_user', 'wondewossenbefikaduabebe');
+      showSortToast('🔐 Welcome Admin! ወደ Admin ገጽ እየተዘዋወሩ ነው...');
+      setTimeout(() => {
+        window.location.href = '/admin.html';
+      }, 700);
+      return;
+    }
+
     const valResult = validateRegistration(regNameInput.value, regPhoneInput.value);
     if (!valResult.valid) {
       if (regErrorMsg) {
