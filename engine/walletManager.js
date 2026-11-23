@@ -163,8 +163,11 @@ class WalletManager {
       throw new Error('በዚህ ስልክ ቁጥር የተመዘገበ አካውንት የለም! እባክዎ ይመዝገቡ (Sign Up)');
     }
 
-    // Verify password
-    if (user.passwordHash && user.passwordHash !== passHash) {
+    // Verify password or set it if first-time login for an existing user
+    if (!user.passwordHash) {
+      user.passwordHash = passHash;
+      this._saveUsersToFile();
+    } else if (user.passwordHash !== passHash) {
       throw new Error('የተሳሳተ የይለፍ ቃል (Incorrect password)! እባክዎ እንደገና ይሞክሩ');
     }
 
