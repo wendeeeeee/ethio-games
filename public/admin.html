@@ -431,13 +431,69 @@
       <button class="tab-btn" data-tab="all" id="tabAllBtn">
         📜 ሁሉም ታሪክ (History)
       </button>
+      <button class="tab-btn" data-tab="sms" id="tabSmsBtn">
+        📱 SMS Gateway <span class="tab-badge" id="smsBadge" style="display:none; background: #3b82f6;">0</span>
+      </button>
     </div>
 
-    <!-- Deposit List -->
+    <!-- Deposit List (Pending & History) -->
     <div class="deposit-list" id="depositList">
       <div class="empty-state">
         <div class="empty-icon">⏳</div>
         <div class="empty-text">ጥያቄዎችን በማምጣት ላይ...</div>
+      </div>
+    </div>
+
+    <!-- SMS Gateway Panel -->
+    <div id="smsGatewayPanel" style="display: none; flex-direction: column; gap: 16px;">
+      <!-- Android Setup Guide Card -->
+      <div style="background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 18px;">
+        <div style="display: flex; align-items: center; gap: 8px; font-size: 16px; font-weight: 800; color: #38bdf8; margin-bottom: 8px;">
+          <span>📱 አንድሮይድ ስልክ (SMS Forwarder) ማገናኛ መመሪያ</span>
+        </div>
+        <p style="font-size: 13px; color: #94a3b8; line-height: 1.5; margin-bottom: 12px;">
+          ስልክዎ ላይ <strong>SMS Forwarder</strong> (ወይም Tasker) አፕሊኬሽን ጭነው ወደ ሰርቨራችን ዌብሁክ (Webhook) ያስተላልፉ።
+        </p>
+        <div style="display: flex; flex-direction: column; gap: 8px; font-size: 13px;">
+          <div style="background: #0f172a; padding: 8px 12px; border-radius: 8px; border: 1px solid #334155;">
+            <span style="color: #64748b;">Webhook URL:</span>
+            <code style="color: #38bdf8; font-weight: bold; margin-left: 6px;" id="webhookUrlDisplay">http://localhost:3000/api/sms/webhook</code>
+          </div>
+          <div style="background: #0f172a; padding: 8px 12px; border-radius: 8px; border: 1px solid #334155;">
+            <span style="color: #64748b;">Secret Key (x-sms-secret):</span>
+            <code style="color: #fbbf24; font-weight: bold; margin-left: 6px;">wende3428_sms_secret</code>
+          </div>
+        </div>
+      </div>
+
+      <!-- Test SMS Simulator Card -->
+      <div style="background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 18px;">
+        <div style="display: flex; align-items: center; gap: 8px; font-size: 16px; font-weight: 800; color: #fbbf24; margin-bottom: 12px;">
+          <span>🧪 የቴሌብር SMS ቴስት መሞከሪያ (Simulator)</span>
+        </div>
+        <p style="font-size: 12px; color: #94a3b8; margin-bottom: 12px;">
+          እውነተኛ ብር ሳያወጡ የቴሌብር ክፍያ እንደደረሰ አስመስለው ሰርቨሩ ላይ ቴስት ማድረግ ይችላሉ፦
+        </p>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 12px;">
+          <input type="number" id="simAmtInput" value="100" placeholder="መጠን (ETB)" style="padding: 10px 14px; background: #0f172a; border: 1px solid #334155; border-radius: 8px; color: #fff; width: 120px; font-weight: 700;">
+          <input type="text" id="simTxnInput" placeholder="Transaction ID (ባዶ ካደረጉት በራሱ ይፈጥራል)" style="padding: 10px 14px; background: #0f172a; border: 1px solid #334155; border-radius: 8px; color: #fff; flex: 1; min-width: 200px;">
+          <button id="sendSimSmsBtn" style="background: linear-gradient(135deg, #3b82f6, #2563eb); color: #fff; border: none; padding: 10px 18px; border-radius: 8px; font-weight: 800; cursor: pointer;">
+            🚀 ቴስት SMS ላክ (Simulate)
+          </button>
+        </div>
+        <div id="simResultMsg" style="display: none; font-size: 12px; padding: 8px 12px; border-radius: 8px;"></div>
+      </div>
+
+      <!-- Incoming Payments List -->
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <span style="font-weight: 800; font-size: 15px; color: #f8fafc;">📩 የደረሱ የቴሌብር ክፍያዎች (Incoming Payments)</span>
+        <button id="refreshSmsBtn" style="background: #334155; border: none; color: #cbd5e1; padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer;">🔄 Refresh</button>
+      </div>
+      <div class="deposit-list" id="smsPaymentsList">
+        <div class="empty-state">
+          <div class="empty-icon">📱</div>
+          <div class="empty-text">እስካሁን የገባ SMS የለም</div>
+        </div>
       </div>
     </div>
   </div>
@@ -466,11 +522,25 @@
     const logoutBtn = document.getElementById('logoutBtn');
     const tabPendingBtn = document.getElementById('tabPendingBtn');
     const tabAllBtn = document.getElementById('tabAllBtn');
+    const tabSmsBtn = document.getElementById('tabSmsBtn');
     const pendingBadge = document.getElementById('pendingBadge');
+    const smsBadge = document.getElementById('smsBadge');
+    const smsGatewayPanel = document.getElementById('smsGatewayPanel');
+    const smsPaymentsList = document.getElementById('smsPaymentsList');
+    const webhookUrlDisplay = document.getElementById('webhookUrlDisplay');
+    const simAmtInput = document.getElementById('simAmtInput');
+    const simTxnInput = document.getElementById('simTxnInput');
+    const sendSimSmsBtn = document.getElementById('sendSimSmsBtn');
+    const simResultMsg = document.getElementById('simResultMsg');
+    const refreshSmsBtn = document.getElementById('refreshSmsBtn');
     const statPendingCount = document.getElementById('statPendingCount');
     const statApprovedSum = document.getElementById('statApprovedSum');
     const statTotalCount = document.getElementById('statTotalCount');
     const toast = document.getElementById('toast');
+
+    if (webhookUrlDisplay) {
+      webhookUrlDisplay.textContent = `${window.location.origin}/api/sms/webhook`;
+    }
 
     function showToast(msg) {
       if (!toast) return;
@@ -554,6 +624,9 @@
       currentTab = 'pending';
       tabPendingBtn.classList.add('active');
       tabAllBtn.classList.remove('active');
+      if (tabSmsBtn) tabSmsBtn.classList.remove('active');
+      depositList.style.display = 'flex';
+      if (smsGatewayPanel) smsGatewayPanel.style.display = 'none';
       renderDeposits();
     });
 
@@ -561,8 +634,139 @@
       currentTab = 'all';
       tabAllBtn.classList.add('active');
       tabPendingBtn.classList.remove('active');
+      if (tabSmsBtn) tabSmsBtn.classList.remove('active');
+      depositList.style.display = 'flex';
+      if (smsGatewayPanel) smsGatewayPanel.style.display = 'none';
       renderDeposits();
     });
+
+    if (tabSmsBtn) {
+      tabSmsBtn.addEventListener('click', () => {
+        currentTab = 'sms';
+        tabSmsBtn.classList.add('active');
+        tabPendingBtn.classList.remove('active');
+        tabAllBtn.classList.remove('active');
+        depositList.style.display = 'none';
+        if (smsGatewayPanel) smsGatewayPanel.style.display = 'flex';
+        loadSmsPayments();
+      });
+    }
+
+    if (refreshSmsBtn) {
+      refreshSmsBtn.addEventListener('click', () => {
+        loadSmsPayments();
+      });
+    }
+
+    // Simulate SMS Test
+    if (sendSimSmsBtn) {
+      sendSimSmsBtn.addEventListener('click', async () => {
+        const amt = Number(simAmtInput.value) || 100;
+        const txn = (simTxnInput.value || '').trim();
+        sendSimSmsBtn.disabled = true;
+        sendSimSmsBtn.textContent = '⏳ በመላክ ላይ...';
+
+        try {
+          const res = await fetch('/api/admin/sms/simulate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ adminKey, amount: amt, transactionId: txn })
+          });
+          const data = await res.json();
+          if (data && data.success) {
+            showToast(`🎉 ቴስት SMS ተልኳል! (${amt} ETB)`);
+            if (simResultMsg) {
+              simResultMsg.style.display = 'block';
+              simResultMsg.style.background = '#064e3b';
+              simResultMsg.style.color = '#34d399';
+              simResultMsg.textContent = `✅ የደረሰ SMS፦ "${data.simText}"`;
+            }
+            if (simTxnInput) simTxnInput.value = '';
+            loadSmsPayments();
+            loadDeposits();
+          } else {
+            alert('Error simulating SMS');
+          }
+        } catch (e) {
+          alert('Network error');
+        } finally {
+          sendSimSmsBtn.disabled = false;
+          sendSimSmsBtn.textContent = '🚀 ቴስት SMS ላክ (Simulate)';
+        }
+      });
+    }
+
+    async function loadSmsPayments() {
+      if (!adminKey) return;
+      try {
+        const res = await fetch(`/api/admin/sms/payments?adminKey=${encodeURIComponent(adminKey)}`);
+        const data = await res.json();
+        if (data && data.payments) {
+          renderSmsPayments(data.payments, data.stats);
+        }
+      } catch (e) {
+        console.error('Failed to load SMS payments', e);
+      }
+    }
+
+    function renderSmsPayments(payments, stats) {
+      if (stats && smsBadge) {
+        if (stats.unclaimedCount > 0) {
+          smsBadge.textContent = stats.unclaimedCount;
+          smsBadge.style.display = 'inline-block';
+        } else {
+          smsBadge.style.display = 'none';
+        }
+      }
+
+      if (!smsPaymentsList) return;
+      if (payments.length === 0) {
+        smsPaymentsList.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-icon">📱</div>
+            <div class="empty-text">እስካሁን ምንም የገባ SMS የለም</div>
+          </div>
+        `;
+        return;
+      }
+
+      smsPaymentsList.innerHTML = payments.map(p => {
+        const isClaimed = p.status === 'CLAIMED';
+        const date = new Date(p.receivedAt).toLocaleString('am-ET', {
+          month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+        });
+
+        return `
+          <div class="deposit-card ${isClaimed ? 'approved' : 'pending'}" style="border-left: 5px solid ${isClaimed ? '#10b981' : '#f59e0b'};">
+            <div class="card-top">
+              <div class="card-user-info">
+                <div class="user-name">📱 ${p.method.toUpperCase()} ${isClaimed ? '✅ CLAIMED (ተወስዷል)' : '⏳ UNCLAIMED (ጥያቄ ይጠብቃል)'}</div>
+                <div class="user-phone">📞 ላኪ፦ ${escapeHtml(p.senderPhone || p.senderName || '127')}</div>
+              </div>
+              <div class="amount-badge">
+                ${Number(p.amount).toLocaleString()} ETB
+              </div>
+            </div>
+
+            <div class="card-txn-row">
+              <span class="txn-text">${escapeHtml(p.transactionId)}</span>
+              <button class="btn-copy" onclick="copyTxn('${p.id}', '${escapeHtml(p.transactionId)}')">📋 Copy TXN</button>
+            </div>
+
+            ${p.rawText ? `
+              <div style="font-size: 11px; color: #94a3b8; background: #0f172a; padding: 6px 10px; border-radius: 6px; font-family: monospace;">
+                ${escapeHtml(p.rawText)}
+              </div>
+            ` : ''}
+
+            <div class="card-meta">
+              <span>📅 የደረሰበት ሰዓት፦ ${date}</span>
+              ${isClaimed ? `<span style="color: #10b981;">👤 User: ${escapeHtml(p.claimedBy || '')}</span>` : '<span style="color: #f59e0b;">⏳ ተጫዋች ሲጠይቅ ወዲያውኑ ይገባል</span>'}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
 
     refreshBtn.addEventListener('click', () => {
       loadDeposits();
@@ -727,8 +931,19 @@
       loadDeposits();
     });
 
+    socket.on('new_sms_payment', (payment) => {
+      showToast(`📱 አዲስ የቴሌብር SMS ደርሷል፦ ${payment.amount} ETB (TXN: ${payment.transactionId})`);
+      if (currentTab === 'sms') {
+        loadSmsPayments();
+      }
+      loadDeposits();
+    });
+
     socket.on('deposit_status_changed', () => {
       loadDeposits();
+      if (currentTab === 'sms') {
+        loadSmsPayments();
+      }
     });
 
     // Auto-poll every 10 seconds just in case

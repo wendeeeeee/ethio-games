@@ -10,6 +10,7 @@ const GameRoom = require('./engine/gameRoom');
 const { SekaGameRoom, SekaBotPlayer } = require('./engine/sekaGameRoom');
 const walletManager = require('./engine/walletManager');
 const depositManager = require('./engine/depositManager');
+const smsGatewayManager = require('./engine/smsGatewayManager');
 const { supabase, SUPABASE_URL, SUPABASE_ANON_KEY } = require('./engine/supabaseClient');
 
 const app = express();
@@ -59,6 +60,42 @@ app.post('/api/wallet/deposit', async (req, res) => {
     const userName = (userWallet && userWallet.name) ? userWallet.name : '';
     const userPhone = (userWallet && userWallet.phone) ? userWallet.phone : '';
 
+    // 1. Check if this payment was ALREADY received via SMS Gateway!
+    const unclaimedPayment = smsGatewayManager.findUnclaimedPayment(txnTrimmed);
+    if (unclaimedPayment && unclaimedPayment.amount >= num) {
+      // Claim the payment
+      smsGatewayManager.claimPayment(txnTrimmed, userId);
+
+      // Create deposit record directly as APPROVED
+      const deposit = await depositManager.createDeposit({
+        userId,
+        userName,
+        userPhone,
+        amount: num,
+        method: unclaimedPayment.method || methodName,
+        transactionId: txnTrimmed
+      });
+      await depositManager.approveDeposit(deposit.id, 'Auto-approved via SMS Gateway matching');
+
+      // Credit user's wallet
+      const wallet = walletManager.deposit(userId, num);
+
+      // Broadcast socket events for instant update
+      io.emit(`wallet_${userId}`, wallet);
+      io.emit(`deposit_approved_${userId}`, { amount: num, transactionId: txnTrimmed });
+      io.emit('deposit_status_changed', { id: deposit.id, status: 'APPROVED' });
+
+      return res.json({
+        success: true,
+        status: 'APPROVED',
+        instant: true,
+        wallet,
+        deposit,
+        message: `🎉 ${num.toLocaleString()} ETB በቴሌብር SMS ተረጋግጦ ወዲያውኑ ገቢ ተደርጓል!`
+      });
+    }
+
+    // 2. Otherwise create PENDING deposit (waiting for SMS or manual admin review)
     const deposit = await depositManager.createDeposit({
       userId,
       userName,
@@ -81,6 +118,122 @@ app.post('/api/wallet/deposit', async (req, res) => {
     console.error('[Deposit] Error:', err.message);
     res.status(400).json({ success: false, message: err.message || 'ስህተት ተከስቷል፤ እባክዎ እንደገና ይሞክሩ' });
   }
+});
+
+// SMS Gateway Webhook: receives SMS notifications from Android phone
+app.post('/api/sms/webhook', async (req, res) => {
+  const secret = req.headers['x-sms-secret'] || req.query.secret || (req.body ? req.body.secret : '');
+  if (secret !== 'wende3428_sms_secret' && !isAdminAuthorized(secret)) {
+    return res.status(403).json({ success: false, message: 'Invalid SMS webhook secret' });
+  }
+
+  const text = req.body.text || req.body.message || req.body.body || req.body.content || '';
+  const sender = req.body.sender || req.body.from || req.body.phone || '';
+  const transactionId = req.body.transactionId || req.body.txnId || '';
+  const amount = req.body.amount || 0;
+
+  try {
+    const result = smsGatewayManager.processIncomingSms({
+      text,
+      sender,
+      transactionId,
+      amount,
+      senderPhone: req.body.senderPhone || '',
+      senderName: req.body.senderName || '',
+      method: req.body.method || 'telebirr'
+    });
+
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+
+    const payment = result.payment;
+
+    // Auto-Match: Check if a user is already waiting for this Transaction ID!
+    const pendingDeposit = depositManager.findPendingByTxn(payment.transactionId);
+    let autoMatched = false;
+
+    if (pendingDeposit && payment.status === 'UNCLAIMED' && payment.amount >= pendingDeposit.amount) {
+      autoMatched = true;
+      await depositManager.approveDeposit(pendingDeposit.id, 'Auto-approved via SMS Gateway Webhook');
+      smsGatewayManager.claimPayment(payment.transactionId, pendingDeposit.userId);
+      const wallet = walletManager.deposit(pendingDeposit.userId, pendingDeposit.amount);
+
+      io.emit(`wallet_${pendingDeposit.userId}`, wallet);
+      io.emit(`deposit_approved_${pendingDeposit.userId}`, {
+        amount: pendingDeposit.amount,
+        transactionId: payment.transactionId
+      });
+      io.emit('deposit_status_changed', { id: pendingDeposit.id, status: 'APPROVED' });
+    }
+
+    // Broadcast new payment notification to admin dashboard
+    io.emit('new_sms_payment', payment);
+
+    res.json({
+      success: true,
+      isNew: result.isNew,
+      payment,
+      autoMatched
+    });
+  } catch (err) {
+    console.error('[SMS Webhook Error]:', err.message);
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// Admin: Get all SMS Gateway payments & stats
+app.get('/api/admin/sms/payments', (req, res) => {
+  const adminKey = req.query.adminKey || req.headers['x-admin-key'];
+  if (!isAdminAuthorized(adminKey)) {
+    return res.status(403).json({ success: false, message: 'Unauthorized' });
+  }
+  const payments = smsGatewayManager.getAllPayments(100);
+  const stats = smsGatewayManager.getStats();
+  res.json({ success: true, payments, stats });
+});
+
+// Admin: Simulate an incoming SMS (for easy testing without real money)
+app.post('/api/admin/sms/simulate', async (req, res) => {
+  const { adminKey, amount, transactionId, senderPhone, senderName } = req.body;
+  if (!isAdminAuthorized(adminKey)) {
+    return res.status(403).json({ success: false, message: 'Unauthorized' });
+  }
+
+  const amt = Number(amount) || 100;
+  const txn = transactionId || ('FT_SIM_' + Date.now().toString().slice(-6));
+  const simPhone = senderPhone || '0911223344';
+  const simName = senderName || 'Abebe Kebede';
+
+  const simText = `You have received ${amt.toFixed(2)} ETB from ${simName} (${simPhone}). Transaction number is: ${txn}. Current balance is 5,000.00 ETB.`;
+
+  const result = smsGatewayManager.processIncomingSms({
+    text: simText,
+    sender: '127',
+    transactionId: txn,
+    amount: amt,
+    senderPhone: simPhone,
+    senderName: simName,
+    method: 'telebirr'
+  });
+
+  // Check auto-match
+  const pendingDeposit = depositManager.findPendingByTxn(txn);
+  if (pendingDeposit && result.payment && result.payment.status === 'UNCLAIMED') {
+    await depositManager.approveDeposit(pendingDeposit.id, 'Auto-approved via SMS Gateway Simulator');
+    smsGatewayManager.claimPayment(txn, pendingDeposit.userId);
+    const wallet = walletManager.deposit(pendingDeposit.userId, pendingDeposit.amount);
+
+    io.emit(`wallet_${pendingDeposit.userId}`, wallet);
+    io.emit(`deposit_approved_${pendingDeposit.userId}`, {
+      amount: pendingDeposit.amount,
+      transactionId: txn
+    });
+    io.emit('deposit_status_changed', { id: pendingDeposit.id, status: 'APPROVED' });
+  }
+
+  io.emit('new_sms_payment', result.payment);
+  res.json({ success: true, payment: result.payment, simText });
 });
 
 // Get user's deposit history

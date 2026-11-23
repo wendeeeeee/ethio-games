@@ -137,6 +137,12 @@ class DepositManager {
     return this.deposits.find(d => String(d.id) === String(id));
   }
 
+  findPendingByTxn(transactionId) {
+    if (!transactionId) return null;
+    const clean = transactionId.trim().toLowerCase();
+    return this.deposits.find(d => d.transactionId && d.transactionId.trim().toLowerCase() === clean && d.status === 'PENDING') || null;
+  }
+
   async approveDeposit(id, adminNote = '') {
     const deposit = this.getDepositById(id);
     if (!deposit) throw new Error('Deposit not found');
