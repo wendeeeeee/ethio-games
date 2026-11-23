@@ -585,6 +585,7 @@ class GameRoom {
       turnState: this.turnState,
       myHand: myHand,
       opponentHandCount: opponentHandCount,
+      opponentHand: (this.status === 'FINISHED' && opponent) ? (isCreator ? this.joinerHand : this.creatorHand) : undefined,
       opponent: opponent ? { id: opponent.id, name: opponent.name } : null,
       tableMelds: this.tableMelds,
       points: pointsInfo.total,
