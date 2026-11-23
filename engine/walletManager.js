@@ -26,7 +26,7 @@ class WalletManager {
       if (userByPhone) {
         const wallet = {
           id: userByPhone.id,
-          name: (name && name !== 'Player') ? name : userByPhone.name,
+          name: (name && name.toLowerCase() !== 'player') ? name : userByPhone.name,
           phone: userByPhone.phone,
           balance: userByPhone.balance,
           locked: userByPhone.locked,
@@ -36,7 +36,7 @@ class WalletManager {
         if (userId && userId !== wallet.id) {
           this.wallets.set(userId, wallet);
         }
-        if (name && name !== 'Player' && name !== userByPhone.name) {
+        if (name && name.toLowerCase() !== 'player' && name !== userByPhone.name) {
           await supabase.from('users').update({ name, updated_at: new Date().toISOString() }).eq('id', wallet.id);
         }
         return wallet;
@@ -46,7 +46,7 @@ class WalletManager {
     // Check in-memory cache first
     if (this.wallets.has(userId)) {
       const cached = this.wallets.get(userId);
-      if (name && name !== 'Player') cached.name = name;
+      if (name && name.toLowerCase() !== 'player') cached.name = name;
       if (phone) cached.phone = phone;
       return cached;
     }
@@ -61,7 +61,7 @@ class WalletManager {
     if (existing) {
       const wallet = {
         id: existing.id,
-        name: (name && name !== 'Player') ? name : existing.name,
+        name: (name && name.toLowerCase() !== 'player') ? name : existing.name,
         phone: phone || existing.phone,
         balance: existing.balance,
         locked: existing.locked,
@@ -70,7 +70,7 @@ class WalletManager {
       this.wallets.set(userId, wallet);
 
       // Update name/phone if changed
-      if ((name && name !== 'Player' && name !== existing.name) || (phone && phone !== existing.phone)) {
+      if ((name && name.toLowerCase() !== 'player' && name !== existing.name) || (phone && phone !== existing.phone)) {
         await supabase.from('users').update({
           name: wallet.name,
           phone: wallet.phone,
@@ -82,9 +82,10 @@ class WalletManager {
     }
 
     // Create new user in Supabase
+    const resolvedName = (name && name.toLowerCase() !== 'player') ? name : (phone ? `User_${phone.slice(-4)}` : 'ተጫዋች');
     const newWallet = {
       id: userId,
-      name: name || 'Player',
+      name: resolvedName,
       phone: phone || '',
       balance: 1000,
       locked: 0,
@@ -112,21 +113,22 @@ class WalletManager {
   }
 
   // Synchronous fallback (uses cache; for compatibility with existing code)
-  getWallet(userId, name = 'Player', phone = '') {
+  getWallet(userId, name = '', phone = '') {
     if (!this.wallets.has(userId)) {
+      const resolvedName = (name && name.toLowerCase() !== 'player') ? name : (phone ? `User_${phone.slice(-4)}` : 'ተጫዋች');
       this.wallets.set(userId, {
         id: userId,
-        name,
+        name: resolvedName,
         phone: phone || '',
         balance: 1000,
         locked: 0,
         transactions: []
       });
       // Fire-and-forget: sync to Supabase
-      this._syncUserToDb(userId, name, phone);
+      this._syncUserToDb(userId, resolvedName, phone);
     } else {
       const wallet = this.wallets.get(userId);
-      if (name && name !== 'Player') wallet.name = name;
+      if (name && name.toLowerCase() !== 'player') wallet.name = name;
       if (phone) wallet.phone = phone;
     }
     return this.wallets.get(userId);

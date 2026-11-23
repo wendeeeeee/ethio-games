@@ -7,9 +7,16 @@ if (!userId) {
   localStorage.setItem('conquer_user_id', userId);
 }
 
-let playerName = localStorage.getItem('conquer_user_name') || 'Player ' + userId.slice(-4);
+let storedName = localStorage.getItem('conquer_user_name');
+let playerName = (storedName && storedName.toLowerCase() !== 'player' && !storedName.toLowerCase().startsWith('player ')) ? storedName : '';
 let userPhone = localStorage.getItem('conquer_user_phone') || '';
-let isUserRegistered = localStorage.getItem('conquer_user_registered') === 'true';
+let isUserRegistered = localStorage.getItem('conquer_user_registered') === 'true' && Boolean(playerName) && Boolean(userPhone);
+if (!isUserRegistered) {
+  localStorage.removeItem('conquer_user_registered');
+  if (storedName && (storedName.toLowerCase() === 'player' || storedName.toLowerCase().startsWith('player '))) {
+    localStorage.removeItem('conquer_user_name');
+  }
+}
 let socket = io();
 let currentRoomId = null;
 let currentGameState = null;
@@ -435,13 +442,15 @@ function applyWalletUpdate(wallet) {
   if (walletBalanceDisplay && wallet.balance !== undefined) {
     walletBalanceDisplay.textContent = `${wallet.balance.toLocaleString()} ETB`;
   }
-  if (wallet.name && wallet.name !== 'Player' && (!playerName || playerName === 'Player' || playerName.startsWith('Player '))) {
+  if (wallet.name && wallet.name.toLowerCase() !== 'player' && !wallet.name.toLowerCase().startsWith('player ') && (!playerName || playerName.toLowerCase().startsWith('player'))) {
     playerName = wallet.name;
     localStorage.setItem('conquer_user_name', playerName);
   }
   if (wallet.phone) {
     userPhone = wallet.phone;
     localStorage.setItem('conquer_user_phone', userPhone);
+  }
+  if (playerName && userPhone) {
     isUserRegistered = true;
     localStorage.setItem('conquer_user_registered', 'true');
   }
@@ -470,15 +479,15 @@ if (headerLogoutBtn) {
 
     userId = 'user_' + Math.floor(1000 + Math.random() * 9000);
     localStorage.setItem('conquer_user_id', userId);
-    playerName = 'Player';
+    playerName = '';
     userPhone = '';
     isUserRegistered = false;
 
     if (regNameInput) regNameInput.value = '';
     if (regPhoneInput) regPhoneInput.value = '';
     const sNameInp = document.getElementById('sekaPlayerNameInput');
-    if (sNameInp) sNameInp.value = 'Player';
-    if (walletUserDisplay) walletUserDisplay.textContent = 'Player';
+    if (sNameInp) sNameInp.value = '';
+    if (walletUserDisplay) walletUserDisplay.textContent = '';
     if (walletBalanceDisplay) walletBalanceDisplay.textContent = '0 ETB';
 
     updateAuthUI();
@@ -501,7 +510,7 @@ const submitRegBtn = document.getElementById('submitRegBtn');
 
 function openRegistrationModal() {
   if (!registerModal) return;
-  regNameInput.value = (playerName && !playerName.startsWith('Player user_')) ? playerName : '';
+  regNameInput.value = (playerName && playerName.toLowerCase() !== 'player' && !playerName.toLowerCase().startsWith('player ')) ? playerName : '';
   regPhoneInput.value = userPhone || '';
   if (regErrorMsg) {
     regErrorMsg.style.display = 'none';
@@ -521,11 +530,6 @@ function closeRegistrationModal() {
   if (!registerModal) return;
   registerModal.style.display = 'none';
 }
-
-// Profile badge is read-only (not clickable to edit)
-// if (openProfileBtn) {
-//   openProfileBtn.addEventListener('click', openRegistrationModal);
-// }
 
 if (closeRegModalBtn) {
   closeRegModalBtn.addEventListener('click', closeRegistrationModal);
@@ -552,15 +556,23 @@ function normalizeEthPhone(phoneStr) {
 
 function validateRegistration(name, phone) {
   if (!name || name.trim().length < 2) {
-    return { valid: false, message: 'እባክዎ ትክክለኛ ስም ያስገቡ (ቢያንስ 2 ፊደል) / Please enter a valid name' };
+    return { valid: false, message: 'እባክዎ ስምዎን ያስገቡ (ቢያንስ 2 ፊደል) / Please enter your name' };
+  }
+  const cleanName = name.trim();
+  const lowerName = cleanName.toLowerCase();
+  if (lowerName === 'player' || lowerName.startsWith('player ') || lowerName === 'player1' || lowerName === 'player 1') {
+    return { valid: false, message: 'እባክዎ ትክክለኛ የራስዎን ስም ያስገቡ (Player መጠቀም አይቻልም)' };
+  }
+  if (!phone || phone.trim().length === 0) {
+    return { valid: false, message: 'እባክዎ ስልክ ቁጥርዎን ያስገቡ / Phone number is required' };
   }
   const cleanPhone = normalizeEthPhone(phone);
   // Ethiopian mobile numbers: 09XXXXXXXX or 07XXXXXXXX (10 digits)
   const ethRegex = /^0(9|7)\d{8}$/;
   if (!ethRegex.test(cleanPhone)) {
-    return { valid: false, message: 'እባክዎ ትክክለኛ የኢትዮጵያ ስልክ ቁጥር ያስገቡ (उदा. 0912345678 ወይም 0712345678)' };
+    return { valid: false, message: 'እባክዎ ትክክለኛ የኢትዮጵያ ስልክ ቁጥር ያስገቡ (ምሳሌ፡ 0912345678 ወይም 0712345678)' };
   }
-  return { valid: true, cleanName: name.trim(), cleanPhone };
+  return { valid: true, cleanName, cleanPhone };
 }
 
 if (registerForm) {
@@ -609,30 +621,36 @@ if (registerForm) {
   });
 }
 
-// Auto-prompt registration — DISABLED (user opens profile manually via header)
-// if (!isUserRegistered) {
-//   setTimeout(openRegistrationModal, 600);
-// }
+// Auto-prompt registration if not registered
+if (!isUserRegistered || !playerName || !userPhone) {
+  setTimeout(openRegistrationModal, 500);
+}
 
 if (playerNameInput) {
   playerNameInput.addEventListener('change', () => {
-    playerName = playerNameInput.value || 'Player';
-    localStorage.setItem('conquer_user_name', playerName);
-    if (walletUserDisplay) walletUserDisplay.textContent = playerName;
-    const sNameInp = document.getElementById('sekaPlayerNameInput');
-    if (sNameInp) sNameInp.value = playerName;
-    socket.emit('register_user', { userId, name: playerName, phone: userPhone });
+    const val = playerNameInput.value.trim();
+    if (val && val.toLowerCase() !== 'player' && !val.toLowerCase().startsWith('player ')) {
+      playerName = val;
+      localStorage.setItem('conquer_user_name', playerName);
+      if (walletUserDisplay) walletUserDisplay.textContent = playerName;
+      const sNameInp = document.getElementById('sekaPlayerNameInput');
+      if (sNameInp) sNameInp.value = playerName;
+      if (userPhone) socket.emit('register_user', { userId, name: playerName, phone: userPhone });
+    }
   });
 }
 
 const initialSekaInput = document.getElementById('sekaPlayerNameInput');
 if (initialSekaInput) {
   initialSekaInput.addEventListener('change', () => {
-    playerName = initialSekaInput.value || 'Player';
-    localStorage.setItem('conquer_user_name', playerName);
-    if (walletUserDisplay) walletUserDisplay.textContent = playerName;
-    if (playerNameInput) playerNameInput.value = playerName;
-    socket.emit('register_user', { userId, name: playerName, phone: userPhone });
+    const val = initialSekaInput.value.trim();
+    if (val && val.toLowerCase() !== 'player' && !val.toLowerCase().startsWith('player ')) {
+      playerName = val;
+      localStorage.setItem('conquer_user_name', playerName);
+      if (walletUserDisplay) walletUserDisplay.textContent = playerName;
+      if (playerNameInput) playerNameInput.value = playerName;
+      if (userPhone) socket.emit('register_user', { userId, name: playerName, phone: userPhone });
+    }
   });
 }
 
@@ -820,6 +838,11 @@ const closeConquerModalBtn = document.getElementById('closeConquerModalBtn');
 if (homeSekaBtn) {
   homeSekaBtn.addEventListener('click', () => {
     playCardSound();
+    if (!isUserRegistered || !playerName || !userPhone) {
+      showSortToast('⚠️ ሴካ ለመጫወት እባክዎ መጀመሪያ ስም እና ስልክ ቁጥር ያስገቡ!');
+      openRegistrationModal();
+      return;
+    }
     if (homeGameSelectView) homeGameSelectView.style.display = 'none';
     if (sekaLobbySection) sekaLobbySection.style.display = 'block';
     refreshSekaRoomsList();
@@ -846,6 +869,11 @@ if (closeConquerModalBtn && conquerComingSoonModal) {
 if (goToSekaFromModalBtn && conquerComingSoonModal) {
   goToSekaFromModalBtn.addEventListener('click', () => {
     conquerComingSoonModal.style.display = 'none';
+    if (!isUserRegistered || !playerName || !userPhone) {
+      showSortToast('⚠️ ሴካ ለመጫወት እባክዎ መጀመሪያ ስም እና ስልክ ቁጥር ያስገቡ!');
+      openRegistrationModal();
+      return;
+    }
     if (homeGameSelectView) homeGameSelectView.style.display = 'none';
     if (sekaLobbySection) sekaLobbySection.style.display = 'block';
     refreshSekaRoomsList();
@@ -863,7 +891,7 @@ if (backToHomeBtn) {
 // Create Seka Room
 if (createSekaRoomBtn) {
   createSekaRoomBtn.addEventListener('click', () => {
-    if (!isUserRegistered) {
+    if (!isUserRegistered || !playerName || !userPhone) {
       showSortToast('⚠️ ጨዋታ ለመፍጠር እባክዎ መጀመሪያ ይመዝገቡ (Sign Up)!');
       openRegistrationModal();
       return;
@@ -871,7 +899,10 @@ if (createSekaRoomBtn) {
     const sekaNameInput = document.getElementById('sekaPlayerNameInput');
     const sekaStakeSelect = document.getElementById('sekaStakeSelect');
     const sekaPlayersSelect = document.getElementById('sekaPlayersSelect');
-    const sName = sekaNameInput && sekaNameInput.value ? sekaNameInput.value : playerName;
+    let sName = sekaNameInput && sekaNameInput.value ? sekaNameInput.value.trim() : playerName;
+    if (!sName || sName.toLowerCase() === 'player' || sName.toLowerCase().startsWith('player ')) {
+      sName = playerName;
+    }
     const stakeAmount = sekaStakeSelect ? Number(sekaStakeSelect.value) : 100;
     const maxPlayers = sekaPlayersSelect ? (Number(sekaPlayersSelect.value) === 3 ? 3 : 2) : 2;
     playCardSound();
@@ -882,14 +913,17 @@ if (createSekaRoomBtn) {
 // Play Seka vs Bot
 if (playSekaBotBtn) {
   playSekaBotBtn.addEventListener('click', () => {
-    if (!isUserRegistered) {
+    if (!isUserRegistered || !playerName || !userPhone) {
       showSortToast('⚠️ ከቦት ጋር ለመጫወት እባክዎ መጀመሪያ ይመዝገቡ (Sign Up)!');
       openRegistrationModal();
       return;
     }
     const sekaNameInput = document.getElementById('sekaPlayerNameInput');
     const sekaStakeSelect = document.getElementById('sekaStakeSelect');
-    const sName = sekaNameInput && sekaNameInput.value ? sekaNameInput.value : playerName;
+    let sName = sekaNameInput && sekaNameInput.value ? sekaNameInput.value.trim() : playerName;
+    if (!sName || sName.toLowerCase() === 'player' || sName.toLowerCase().startsWith('player ')) {
+      sName = playerName;
+    }
     const stakeAmount = sekaStakeSelect ? Number(sekaStakeSelect.value) : 100;
     playCardSound();
     socket.emit('play_seka_bot', { userId, name: sName, stakeAmount });
@@ -912,6 +946,11 @@ if (depositBtn) {
 // Create Room (Conquer)
 if (createRoomBtn) {
   createRoomBtn.addEventListener('click', () => {
+    if (!isUserRegistered || !playerName || !userPhone) {
+      showSortToast('⚠️ ጨዋታ ለመፍጠር እባክዎ መጀመሪያ ይመዝገቡ (Sign Up)!');
+      openRegistrationModal();
+      return;
+    }
     const stakeAmount = Number(stakeSelect?.value) || 100;
     socket.emit('create_room', { userId, name: playerName, stakeAmount });
   });
@@ -920,6 +959,11 @@ if (createRoomBtn) {
 // Play Against Bot (Conquer)
 if (playBotBtn) {
   playBotBtn.addEventListener('click', () => {
+    if (!isUserRegistered || !playerName || !userPhone) {
+      showSortToast('⚠️ ከቦት ጋር ለመጫወት እባክዎ መጀመሪያ ይመዝገቡ (Sign Up)!');
+      openRegistrationModal();
+      return;
+    }
     const stakeAmount = Number(stakeSelect?.value) || 100;
     socket.emit('play_vs_bot', { userId, name: playerName, stakeAmount });
     switchToGameView();
@@ -1016,18 +1060,26 @@ if (!window.sekaRoomsAutoRefresh) {
 }
 
 window.joinRoom = function (roomId) {
+  if (!isUserRegistered || !playerName || !userPhone) {
+    showSortToast('⚠️ ጨዋታውን ለመቀላቀል እባክዎ መጀመሪያ ይመዝገቡ (Sign Up)!');
+    openRegistrationModal();
+    return;
+  }
   socket.emit('join_room', { roomId, userId, name: playerName });
   switchToGameView();
 };
 
 window.joinSekaRoom = function (roomId) {
-  if (!isUserRegistered) {
+  if (!isUserRegistered || !playerName || !userPhone) {
     showSortToast('⚠️ ጨዋታውን ለመቀላቀል እባክዎ መጀመሪያ ይመዝገቡ (Sign Up)!');
     openRegistrationModal();
     return;
   }
   const sekaNameInput = document.getElementById('sekaPlayerNameInput');
-  const sName = sekaNameInput && sekaNameInput.value ? sekaNameInput.value : playerName;
+  let sName = sekaNameInput && sekaNameInput.value ? sekaNameInput.value.trim() : playerName;
+  if (!sName || sName.toLowerCase() === 'player' || sName.toLowerCase().startsWith('player ')) {
+    sName = playerName;
+  }
   currentRoomId = roomId;
   playCardSound();
   socket.emit('join_seka_room', { roomId, userId, name: sName });

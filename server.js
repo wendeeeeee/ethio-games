@@ -52,7 +52,13 @@ app.get('/favicon.ico', (req, res) => res.status(204).end());
 app.post('/api/user/register', async (req, res) => {
   const { userId, name, phone } = req.body;
   if (!userId) return res.status(400).json({ success: false, message: 'userId is required' });
-  const wallet = await walletManager.updateProfileAsync(userId, { name, phone });
+  if (!name || name.trim().length < 2 || name.trim().toLowerCase() === 'player' || name.trim().toLowerCase().startsWith('player ')) {
+    return res.status(400).json({ success: false, message: 'እባክዎ ትክክለኛ ስም ያስገቡ (Player መጠቀም አይቻልም)' });
+  }
+  if (!phone || phone.trim().length < 9) {
+    return res.status(400).json({ success: false, message: 'እባክዎ ትክክለኛ ስልክ ቁጥር ያስገቡ' });
+  }
+  const wallet = await walletManager.updateProfileAsync(userId, { name: name.trim(), phone: phone.trim() });
   res.json({ success: true, wallet });
 });
 
