@@ -291,36 +291,8 @@ class SekaGameRoom {
 
     const cardToDiscard = hand[cardIndex];
 
-    // Check if player claims or forms a winning hand
-    const remainingHand = hand.filter((_, idx) => idx !== cardIndex);
-    const winCheck = validateSekaWinningHand(hand, cardToDiscard);
-
-    if (winCheck.valid) {
-      // Confirmed Win!
-      hand.splice(cardIndex, 1);
-      this.discardPile.push(cardToDiscard);
-
-      this.status = 'FINISHED';
-      this.winner = this.players.find(p => p.id === playerId) || this.creator;
-      this.winReason = 'SEKA_WIN';
-      this.winningMelds = winCheck.melds;
-      this.winningDiscard = cardToDiscard;
-      this.clearAllTimers();
-
-      walletManager.payoutWinner(this.roomId, this.winner.id);
-
-      this.log(`🏆 እንኳን ደስ አለህ! ${this.winner.name} በ 2 ትሪስ + 1 ኳትሪስ ሴካ ጨርሶ አሸነፈ! ፖት: ${this.pot} ETB ወሰደ!`);
-
-      return {
-        success: true,
-        isWin: true,
-        winner: this.winner,
-        winningMelds: winCheck.melds,
-        discardedCard: cardToDiscard
-      };
-    }
-
     // Normal Discard (passes turn to next player in circular order)
+    // In Seka, winning is never automatic on discard; a player must explicitly click "ሴካ አሸንፍ" (claimWin)!
     hand.splice(cardIndex, 1);
     this.discardPile.push(cardToDiscard);
 
@@ -359,13 +331,18 @@ class SekaGameRoom {
 
     if (discardCardId) {
       discardCard = hand.find(c => String(c.id) === String(discardCardId));
-      if (!discardCard) {
-        return { success: false, message: 'የተመረጠው ተጣይ ካርታ እጅህ ላይ የለም!' };
+    }
+
+    // Check with specified discard card, or fallback to auto-detecting any valid discard card
+    let winCheck = discardCard ? validateSekaWinningHand(hand, discardCard) : null;
+    if (!winCheck || !winCheck.valid) {
+      const fallbackCheck = validateSekaWinningHand(hand, null);
+      if (fallbackCheck.valid) {
+        winCheck = fallbackCheck;
       }
     }
 
-    const winCheck = validateSekaWinningHand(hand, discardCard);
-    if (!winCheck.valid) {
+    if (!winCheck || !winCheck.valid) {
       return {
         success: false,
         message: 'ካርታዎችህ 2 ትሪስ እና 1 ኳትሪስ አላሟሉም!'

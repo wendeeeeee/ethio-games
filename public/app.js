@@ -949,7 +949,7 @@ socket.on(`deposit_rejected_${userId}`, (data) => {
 });
 
 socket.on('error_msg', (msg) => {
-  alert(`⚠️ ${msg}`);
+  showSortToast(`⚠️ ${msg}`);
 });
 
 socket.on('room_expired', ({ roomId, message }) => {
@@ -2058,8 +2058,14 @@ const sekaWinBtn = document.getElementById('sekaWinBtn');
 if (sekaWinBtn) {
   sekaWinBtn.addEventListener('click', () => {
     if (!currentGameState || currentGameState.gameType !== 'SEKA') return;
-    if (currentGameState.currentTurnPlayerId !== userId) return alert('የአንተ ተራ አይደለም!');
-    if (currentGameState.turnState !== 'AWAITING_DISCARD') return alert('ለማሸነፍ መጀመሪያ 1 ካርታ አንሳ!');
+    if (currentGameState.currentTurnPlayerId !== userId) {
+      showSortToast('⚠️ የአንተ ተራ አይደለም!');
+      return;
+    }
+    if (currentGameState.turnState !== 'AWAITING_DISCARD') {
+      showSortToast('⚠️ ለማሸነፍ መጀመሪያ 1 ካርታ አንሳ!');
+      return;
+    }
 
     const discardCard = selectedCardId || (selectedCardsSet.size === 1 ? Array.from(selectedCardsSet)[0] : null);
     playCardSound();
@@ -2606,11 +2612,8 @@ function syncHandPreservingOrder(newHand) {
     return [];
   }
   if (!playerOrderedCardIds || playerOrderedCardIds.length === 0) {
-    if (typeof currentGameState !== 'undefined' && currentGameState && currentGameState.gameType === 'SEKA') {
-      const arranged = arrangeSekaHandOptimal(newHand).arrangedCards;
-      playerOrderedCardIds = arranged.map(c => c.id);
-      return arranged;
-    }
+    // Keep cards in their natural dealt order (scattered / unorganized)
+    // The player uses "✨ ደርድር" to sort them when desired!
     playerOrderedCardIds = newHand.map(c => c.id);
     return newHand;
   }
@@ -2871,21 +2874,21 @@ function arrangeSekaHandOptimal(hand) {
     }
   }
 
-  // Sort groups: Quatris (4) first, then Tris (3), then leftovers — ኳትሪስ → ትሪስ 1 → ትሪስ 2 → ያልገቡ
+  // Sort groups: Quatris (4) first, then Tris (3), then ALL leftovers strictly at the far right — ኳትሪስ → ትሪስ 1 → ትሪስ 2 → ያልገቡ (ቀኝ ጥግ)
   const quatrisGroups = [];
   const trisGroups = [];
-  const leftoverGroups = [];
+  const leftoverCards = [];
   for (const grp of arrangedGroups) {
     const isQuatris = grp.length === 4 && checkValidSekaQuatris(grp);
     const isTris = grp.length === 3 && checkValidSekaTris(grp);
     if (isQuatris) quatrisGroups.push(grp);
     else if (isTris) trisGroups.push(grp);
-    else leftoverGroups.push(grp);
+    else leftoverCards.push(...grp);
   }
-  const sortedGroups = [...quatrisGroups, ...trisGroups, ...leftoverGroups];
+  const arrangedCards = [...quatrisGroups.flat(), ...trisGroups.flat(), ...leftoverCards];
 
   return {
-    arrangedCards: sortedGroups.flat(),
+    arrangedCards,
     isWin: false
   };
 }

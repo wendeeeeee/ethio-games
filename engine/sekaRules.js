@@ -384,8 +384,21 @@ function arrangeSekaHandOptimal(hand) {
     }
   }
 
+  // Sort groups: Quatris (4) first, then Tris (3), then leftovers at the far right — ኳትሪስ → ትሪስ 1 → ትሪስ 2 → ያልገቡ (ቀኝ ጥግ)
+  const quatrisGroups = [];
+  const trisGroups = [];
+  const leftoverCards = [];
+  for (const grp of arrangedGroups) {
+    const isQuatris = grp.length === 4 && isValidSekaQuatris(grp);
+    const isTris = grp.length === 3 && isValidSekaTris(grp);
+    if (isQuatris) quatrisGroups.push(grp);
+    else if (isTris) trisGroups.push(grp);
+    else leftoverCards.push(...grp);
+  }
+  const arrangedCards = [...quatrisGroups.flat(), ...trisGroups.flat(), ...leftoverCards];
+
   return {
-    arrangedCards: arrangedGroups.flat(),
+    arrangedCards,
     isWin: false
   };
 }
