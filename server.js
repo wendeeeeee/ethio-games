@@ -21,6 +21,7 @@ const io = new Server(server, {
 
 app.use(cors());
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 // In-memory rooms: { roomId: GameRoom }
@@ -127,10 +128,15 @@ app.post('/api/sms/webhook', async (req, res) => {
     return res.status(403).json({ success: false, message: 'Invalid SMS webhook secret' });
   }
 
-  const text = req.body.text || req.body.message || req.body.body || req.body.content || '';
-  const sender = req.body.sender || req.body.from || req.body.phone || '';
+  const text = req.body.text || req.body.message || req.body.body || req.body.content || req.body.msg || '';
+  const sender = req.body.sender || req.body.from || req.body.phone || req.body.senderPhone || '';
   const transactionId = req.body.transactionId || req.body.txnId || '';
   const amount = req.body.amount || 0;
+
+  console.log('[SMS Webhook Received]:', { text, sender, raw: req.body });
+
+  // Handle Android app test clicks (e.g. "This is a test message from SMS Forwarder")
+  const isTestPing = !transactionId && (!text || text.toLowerCase().includes('test') || text.includes('[msg]') || text.length < 15);
 
   try {
     const result = smsGatewayManager.processIncomingSms({
@@ -144,6 +150,13 @@ app.post('/api/sms/webhook', async (req, res) => {
     });
 
     if (!result.success) {
+      if (isTestPing) {
+        return res.json({
+          success: true,
+          isTest: true,
+          message: '✅ Connection Successful! Webhook is ready to receive Telebirr SMS.'
+        });
+      }
       return res.status(400).json(result);
     }
 
