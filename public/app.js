@@ -2838,6 +2838,16 @@ function arrangeSekaHandOptimal(hand) {
   const singleCards = [];
   const usedIds = new Set();
 
+  function getSekaRankDistLocal(r1, r2) {
+    const n1 = rankOrderMap[r1] || 0;
+    const n2 = rankOrderMap[r2] || 0;
+    const direct = Math.abs(n1 - n2);
+    const circular1 = Math.abs((n1 === 1 ? 14 : n1) - (n2 === 1 ? 14 : n2));
+    const circular2 = Math.abs(n1 - (n2 === 1 ? 14 : n2));
+    const circular3 = Math.abs((n1 === 1 ? 14 : n1) - n2);
+    return Math.min(direct, circular1, circular2, circular3);
+  }
+
   for (const s of suits) {
     const suitNatural = bySuit[s];
     if (suitNatural.length === 0) continue;
@@ -2848,21 +2858,43 @@ function arrangeSekaHandOptimal(hand) {
     const isAceHigh = hasA && hasHigh && !hasLow;
     const rankFn = (c) => (isAceHigh && c.rank === 'A' ? 14 : (rankOrderMap[c.rank] || 0));
 
-    const suitCards = suitNatural.sort((a, b) => rankFn(a) - rankFn(b));
+    let suitCards = suitNatural.sort((a, b) => rankFn(a) - rankFn(b));
 
-    // 0. Check natural complete 4-card Quatris sequence FIRST (e.g. J-Q-K-A, 7-8-9-10)
-    for (let i = 0; i <= suitCards.length - 4; i++) {
-      const quad = suitCards.slice(i, i + 4);
+    // Special Ace-bridge sort if both Q/K and 2/3 exist with A: [Q, K, A, 2, 3, ...]
+    if (hasA && hasHigh && hasLow) {
+      const qkCards = suitCards.filter(c => ['Q', 'K'].includes(c.rank)).sort((a, b) => (rankOrderMap[a.rank] - rankOrderMap[b.rank]));
+      const aCards = suitCards.filter(c => c.rank === 'A');
+      const numCards = suitCards.filter(c => !['Q', 'K', 'A'].includes(c.rank)).sort((a, b) => (rankOrderMap[a.rank] - rankOrderMap[b.rank]));
+      suitCards = [...qkCards, ...aCards, ...numCards];
+    }
+
+    // 0a. Check 6-card natural run FIRST: produces TWO TRIS! (e.g. 1-2-3-4-5-6 or 3-4-5-6-7-8)
+    for (let i = 0; i <= suitCards.length - 6; i++) {
+      const run6 = suitCards.slice(i, i + 6);
+      const trio1 = run6.slice(0, 3);
+      const trio2 = run6.slice(3, 6);
+      if (checkValidSekaTris(trio1) && checkValidSekaTris(trio2) && !run6.some(c => usedIds.has(c.id))) {
+        trisGroups.push(arrangeSekaMeld(trio1));
+        trisGroups.push(arrangeSekaMeld(trio2));
+        run6.forEach(c => usedIds.add(c.id));
+      }
+    }
+
+    // 0b. Check natural complete 4-card Quatris sequence (e.g. J-Q-K-A, 7-8-9-10)
+    const remForQuat = suitCards.filter(c => !usedIds.has(c.id));
+    for (let i = 0; i <= remForQuat.length - 4; i++) {
+      const quad = remForQuat.slice(i, i + 4);
       if (checkValidSekaQuatris(quad) && !quad.some(c => usedIds.has(c.id))) {
         quatrisGroups.push(arrangeSekaMeld(quad));
         quad.forEach(c => usedIds.add(c.id));
       }
     }
     // Also check Ace-high Quatris wrapping (J-Q-K then A at start of sorted array)
-    if (suitCards.length >= 4) {
-      const aceCard = suitCards.find(c => c.rank === 'A' && !usedIds.has(c.id));
+    const remAceHighQuat = suitCards.filter(c => !usedIds.has(c.id));
+    if (remAceHighQuat.length >= 4) {
+      const aceCard = remAceHighQuat.find(c => c.rank === 'A' && !usedIds.has(c.id));
       if (aceCard) {
-        const highCards = suitCards.filter(c => !usedIds.has(c.id) && ['J', 'Q', 'K'].includes(c.rank));
+        const highCards = remAceHighQuat.filter(c => !usedIds.has(c.id) && ['J', 'Q', 'K'].includes(c.rank));
         if (highCards.length >= 3) {
           const quad = [...highCards.slice(0, 3), aceCard];
           if (checkValidSekaQuatris(quad)) {
@@ -2938,17 +2970,33 @@ function arrangeSekaHandOptimal(hand) {
       }
     }
 
-    // 4. Cluster remaining cards of this suit by PROXIMITY (diff <= 2)
-    // Cards that are adjacent or separated by at most 1 gap (e.g. 7♣ 9♣ 10♣, 2♣ 3♣) form close clusters!
-    // Truly distant cards with diff > 2 become singles and go to the far right.
+    // 4. Attach unmelded neighbors/extensions of this suit directly to melds in this suit!
+    // (e.g. 9♠ when [5♠, Joker, 7♠] is formed! 9 is dist 2 from 7; or 5-6 extending a Tris)
+    const suitMelds = [...quatrisGroups, ...trisGroups].filter(m => m.some(c => c.suit === s && !isSekaWildJoker(c)));
+    const remForNeighbors = suitCards.filter(c => !usedIds.has(c.id));
+    for (const remCard of remForNeighbors) {
+      for (const meld of suitMelds) {
+        if (usedIds.has(remCard.id)) break;
+        const meldNats = meld.filter(c => !isSekaWildJoker(c));
+        const canAttach = meldNats.some(c => getSekaRankDistLocal(c.rank, remCard.rank) <= 2);
+        if (canAttach) {
+          meld.push(remCard);
+          usedIds.add(remCard.id);
+          break;
+        }
+      }
+    }
+
+    // 5. Cluster remaining cards of this suit using circular proximity (dist <= 2)
+    // (e.g. Q♣ A♣ 3♣ stay together; truly distant cards with dist > 2 become singles)
     const remSuit = suitCards.filter(c => !usedIds.has(c.id));
     if (remSuit.length > 0) {
       let currentCluster = [remSuit[0]];
       for (let i = 1; i < remSuit.length; i++) {
         const prev = remSuit[i - 1];
         const curr = remSuit[i];
-        const diff = rankFn(curr) - rankFn(prev);
-        if (diff <= 2) {
+        const dist = getSekaRankDistLocal(prev.rank, curr.rank);
+        if (dist <= 2) {
           currentCluster.push(curr);
         } else {
           if (currentCluster.length >= 2) {

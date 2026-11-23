@@ -424,6 +424,65 @@ test('Leave game timeout: player leaves and fails to return in 1 min, forfeits; 
 });
 
 // ==============================================================
+console.log('\n✨ 8. SMART SORT SEKA RULES (User Defined Cases)');
+// ==============================================================
+
+test('6-card natural run in same suit forms TWO Tris (1,2,3 ♠ and 4,5,6 ♠)', () => {
+  const hand = [
+    { id: '1', rank: 'A', suit: '♠' },
+    { id: '2', rank: '2', suit: '♠' },
+    { id: '3', rank: '3', suit: '♠' },
+    { id: '4', rank: '4', suit: '♠' },
+    { id: '5', rank: '5', suit: '♠' },
+    { id: '6', rank: '6', suit: '♠' },
+    { id: '7', rank: '8', suit: '♥' },
+    { id: '8', rank: '9', suit: '♥' },
+    { id: '9', rank: '10', suit: '♥' },
+    { id: '10', rank: 'K', suit: '♦' }
+  ];
+  const res = arrangeSekaHandOptimal(hand);
+  const ranks = res.arrangedCards.map(c => c.rank + c.suit);
+  const first6 = ranks.slice(0, 6);
+  assert(first6.includes('A♠') && first6.includes('2♠') && first6.includes('3♠'), '1-2-3-4-5-6 should form two tris together');
+  assert(first6.includes('4♠') && first6.includes('5♠') && first6.includes('6♠'), '4-5-6 should stay with 1-2-3');
+});
+
+test('Ace-bridge: Q♣, A♣, 3♣ stay together (Q♣ connects to A♣, A♣ connects to 3♣)', () => {
+  const hand = [
+    { id: '1', rank: 'A', suit: '♣' },
+    { id: '2', rank: '3', suit: '♣' },
+    { id: '3', rank: 'Q', suit: '♣' },
+    { id: '4', rank: '5', suit: '♥' },
+    { id: '5', rank: '6', suit: '♥' },
+    { id: '6', rank: '7', suit: '♥' }
+  ];
+  const res = arrangeSekaHandOptimal(hand);
+  const ranks = res.arrangedCards.map(c => c.rank + c.suit);
+  const qIdx = ranks.indexOf('Q♣');
+  const aIdx = ranks.indexOf('A♣');
+  const threeIdx = ranks.indexOf('3♣');
+  assert(qIdx !== -1 && aIdx !== -1 && threeIdx !== -1, 'All 3 cards must be present');
+  assert(Math.abs(qIdx - aIdx) <= 2 && Math.abs(aIdx - threeIdx) <= 2, 'Q, A, 3 must be adjacent in the sorted hand');
+});
+
+test('Neighbor extension: 9♠ stays adjacent to [5♠, Joker, 7♠] because 8♠ would make Tris', () => {
+  const hand = [
+    { id: '1', rank: '5', suit: '♠' },
+    { id: '2', rank: '7', suit: '♠' },
+    { id: '3', rank: 'JOKER', suit: '🃏', isJoker: true },
+    { id: '4', rank: '9', suit: '♠' },
+    { id: '5', rank: '2', suit: '♦' },
+    { id: '6', rank: '3', suit: '♦' },
+    { id: '7', rank: '4', suit: '♦' }
+  ];
+  const res = arrangeSekaHandOptimal(hand);
+  const ranks = res.arrangedCards.map(c => c.isJoker ? 'JOKER' : c.rank + c.suit);
+  const nineIdx = ranks.indexOf('9♠');
+  const sevenIdx = ranks.indexOf('7♠');
+  assert(Math.abs(nineIdx - sevenIdx) <= 2, '9♠ should stay adjacent to [5♠, Joker, 7♠]');
+});
+
+// ==============================================================
 console.log('\n📊 SUMMARY');
 // ==============================================================
 
