@@ -7,14 +7,22 @@ if (!userId) {
   localStorage.setItem('conquer_user_id', userId);
 }
 
+function isGenericName(name) {
+  if (!name) return true;
+  const l = name.trim().toLowerCase();
+  return l === 'player' || l.startsWith('player ') || l === 'player1' || l === 'player 1' ||
+         l === 'ተጫዋች' || l.startsWith('ተጫዋች') || l.startsWith('user_');
+}
+
 let storedName = localStorage.getItem('conquer_user_name');
-let playerName = (storedName && storedName.toLowerCase() !== 'player' && !storedName.toLowerCase().startsWith('player ')) ? storedName : '';
+let playerName = (storedName && !isGenericName(storedName)) ? storedName : '';
 let userPhone = localStorage.getItem('conquer_user_phone') || '';
 let isUserRegistered = localStorage.getItem('conquer_user_registered') === 'true' && Boolean(playerName) && Boolean(userPhone);
-if (!isUserRegistered) {
+if (!isUserRegistered || isGenericName(storedName)) {
   localStorage.removeItem('conquer_user_registered');
-  if (storedName && (storedName.toLowerCase() === 'player' || storedName.toLowerCase().startsWith('player '))) {
+  if (isGenericName(storedName)) {
     localStorage.removeItem('conquer_user_name');
+    playerName = '';
   }
 }
 let socket = io();
@@ -445,7 +453,7 @@ function applyWalletUpdate(wallet) {
   if (walletBalanceDisplay && wallet.balance !== undefined) {
     walletBalanceDisplay.textContent = `${wallet.balance.toLocaleString()} ETB`;
   }
-  if (wallet.name && wallet.name.toLowerCase() !== 'player' && !wallet.name.toLowerCase().startsWith('player ') && (!playerName || playerName.toLowerCase().startsWith('player'))) {
+  if (wallet.name && !isGenericName(wallet.name) && (!playerName || isGenericName(playerName))) {
     playerName = wallet.name;
     localStorage.setItem('conquer_user_name', playerName);
   }
@@ -513,7 +521,7 @@ const submitRegBtn = document.getElementById('submitRegBtn');
 
 function openRegistrationModal() {
   if (!registerModal) return;
-  regNameInput.value = (playerName && playerName.toLowerCase() !== 'player' && !playerName.toLowerCase().startsWith('player ')) ? playerName : '';
+  regNameInput.value = (playerName && !isGenericName(playerName)) ? playerName : '';
   regPhoneInput.value = userPhone || '';
   if (regErrorMsg) {
     regErrorMsg.style.display = 'none';
@@ -562,9 +570,8 @@ function validateRegistration(name, phone) {
     return { valid: false, message: 'እባክዎ ስምዎን ያስገቡ (ቢያንስ 2 ፊደል) / Please enter your name' };
   }
   const cleanName = name.trim();
-  const lowerName = cleanName.toLowerCase();
-  if (lowerName === 'player' || lowerName.startsWith('player ') || lowerName === 'player1' || lowerName === 'player 1') {
-    return { valid: false, message: 'እባክዎ ትክክለኛ የራስዎን ስም ያስገቡ (Player መጠቀም አይቻልም)' };
+  if (isGenericName(cleanName)) {
+    return { valid: false, message: 'እባክዎ ትክክለኛ የራስዎን ስም ያስገቡ (Player ወይም ተጫዋች መጠቀም አይቻልም)' };
   }
   if (!phone || phone.trim().length === 0) {
     return { valid: false, message: 'እባክዎ ስልክ ቁጥርዎን ያስገቡ / Phone number is required' };
