@@ -1088,9 +1088,9 @@ select:focus {
 
 .fan .card {
   position: absolute !important;
-  width: 72px !important;
-  height: 104px !important;
-  left: -36px !important;
+  width: 66px !important;
+  height: 96px !important;
+  left: -33px !important;
   bottom: 0 !important;
   margin-left: 0 !important;
   background: white;
@@ -1714,63 +1714,63 @@ select:focus {
   }
 
   .fan .card {
-    width: 82px !important;
-    height: 118px !important;
-    left: -41px !important;
+    width: 74px !important;
+    height: 106px !important;
+    left: -37px !important;
     border-radius: 9px !important;
   }
 
   .fan .card .corner-rank {
-    font-size: 18px !important;
+    font-size: 16px !important;
   }
 
   .fan .card .corner-suit {
-    font-size: 15px !important;
+    font-size: 13px !important;
   }
 
   .fan .card .card-center-suit {
-    font-size: 36px !important;
+    font-size: 32px !important;
   }
 
   .fan .card .card-corner {
-    width: 20px !important;
+    width: 18px !important;
   }
 
   .card {
-    width: 86px;
-    height: 124px;
+    width: 80px;
+    height: 116px;
   }
 
   .card-center-suit {
-    font-size: 36px;
+    font-size: 34px;
   }
 
   .corner-rank {
-    font-size: 18px;
+    font-size: 16px;
   }
 
   .corner-suit {
-    font-size: 14px;
+    font-size: 13px;
   }
 
   .card-back {
-    width: 56px;
-    height: 80px;
+    width: 52px;
+    height: 74px;
   }
 
   #groundCardContainer .card {
-    width: 76px !important;
-    height: 110px !important;
+    width: 70px !important;
+    height: 100px !important;
   }
 
   .stock-deck-top {
-    width: 68px !important;
-    height: 98px !important;
+    width: 62px !important;
+    height: 88px !important;
   }
 
   .deck-stack-wrapper {
-    width: 80px;
-    height: 105px;
+    width: 74px;
+    height: 95px;
   }
 }
 
