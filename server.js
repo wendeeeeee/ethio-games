@@ -849,16 +849,8 @@ io.on('connection', (socket) => {
   socket.on('disconnect', () => {
     const playerInfo = socketPlayerMap.get(socket.id);
     if (playerInfo && playerInfo.roomId) {
-      const room = rooms.get(playerInfo.roomId);
-      if (room && room.status === 'WAITING') {
-        walletManager.refundEscrow(room.roomId);
-        rooms.delete(playerInfo.roomId);
-      }
       const sRoom = sekaRooms.get(playerInfo.roomId);
-      if (sRoom && sRoom.status === 'WAITING') {
-        walletManager.refundEscrow(sRoom.roomId);
-        sekaRooms.delete(playerInfo.roomId);
-      } else if (sRoom && sRoom.status === 'PLAYING') {
+      if (sRoom && sRoom.status === 'PLAYING') {
         sRoom.playerLeaveTemp(playerInfo.userId, sRoom.onLeaveTimeoutCallback);
         broadcastSekaRoomUpdate(sRoom);
       }

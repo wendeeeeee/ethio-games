@@ -11,7 +11,7 @@ function isGenericName(name) {
   if (!name) return true;
   const l = name.trim().toLowerCase();
   return l === 'player' || l.startsWith('player ') || l === 'player1' || l === 'player 1' ||
-         l === 'ተጫዋች' || l.startsWith('ተጫዋች') || l.startsWith('user_');
+    l === 'ተጫዋች' || l.startsWith('ተጫዋች') || l.startsWith('user_');
 }
 
 let storedName = localStorage.getItem('conquer_user_name');
@@ -1004,10 +1004,9 @@ socket.on('seka_room_created', ({ roomId, expiresAt, isBot, stakeAmount }) => {
   if (isBot) {
     switchToGameView();
   } else {
-    // Creator stays on lobby and sees their game in the "Active Games" list
     currentWaitingRoomId = roomId;
     playCardSound();
-    showSortToast('🎉 ጨዋታው ተፈጥሯል! አሁን Active Games ላይ ይታያል፤ ተጋጣሚ ሲገባ ወዲያውኑ ይጀምራል።');
+    showWaitingForOpponentModal(roomId, expiresAt, stakeAmount);
     refreshSekaRoomsList();
   }
 });
@@ -1117,8 +1116,10 @@ if (backToHomeBtn) {
 }
 
 // Create Seka Room
+let isCreatingSekaRoom = false;
 if (createSekaRoomBtn) {
   createSekaRoomBtn.addEventListener('click', () => {
+    if (isCreatingSekaRoom) return;
     if (!isUserRegistered || !playerName || !userPhone) {
       showSortToast('⚠️ ጨዋታ ለመፍጠር እባክዎ መጀመሪያ ይመዝገቡ (Sign Up)!');
       openRegistrationModal();
@@ -1133,6 +1134,8 @@ if (createSekaRoomBtn) {
     }
     const stakeAmount = sekaStakeSelect ? Number(sekaStakeSelect.value) : 100;
     const maxPlayers = sekaPlayersSelect ? (Number(sekaPlayersSelect.value) === 3 ? 3 : 2) : 2;
+    isCreatingSekaRoom = true;
+    setTimeout(() => { isCreatingSekaRoom = false; }, 2000);
     playCardSound();
     socket.emit('create_seka_room', { userId, name: sName, stakeAmount, maxPlayers });
   });
@@ -1182,21 +1185,9 @@ let selectedDepositAmount = 100;
 const DEPOSIT_METHODS = {
   telebirr: {
     name: 'Telebirr',
-    phone: '0911002233',
-    accountName: 'Ethio Games / Conquer',
-    instruction: 'በቴሌብር መተግበሪያ ወደ <strong>0911002233</strong> ይላኩ። ከዚያ Transaction ID ያስገቡና <strong>«አሁን አስገባ»</strong> ይጫኑ!'
-  },
-  cbebirr: {
-    name: 'CBE Birr',
-    phone: '1000123456789',
-    accountName: 'Ethio Games',
-    instruction: 'በ CBE Birr ወይም ንግድ ባንክ ወደ <strong>1000123456789</strong> ያስገቡ። Transaction ID ያስገቡና <strong>«አሁን አስገባ»</strong> ይጫኑ!'
-  },
-  bank: {
-    name: 'Bank / Chapa',
-    phone: '1000987654321',
-    accountName: 'Ethio Games Ltd',
-    instruction: 'በቀጥታ በባንክ ወይም በኦንላይን ፔይመንት ያስገቡ። Reference Number ያስገቡና <strong>«አሁን አስገባ»</strong> ይጫኑ!'
+    phone: '0960995213',
+    accountName: 'Wendosen',
+    instruction: 'በቴሌብር መተግበሪያ ወደ <strong>0960995213</strong> (Wendosen) ይላኩ። ከዚያ Transaction ID ያስገቡና <strong>«አሁን አስገባ»</strong> ይጫኑ!'
   }
 };
 

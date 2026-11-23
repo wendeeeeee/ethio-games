@@ -23,7 +23,8 @@
 
       <!-- Unregistered user: Shows Login & Sign Up Buttons -->
       <div id="userLoggedOutArea" style="display: flex; gap: 8px; align-items: center;">
-        <button class="header-login-btn" id="headerLoginBtn" title="ይግቡ (Login)" style="background: #f1f5f9; color: #0f172a; border: 1.5px solid #cbd5e1; padding: 7px 14px; border-radius: 10px; font-weight: 700; font-size: 13px; cursor: pointer;">
+        <button class="header-login-btn" id="headerLoginBtn" title="ይግቡ (Login)"
+          style="background: #f1f5f9; color: #0f172a; border: 1.5px solid #cbd5e1; padding: 7px 14px; border-radius: 10px; font-weight: 700; font-size: 13px; cursor: pointer;">
           🔑 Login
         </button>
         <button class="header-signup-btn" id="headerSignupBtn" title="ይመዝገቡ (Sign Up)">
@@ -401,11 +402,14 @@
         style="position: absolute; top: 12px; right: 14px; background: #f1f5f9; border: 1px solid #e2e8f0; color: #64748b; width: 32px; height: 32px; border-radius: 50%; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center;">✕</button>
 
       <!-- Auth Switcher Tabs -->
-      <div class="auth-tabs" style="display: flex; gap: 6px; background: #f1f5f9; padding: 4px; border-radius: 12px; margin-bottom: 18px;">
-        <button type="button" id="tabBtnLogin" class="auth-tab-btn active" style="flex: 1; padding: 9px; font-size: 14px; font-weight: 800; border: none; border-radius: 9px; cursor: pointer; background: #fff; color: #0f172a; box-shadow: 0 2px 6px rgba(0,0,0,0.06);">
+      <div class="auth-tabs"
+        style="display: flex; gap: 6px; background: #f1f5f9; padding: 4px; border-radius: 12px; margin-bottom: 18px;">
+        <button type="button" id="tabBtnLogin" class="auth-tab-btn active"
+          style="flex: 1; padding: 9px; font-size: 14px; font-weight: 800; border: none; border-radius: 9px; cursor: pointer; background: #fff; color: #0f172a; box-shadow: 0 2px 6px rgba(0,0,0,0.06);">
           🔑 ይግቡ (Login)
         </button>
-        <button type="button" id="tabBtnRegister" class="auth-tab-btn" style="flex: 1; padding: 9px; font-size: 14px; font-weight: 800; border: none; border-radius: 9px; cursor: pointer; background: transparent; color: #64748b;">
+        <button type="button" id="tabBtnRegister" class="auth-tab-btn"
+          style="flex: 1; padding: 9px; font-size: 14px; font-weight: 800; border: none; border-radius: 9px; cursor: pointer; background: transparent; color: #64748b;">
           📝 ይመዝገቡ (Sign Up)
         </button>
       </div>
@@ -438,7 +442,8 @@
         </button>
 
         <div style="font-size: 13px; color: #64748b; margin-top: 6px;">
-          አካውንት የለዎትም? <a href="#" id="switchToRegisterLink" style="color: #2563eb; font-weight: 800; text-decoration: none;">ይመዝገቡ (Sign Up)</a>
+          አካውንት የለዎትም? <a href="#" id="switchToRegisterLink"
+            style="color: #2563eb; font-weight: 800; text-decoration: none;">ይመዝገቡ (Sign Up)</a>
         </div>
       </form>
 
@@ -472,7 +477,8 @@
           <label style="font-size: 13px; font-weight: 700; color: #334155; display: block; margin-bottom: 6px;">
             🔒 የይለፍ ቃል ማረጋገጫ (Confirm Password) <span style="color: #ef4444;">*</span>
           </label>
-          <input type="password" id="regConfirmPassInput" placeholder="የይለፍ ቃልዎን በድጋሚ ያስገቡ" required autocomplete="new-password"
+          <input type="password" id="regConfirmPassInput" placeholder="የይለፍ ቃልዎን በድጋሚ ያስገቡ" required
+            autocomplete="new-password"
             style="width: 100%; padding: 12px 14px; background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 10px; color: #0f172a; font-size: 14px; box-sizing: border-box;">
         </div>
 
@@ -486,12 +492,14 @@
         </button>
 
         <div style="font-size: 13px; color: #64748b; margin-top: 6px;">
-          ቀድሞ አካውንት አለዎት? <a href="#" id="switchToLoginLink" style="color: #059669; font-weight: 800; text-decoration: none;">ይግቡ (Login)</a>
+          ቀድሞ አካውንት አለዎት? <a href="#" id="switchToLoginLink"
+            style="color: #059669; font-weight: 800; text-decoration: none;">ይግቡ (Login)</a>
         </div>
       </form>
 
       <div style="text-align: center; margin-top: 14px; padding-top: 10px; border-top: 1px solid #e2e8f0;">
-        <a href="/admin.html" style="font-size: 12px; color: #94a3b8; text-decoration: none; font-weight: 600;">🛡️ ወደ Admin ገጽ ይግቡ (Admin Login)</a>
+        <a href="/admin.html" style="font-size: 12px; color: #94a3b8; text-decoration: none; font-weight: 600;">🛡️ ወደ
+          Admin ገጽ ይግቡ (Admin Login)</a>
       </div>
     </div>
   </div>
@@ -502,25 +510,19 @@
       <button class="modal-close-btn" id="closeDepositModalBtn" title="ዝጋ (Close)">✕</button>
 
       <div class="deposit-modal-header">
-        <div class="deposit-icon">💰</div>
-        <div class="deposit-title">ገንዘብ አስገባ (Deposit)</div>
-        <p class="deposit-subtitle">ቀሪ ሂሳብዎን በቴሌብር (Telebirr) ወይም በንግድ ባንክ (CBE Birr) ይሙሉ</p>
+        <div class="deposit-icon">📱</div>
+        <div class="deposit-title">ገንዘብ አስገባ (Telebirr Deposit)</div>
+        <p class="deposit-subtitle">ቀሪ ሂሳብዎን በቴሌብር (Telebirr) ይሙሉ</p>
         <div class="deposit-current-balance">
           <span>የአሁን ቀሪ ሂሳብ:</span>
           <strong id="depositModalBalanceDisplay">1,000 ETB</strong>
         </div>
       </div>
 
-      <!-- Payment Method Selection -->
-      <div class="deposit-method-tabs" id="depositMethodTabs">
+      <!-- Payment Method: Telebirr Only -->
+      <div class="deposit-method-tabs" id="depositMethodTabs" style="display: none;">
         <button type="button" class="deposit-tab-btn active" data-method="telebirr">
-          <span class="tab-icon">📱</span> Telebirr
-        </button>
-        <button type="button" class="deposit-tab-btn" data-method="cbebirr">
-          <span class="tab-icon">🏦</span> CBE Birr
-        </button>
-        <button type="button" class="deposit-tab-btn" data-method="bank">
-          <span class="tab-icon">💳</span> Bank / Chapa
+          <span class="tab-icon">📱</span> Telebirr (0960995213)
         </button>
       </div>
 
@@ -538,7 +540,8 @@
 
         <div class="deposit-custom-amount-wrap">
           <span class="currency-prefix">ETB</span>
-          <input type="number" id="depositCustomAmountInput" placeholder="መጠን አስገባ" value="100" min="10" max="50000" step="10">
+          <input type="number" id="depositCustomAmountInput" placeholder="መጠን አስገባ" value="100" min="10" max="50000"
+            step="10">
         </div>
       </div>
 
@@ -546,14 +549,14 @@
       <div class="deposit-info-card" id="depositInfoCard">
         <div class="deposit-info-row">
           <span class="info-label">የመክፈያ ስልክ (Phone):</span>
-          <span class="info-value copyable" id="depositPhoneVal" title="ኮፒ ለማድረግ ይጫኑ">0911002233 📋</span>
+          <span class="info-value copyable" id="depositPhoneVal" title="ኮፒ ለማድረግ ይጫኑ">0960995213 📋</span>
         </div>
         <div class="deposit-info-row">
           <span class="info-label">የተቀባይ ስም (Account):</span>
-          <span class="info-value" id="depositAccountNameVal">Ethio Games</span>
+          <span class="info-value" id="depositAccountNameVal">Wendosen</span>
         </div>
         <p class="deposit-instructions" id="depositInstructions">
-          ገንዘቡን ከላኩ በኋላ ከታች ያለውን <strong>«አሁን አስገባ (Deposit Now)»</strong> የሚለውን ይጫኑ። ወዲያውኑ ወደ አካውንትዎ ገቢ ይሆናል!
+          በቴሌብር ወደ <strong>0960995213</strong> (Wendosen) ይላኩ። ከዚያ Transaction ID አስገብተው <strong>«አሁን አስገባ»</strong> ይጫኑ!
         </p>
       </div>
 
@@ -566,7 +569,9 @@
         <p class="deposit-txn-hint">ገንዘቡን ከላኩ በኋላ Transaction ID / Reference Number ያስገቡ</p>
       </div>
 
-      <div id="depositErrorMsg" style="display: none; color: #dc2626; font-size: 12px; margin-bottom: 10px; padding: 6px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px;"></div>
+      <div id="depositErrorMsg"
+        style="display: none; color: #dc2626; font-size: 12px; margin-bottom: 10px; padding: 6px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px;">
+      </div>
 
       <!-- Pending Deposits List -->
       <div id="depositPendingList" class="deposit-pending-list" style="display: none;">
@@ -650,8 +655,9 @@
 
   <!-- Footer with Admin link -->
   <footer style="text-align: center; padding: 24px 10px 16px; font-size: 11px; color: #94a3b8;">
-    <span>© 2024 Ethio Games — Seka & Conquer</span> · 
-    <a href="/admin.html" style="color: #64748b; text-decoration: none; font-weight: 600;" title="የተቀማጭ ገንዘብ ማረጋገጫ ገጽ">🛡️ Admin Portal</a>
+    <span>© 2024 Ethio Games — Seka & Conquer</span> ·
+    <a href="/admin.html" style="color: #64748b; text-decoration: none; font-weight: 600;"
+      title="የተቀማጭ ገንዘብ ማረጋገጫ ገጽ">🛡️ Admin Portal</a>
   </footer>
 
   <!-- Socket.io & App Script -->
