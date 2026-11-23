@@ -366,33 +366,42 @@ function arrangeSekaHandOptimal(hand) {
       }
     }
 
-    // 4. Any remaining cards in this suit:
-    // If there are 2 or more cards in this suit, they NEVER get torn apart!
-    // They are kept together in ascending rank order (e.g. 7♣ 9♣ 10♣ stay together as 7♣ 9♣ 10♣!)
-    const remSameSuit = suitCards.filter(c => !usedIds.has(c.id));
-    if (remSameSuit.length >= 2) {
-      sameSuitGroups.push(remSameSuit.sort((a, b) => rankFn(a) - rankFn(b)));
-      remSameSuit.forEach(c => usedIds.add(c.id));
-    } else if (remSameSuit.length === 1) {
-      singleCards.push(remSameSuit[0]);
-      usedIds.add(remSameSuit[0].id);
+    // 4. Cluster remaining cards of this suit by PROXIMITY (diff <= 2)
+    // Cards that are adjacent or separated by at most 1 gap (e.g. 7♣ 9♣ 10♣, 2♣ 3♣) form close clusters!
+    // Truly distant cards with diff > 2 become singles and go to the far right.
+    const remSuit = suitCards.filter(c => !usedIds.has(c.id));
+    if (remSuit.length > 0) {
+      let currentCluster = [remSuit[0]];
+      for (let i = 1; i < remSuit.length; i++) {
+        const prev = remSuit[i - 1];
+        const curr = remSuit[i];
+        const diff = rankFn(curr) - rankFn(prev);
+        if (diff <= 2) {
+          currentCluster.push(curr);
+        } else {
+          if (currentCluster.length >= 2) {
+            sameSuitGroups.push(currentCluster);
+          } else {
+            singleCards.push(currentCluster[0]);
+          }
+          currentCluster = [curr];
+        }
+      }
+      if (currentCluster.length >= 2) {
+        sameSuitGroups.push(currentCluster);
+      } else {
+        singleCards.push(currentCluster[0]);
+      }
+      remSuit.forEach(c => usedIds.add(c.id));
     }
   }
 
-  // Prioritize same-suit groups: groups containing close/consecutive pairs come first!
+  // Prioritize same-suit close clusters: larger clusters first (e.g. 3 cards before 2 cards), then tighter gap
   sameSuitGroups.sort((a, b) => {
-    let minDiffA = 99;
-    for (let i = 0; i < a.length - 1; i++) {
-      const d = Math.abs((RANK_ORDER[a[i + 1].rank] || 0) - (RANK_ORDER[a[i].rank] || 0));
-      if (d < minDiffA) minDiffA = d;
-    }
-    let minDiffB = 99;
-    for (let i = 0; i < b.length - 1; i++) {
-      const d = Math.abs((RANK_ORDER[b[i + 1].rank] || 0) - (RANK_ORDER[b[i].rank] || 0));
-      if (d < minDiffB) minDiffB = d;
-    }
-    if (minDiffA !== minDiffB) return minDiffA - minDiffB;
-    return b.length - a.length;
+    if (b.length !== a.length) return b.length - a.length;
+    const spanA = (RANK_ORDER[a[a.length - 1].rank] || 0) - (RANK_ORDER[a[0].rank] || 0);
+    const spanB = (RANK_ORDER[b[b.length - 1].rank] || 0) - (RANK_ORDER[b[0].rank] || 0);
+    return spanA - spanB;
   });
 
   // Any unused Jokers
@@ -401,9 +410,9 @@ function arrangeSekaHandOptimal(hand) {
   // Final card order:
   // 1. Quatris groups (4 cards each)
   // 2. Tris groups (3 cards each)
-  // 3. Same suit groups (2+ cards, kept intact and sorted in ascending order)
+  // 3. Close Proximity clusters (e.g. 7♣ 9♣ 10♣, 2♣ 3♣, 5♠ 6♠ - potential Tris)
   // 4. Unused Jokers (if any)
-  // 5. Isolated single cards (ተጣይ/ነጠላ - cards with 0 suit partners) strictly at the FAR RIGHT!
+  // 5. Isolated distant single cards (ተጣይ/ነጠላ) strictly at the FAR RIGHT!
   const arrangedCards = [
     ...quatrisGroups.flat(),
     ...trisGroups.flat(),
