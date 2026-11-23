@@ -2734,9 +2734,85 @@ function checkValidSekaQuatris(cards) {
   return testSeq(r => rankOrderMap[r]) || testSeq(r => r === 'A' ? 14 : rankOrderMap[r]);
 }
 
+function partition10CardsIntoSekaMeldsClient(cards) {
+  if (!cards || cards.length !== 10) return { valid: false };
+
+  function getCombinations(arr, k) {
+    const result = [];
+    function backtrack(start, current) {
+      if (current.length === k) {
+        result.push([...current]);
+        return;
+      }
+      for (let i = start; i < arr.length; i++) {
+        current.push(arr[i]);
+        backtrack(i + 1, current);
+        current.pop();
+      }
+    }
+    backtrack(0, []);
+    return result;
+  }
+
+  const indices = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+  const quatrisCombos = getCombinations(indices, 4);
+
+  for (const qIdx of quatrisCombos) {
+    const qSet = new Set(qIdx);
+    const quatrisCards = qIdx.map(i => cards[i]);
+    if (!checkValidSekaQuatris(quatrisCards)) continue;
+
+    const remIndices = indices.filter(i => !qSet.has(i));
+    const trisCombos = getCombinations(remIndices, 3);
+
+    for (const t1Idx of trisCombos) {
+      const t1Set = new Set(t1Idx);
+      const t2Idx = remIndices.filter(i => !t1Set.has(i));
+
+      const tris1Cards = t1Idx.map(i => cards[i]);
+      const tris2Cards = t2Idx.map(i => cards[i]);
+
+      if (checkValidSekaTris(tris1Cards) && checkValidSekaTris(tris2Cards)) {
+        return {
+          valid: true,
+          quatris: arrangeSekaMeld(quatrisCards),
+          tris1: arrangeSekaMeld(tris1Cards),
+          tris2: arrangeSekaMeld(tris2Cards)
+        };
+      }
+    }
+  }
+  return { valid: false };
+}
+
 function arrangeSekaHandOptimal(hand) {
   if (!hand || hand.length <= 1) return { arrangedCards: hand || [], isWin: false };
 
+  // 1. Check if winning 10-card or 11-card hand
+  if (hand.length === 10) {
+    const p10 = partition10CardsIntoSekaMeldsClient(hand);
+    if (p10.valid) {
+      return {
+        arrangedCards: [...p10.quatris, ...p10.tris1, ...p10.tris2],
+        isWin: true
+      };
+    }
+  } else if (hand.length === 11) {
+    for (let i = 0; i < hand.length; i++) {
+      const candidateDiscard = hand[i];
+      const remaining10 = hand.filter((_, idx) => idx !== i);
+      const p10 = partition10CardsIntoSekaMeldsClient(remaining10);
+      if (p10.valid) {
+        return {
+          arrangedCards: [...p10.quatris, ...p10.tris1, ...p10.tris2, candidateDiscard],
+          isWin: true,
+          tetayCard: candidateDiscard
+        };
+      }
+    }
+  }
+
+  // 2. Arrangement during gameplay (melds -> connected pairs -> same suit -> lone singles at far right)
   const jokers = hand.filter(isSekaWildJoker);
   let availableJokers = [...jokers];
   const natural = hand.filter(c => !isSekaWildJoker(c));
@@ -2749,10 +2825,17 @@ function arrangeSekaHandOptimal(hand) {
     if (bySuit[c.suit]) bySuit[c.suit].push(c);
   });
 
-  const arrangedGroups = [];
+  const quatrisGroups = [];
+  const trisGroups = [];
+  const pairGroups = [];
+  const sameSuitGroups = [];
+  const singleCards = [];
+  const usedIds = new Set();
 
   for (const s of suits) {
     const suitNatural = bySuit[s];
+    if (suitNatural.length === 0) continue;
+
     const hasA = suitNatural.some(c => c.rank === 'A');
     const hasHigh = suitNatural.some(c => ['K', 'Q', 'J', '10'].includes(c.rank));
     const hasLow = suitNatural.some(c => ['2', '3', '4', '5'].includes(c.rank));
@@ -2760,70 +2843,67 @@ function arrangeSekaHandOptimal(hand) {
     const rankFn = (c) => (isAceHigh && c.rank === 'A' ? 14 : (rankOrderMap[c.rank] || 0));
 
     const suitCards = suitNatural.sort((a, b) => rankFn(a) - rankFn(b));
-    let usedInSuit = new Set();
 
     // 0. Check natural complete 4-card Quatris sequence FIRST (e.g. J-Q-K-A, 7-8-9-10)
     for (let i = 0; i <= suitCards.length - 4; i++) {
       const quad = suitCards.slice(i, i + 4);
-      if (checkValidSekaQuatris(quad) && !quad.some(c => usedInSuit.has(c.id))) {
-        arrangedGroups.push(arrangeSekaMeld(quad));
-        quad.forEach(c => usedInSuit.add(c.id));
+      if (checkValidSekaQuatris(quad) && !quad.some(c => usedIds.has(c.id))) {
+        quatrisGroups.push(arrangeSekaMeld(quad));
+        quad.forEach(c => usedIds.add(c.id));
       }
     }
     // Also check Ace-high Quatris wrapping (J-Q-K then A at start of sorted array)
     if (suitCards.length >= 4) {
-      const aceCard = suitCards.find(c => c.rank === 'A' && !usedInSuit.has(c.id));
+      const aceCard = suitCards.find(c => c.rank === 'A' && !usedIds.has(c.id));
       if (aceCard) {
-        const highCards = suitCards.filter(c => !usedInSuit.has(c.id) && ['J', 'Q', 'K'].includes(c.rank));
+        const highCards = suitCards.filter(c => !usedIds.has(c.id) && ['J', 'Q', 'K'].includes(c.rank));
         if (highCards.length >= 3) {
           const quad = [...highCards.slice(0, 3), aceCard];
           if (checkValidSekaQuatris(quad)) {
-            arrangedGroups.push(arrangeSekaMeld(quad));
-            quad.forEach(c => usedInSuit.add(c.id));
+            quatrisGroups.push(arrangeSekaMeld(quad));
+            quad.forEach(c => usedIds.add(c.id));
           }
         }
       }
     }
 
-    // 1. Check natural complete 3-card Tris sequence
-    const remForTris = suitCards.filter(c => !usedInSuit.has(c.id));
+    // 1. Check natural complete 3-card Tris in this suit
+    const remForTris = suitCards.filter(c => !usedIds.has(c.id));
     for (let i = 0; i <= remForTris.length - 3; i++) {
       const trio = remForTris.slice(i, i + 3);
-      if (checkValidSekaTris(trio) && !trio.some(c => usedInSuit.has(c.id))) {
-        arrangedGroups.push(arrangeSekaMeld(trio));
-        trio.forEach(c => usedInSuit.add(c.id));
+      if (checkValidSekaTris(trio) && !trio.some(c => usedIds.has(c.id))) {
+        trisGroups.push(arrangeSekaMeld(trio));
+        trio.forEach(c => usedIds.add(c.id));
       }
     }
-    // 1b. Check Ace-high Tris (Q-K-A) that may not be caught by consecutive slicing
-    //     because A is sorted first (rank 1) while Q and K are at the end
-    if (remForTris.length >= 3) {
-      const aceCard = remForTris.find(c => c.rank === 'A' && !usedInSuit.has(c.id));
-      if (aceCard) {
-        const kCard = remForTris.find(c => c.rank === 'K' && !usedInSuit.has(c.id));
-        const qCard = remForTris.find(c => c.rank === 'Q' && !usedInSuit.has(c.id));
-        if (kCard && qCard) {
-          const aceHighTrio = [qCard, kCard, aceCard];
-          if (checkValidSekaTris(aceHighTrio)) {
-            arrangedGroups.push(arrangeSekaMeld(aceHighTrio));
-            aceHighTrio.forEach(c => usedInSuit.add(c.id));
-          }
+    // 1b. Check Ace-high Tris (Q-K-A)
+    const remAceHigh = suitCards.filter(c => !usedIds.has(c.id));
+    if (remAceHigh.length >= 3) {
+      const aceCard = remAceHigh.find(c => c.rank === 'A');
+      const kCard = remAceHigh.find(c => c.rank === 'K');
+      const qCard = remAceHigh.find(c => c.rank === 'Q');
+      if (aceCard && kCard && qCard) {
+        const aceHighTrio = [qCard, kCard, aceCard];
+        if (checkValidSekaTris(aceHighTrio)) {
+          trisGroups.push(arrangeSekaMeld(aceHighTrio));
+          aceHighTrio.forEach(c => usedIds.add(c.id));
         }
       }
     }
 
-    // 2. Check 3-card gap with Joker forming Quatris (e.g. J♠ Q♠ 🃏 → J♠ Q♠ 🃏 A♠ style, or 7♦ 8♦ 🃏 10♦)
+    // 2. Check 3-card gap with Joker forming Quatris
     if (availableJokers.length > 0) {
-      const remForQuatrisJoker = suitCards.filter(c => !usedInSuit.has(c.id));
-      for (let i = 0; i < remForQuatrisJoker.length - 2; i++) {
-        for (let j = i + 1; j < remForQuatrisJoker.length - 1; j++) {
-          for (let k = j + 1; k < remForQuatrisJoker.length; k++) {
+      const remForQuatrisJk = suitCards.filter(c => !usedIds.has(c.id));
+      for (let i = 0; i < remForQuatrisJk.length - 2; i++) {
+        for (let j = i + 1; j < remForQuatrisJk.length - 1; j++) {
+          for (let k = j + 1; k < remForQuatrisJk.length; k++) {
             if (availableJokers.length === 0) break;
-            const c1 = remForQuatrisJoker[i], c2 = remForQuatrisJoker[j], c3 = remForQuatrisJoker[k];
-            if (usedInSuit.has(c1.id) || usedInSuit.has(c2.id) || usedInSuit.has(c3.id)) continue;
+            const c1 = remForQuatrisJk[i], c2 = remForQuatrisJk[j], c3 = remForQuatrisJk[k];
+            if (usedIds.has(c1.id) || usedIds.has(c2.id) || usedIds.has(c3.id)) continue;
             const jk = availableJokers[0];
             if (checkValidSekaQuatris([c1, c2, c3, jk])) {
-              arrangedGroups.push(arrangeSekaMeld([c1, c2, c3, jk]));
-              usedInSuit.add(c1.id); usedInSuit.add(c2.id); usedInSuit.add(c3.id);
+              quatrisGroups.push(arrangeSekaMeld([c1, c2, c3, jk]));
+              usedIds.add(c1.id); usedIds.add(c2.id); usedIds.add(c3.id);
               availableJokers.shift();
             }
           }
@@ -2831,61 +2911,72 @@ function arrangeSekaHandOptimal(hand) {
       }
     }
 
-    // 3. Check 2-card gap pairs with Joker for Tris (e.g. 5♥ 7♥ → 5♥ Joker 7♥, or 5♥ 6♥ → 5♥ 6♥ Joker)
+    // 3. Check 2-card gap pairs with Joker for Tris
     if (availableJokers.length > 0) {
-      const remSuitCards = suitCards.filter(c => !usedInSuit.has(c.id));
+      const remSuitCards = suitCards.filter(c => !usedIds.has(c.id));
       for (let i = 0; i < remSuitCards.length; i++) {
         for (let j = i + 1; j < remSuitCards.length; j++) {
           if (availableJokers.length === 0) break;
           const c1 = remSuitCards[i];
           const c2 = remSuitCards[j];
-          if (usedInSuit.has(c1.id) || usedInSuit.has(c2.id)) continue;
+          if (usedIds.has(c1.id) || usedIds.has(c2.id)) continue;
 
           const jk = availableJokers[0];
           if (checkValidSekaTris([c1, c2, jk])) {
             const arrangedTrio = arrangeSekaMeld([c1, c2, jk]);
-            arrangedGroups.push(arrangedTrio);
-            usedInSuit.add(c1.id);
-            usedInSuit.add(c2.id);
+            trisGroups.push(arrangedTrio);
+            usedIds.add(c1.id); usedIds.add(c2.id);
             availableJokers.shift();
           }
         }
       }
     }
 
-    // Remaining natural cards in this suit
-    const leftoverSuit = suitCards.filter(c => !usedInSuit.has(c.id));
-    if (leftoverSuit.length > 0) {
-      arrangedGroups.push(leftoverSuit);
+    // 4. Pairs / 2-card connected potential Tris (ገጥሞች - 2♣ 3♣, 5♥ 7♥, etc.)
+    const remPairs = suitCards.filter(c => !usedIds.has(c.id));
+    for (let diffTarget = 1; diffTarget <= 2; diffTarget++) {
+      for (let i = 0; i < remPairs.length; i++) {
+        for (let j = i + 1; j < remPairs.length; j++) {
+          const c1 = remPairs[i], c2 = remPairs[j];
+          if (usedIds.has(c1.id) || usedIds.has(c2.id)) continue;
+          const r1 = rankFn(c1), r2 = rankFn(c2);
+          if (Math.abs(r1 - r2) === diffTarget) {
+            pairGroups.push([c1, c2].sort((a, b) => rankFn(a) - rankFn(b)));
+            usedIds.add(c1.id); usedIds.add(c2.id);
+          }
+        }
+      }
+    }
+
+    // 5. Remaining cards of the same suit (2 or more cards)
+    const remSameSuit = suitCards.filter(c => !usedIds.has(c.id));
+    if (remSameSuit.length >= 2) {
+      sameSuitGroups.push(remSameSuit.sort((a, b) => rankFn(a) - rankFn(b)));
+      remSameSuit.forEach(c => usedIds.add(c.id));
+    } else if (remSameSuit.length === 1) {
+      singleCards.push(remSameSuit[0]);
+      usedIds.add(remSameSuit[0].id);
     }
   }
 
-  // If there are still unused jokers: NEVER place them consecutively (ተከታታይ ጆከር ማድረግ አይቻልም)!
-  if (availableJokers.length === 1) {
-    arrangedGroups.push([availableJokers[0]]);
-  } else if (availableJokers.length > 1) {
-    // If 2 jokers are unused, separate them so they are never side-by-side
-    if (arrangedGroups.length >= 2) {
-      arrangedGroups[0].push(availableJokers[0]);
-      arrangedGroups[arrangedGroups.length - 1].push(availableJokers[1]);
-    } else {
-      arrangedGroups.unshift([availableJokers[0]]);
-      arrangedGroups.push([availableJokers[1]]);
-    }
-  }
+  // Any unused Jokers
+  const unusedJokers = [...availableJokers];
 
-  // Sort groups: Quatris (4) first, then Tris (3), then ALL leftovers strictly at the far right — ኳትሪስ → ትሪስ 1 → ትሪስ 2 → ያልገቡ (ቀኝ ጥግ)
-  const quatrisGroups = [];
-  const trisGroups = [];
-  const leftoverCards = [];
-  for (const grp of arrangedGroups) {
-    const isQuatris = grp.length === 4 && checkValidSekaQuatris(grp);
-    const isTris = grp.length === 3 && checkValidSekaTris(grp);
-    if (isQuatris) quatrisGroups.push(grp);
-    else if (isTris) trisGroups.push(grp);
-    else leftoverCards.push(...grp);
-  }
-  const arrangedCards = [...quatrisGroups.flat(), ...trisGroups.flat(), ...leftoverCards];
+  // Final card order:
+  // 1. Quatris groups (4 cards each)
+  // 2. Tris groups (3 cards each)
+  // 3. Connected Pair groups (ገጥሞች - 2 cards each, e.g. 2♣ 3♣)
+  // 4. Same suit groups (2+ cards)
+  // 5. Unused Jokers (if any)
+  // 6. Isolated single cards (ተጣይ/ነጠላ) strictly at the FAR RIGHT!
+  const arrangedCards = [
+    ...quatrisGroups.flat(),
+    ...trisGroups.flat(),
+    ...pairGroups.flat(),
+    ...sameSuitGroups.flat(),
+    ...unusedJokers,
+    ...singleCards
+  ];
 
   return {
     arrangedCards,
