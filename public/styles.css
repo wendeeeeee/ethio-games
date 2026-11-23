@@ -1,16 +1,19 @@
 /* public/styles.css - Clean, Light & Modern Casino Theme */
 :root {
-  --primary-gold: #d97706;
-  --secondary-gold: #b45309;
+  --primary-accent: #059669;
+  --primary-hover: #047857;
+  --primary-gold: #059669;
+  --secondary-gold: #047857;
   --bg-light: #f8fafc;
   --card-bg: #ffffff;
   --text-main: #0f172a;
   --text-muted: #64748b;
+  --text-sub: #334155;
   --border-light: #e2e8f0;
-  --felt-green: #16a34a;
-  --felt-dark: #15803d;
-  --card-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   --card-border: #cbd5e1;
+  --felt-green: #065f46;
+  --felt-dark: #022c22;
+  --card-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 
 * {
@@ -84,22 +87,22 @@ body {
 }
 
 .deposit-btn {
-  background: linear-gradient(135deg, #f59e0b, #d97706);
+  background: #059669;
   color: #ffffff;
-  border: 1px solid #fef08a;
-  padding: 4px 12px;
+  border: 1px solid #047857;
+  padding: 5px 14px;
   border-radius: 20px;
-  font-weight: 800;
+  font-weight: 700;
   cursor: pointer;
   font-size: 12px;
-  box-shadow: 0 2px 6px rgba(217, 119, 6, 0.3);
+  box-shadow: 0 2px 6px rgba(5, 150, 105, 0.2);
   transition: transform 0.2s, background 0.2s, box-shadow 0.2s;
 }
 
 .deposit-btn:hover {
-  background: linear-gradient(135deg, #d97706, #b45309);
+  background: #047857;
   transform: translateY(-1px);
-  box-shadow: 0 4px 10px rgba(217, 119, 6, 0.4);
+  box-shadow: 0 4px 10px rgba(5, 150, 105, 0.3);
 }
 
 .sound-toggle-btn {
@@ -151,8 +154,8 @@ body {
 /* In-Game Full Table Background (Prevents ANY white gap at bottom) */
 html.in-game,
 body.in-game {
-  background: #14532d !important;
-  background-color: #14532d !important;
+  background: #022c22 !important;
+  background-color: #022c22 !important;
   height: 100% !important;
   height: 100dvh !important;
   max-height: 100dvh !important;
@@ -163,8 +166,8 @@ body.in-game {
 }
 
 body.in-game .app-header {
-  background: #0f3d20 !important;
-  border-bottom: 1px solid #166534 !important;
+  background: #064e3b !important;
+  border-bottom: 1px solid #065f46 !important;
   color: #f8fafc !important;
 }
 
@@ -173,13 +176,13 @@ body.in-game .app-header .logo-title {
 }
 
 body.in-game .app-header .logo-title span {
-  color: #86efac !important;
+  color: #a7f3d0 !important;
 }
 
 body.in-game .app-header .wallet-badge {
   background: rgba(0, 0, 0, 0.45) !important;
-  border: 1px solid rgba(217, 119, 6, 0.5) !important;
-  color: #fef08a !important;
+  border: 1px solid rgba(5, 150, 105, 0.5) !important;
+  color: #a7f3d0 !important;
 }
 
 body.in-game #gameView {
@@ -189,8 +192,8 @@ body.in-game #gameView {
   height: 100% !important;
   min-height: 0 !important;
   width: 100% !important;
-  background: #14532d !important;
-  background-color: #14532d !important;
+  background: #022c22 !important;
+  background-color: #022c22 !important;
   overflow: hidden !important;
   padding: 0 !important;
   margin: 0 !important;
@@ -201,8 +204,8 @@ body.in-game .game-table {
   height: 100% !important;
   max-height: 100% !important;
   min-height: 0 !important;
-  background: radial-gradient(ellipse at center, #16a34a 0%, #15803d 70%, #14532d 100%) !important;
-  background-color: #14532d !important;
+  background: radial-gradient(ellipse at center, #065f46 0%, #064e3b 70%, #022c22 100%) !important;
+  background-color: #022c22 !important;
   padding-bottom: max(12px, env(safe-area-inset-bottom, 12px)) !important;
   box-sizing: border-box !important;
   margin: 0 !important;
@@ -271,13 +274,13 @@ body.in-game .game-table {
 }
 
 .home-game-card.seka-card {
-  border-color: #f59e0b;
-  background: #fffdf5;
+  border-color: #cbd5e1;
+  background: #ffffff;
 }
 
 .home-game-card.seka-card:hover {
-  border-color: #d97706;
-  box-shadow: 0 10px 28px rgba(217, 119, 6, 0.18);
+  border-color: #059669;
+  box-shadow: 0 10px 28px rgba(5, 150, 105, 0.15);
 }
 
 .home-game-card.conquer-card {
@@ -291,7 +294,7 @@ body.in-game .game-table {
 
 .coming-soon-badge {
   font-size: 11px;
-  font-weight: 800;
+  font-weight: 700;
   padding: 3px 10px;
   border-radius: 20px;
   background: #f1f5f9;
@@ -302,12 +305,12 @@ body.in-game .game-table {
 
 .active-live-badge {
   font-size: 11px;
-  font-weight: 800;
+  font-weight: 700;
   padding: 3px 10px;
   border-radius: 20px;
-  background: rgba(245, 158, 11, 0.15);
-  color: #d97706;
-  border: 1px solid #f59e0b;
+  background: #ecfdf5;
+  color: #059669;
+  border: 1px solid #a7f3d0;
   margin-bottom: 8px;
 }
 
@@ -319,7 +322,7 @@ body.in-game .game-table {
 
 .home-card-title {
   font-size: 22px;
-  font-weight: 900;
+  font-weight: 800;
   color: #0f172a;
   margin-bottom: 4px;
 }
@@ -335,17 +338,23 @@ body.in-game .game-table {
   padding: 12px 18px;
   border-radius: 12px;
   font-size: 14px;
-  font-weight: 800;
+  font-weight: 700;
   text-align: center;
   box-sizing: border-box;
   transition: all 0.2s ease;
 }
 
 .home-card-btn.active-btn {
-  background: linear-gradient(135deg, #f59e0b, #d97706);
+  background: #059669;
   color: #ffffff;
   border: none;
-  box-shadow: 0 4px 14px rgba(217, 119, 6, 0.3);
+  box-shadow: 0 3px 10px rgba(5, 150, 105, 0.25);
+}
+
+.home-card-btn.active-btn:hover {
+  background: #047857;
+  transform: translateY(-1px);
+  box-shadow: 0 5px 14px rgba(5, 150, 105, 0.3);
 }
 
 .home-card-btn.disabled-btn {
@@ -454,38 +463,44 @@ select {
 input:focus,
 select:focus {
   outline: none;
-  border-color: #d97706;
+  border-color: #059669;
   background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.12);
 }
 
 .btn-primary {
   width: 100%;
   padding: 11px;
-  background: linear-gradient(135deg, #f59e0b, #d97706);
+  background: #059669;
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
   color: #ffffff;
   font-weight: 700;
   font-size: 14px;
   cursor: pointer;
   transition: all 0.2s;
-  box-shadow: 0 3px 10px rgba(217, 119, 6, 0.2);
+  box-shadow: 0 2px 8px rgba(5, 150, 105, 0.2);
 }
 
 .btn-primary:hover {
-  background: linear-gradient(135deg, #fbbf24, #f59e0b);
+  background: #047857;
   transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(5, 150, 105, 0.25);
 }
 
 .btn-bot {
-  background: linear-gradient(135deg, #3b82f6, #2563eb);
-  color: #fff;
+  background: #f8fafc;
+  color: #334155;
+  border: 1.5px solid #cbd5e1;
   margin-top: 10px;
-  box-shadow: 0 3px 10px rgba(37, 99, 235, 0.2);
+  box-shadow: none;
 }
 
 .btn-bot:hover {
-  background: linear-gradient(135deg, #60a5fa, #3b82f6);
+  background: #f1f5f9;
+  border-color: #94a3b8;
+  color: #0f172a;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
 }
 
 .room-list-item {
@@ -546,19 +561,20 @@ select:focus {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 30px;
   padding: 8px 20px;
 }
 
 .pot-badge {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 800;
-  color: var(--primary-gold);
-  background: rgba(0, 0, 0, 0.7);
+  color: #a7f3d0;
+  background: rgba(0, 0, 0, 0.6);
   padding: 6px 16px;
   border-radius: 20px;
-  border: 1px solid var(--primary-gold);
+  border: 1px solid rgba(52, 211, 153, 0.4);
 }
 
 .poke-btn {
@@ -2729,10 +2745,10 @@ body.in-game .user-profile-badge {
 /* Turn Timer Badge in table */
 .turn-timer-badge {
   background: rgba(15, 23, 42, 0.75);
-  border: 1.5px solid #f59e0b;
-  color: #fef08a;
+  border: 1.5px solid rgba(52, 211, 153, 0.4);
+  color: #a7f3d0;
   font-size: 13px;
-  font-weight: 800;
+  font-weight: 700;
   padding: 4px 10px;
   border-radius: 20px;
   display: inline-flex;
@@ -2765,11 +2781,11 @@ body.in-game .user-profile-badge {
   transform: translateX(-50%);
   width: calc(100% - 32px);
   max-width: 600px;
-  background: linear-gradient(135deg, #1e293b, #0f172a);
-  border: 2px solid #f59e0b;
+  background: #0f172a;
+  border: 1.5px solid #059669;
   border-radius: 14px;
   padding: 12px 18px;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25);
   z-index: 9999;
   animation: slideDownBanner 0.3s ease-out;
 }
@@ -2953,15 +2969,15 @@ body.in-game .user-profile-badge {
 }
 
 .amount-preset-btn:hover {
-  border-color: #005cb9;
-  background: rgba(0, 92, 185, 0.04);
+  border-color: #059669;
+  background: rgba(5, 150, 105, 0.05);
 }
 
 .amount-preset-btn.active {
-  background: #005cb9;
-  border-color: #005cb9;
+  background: #059669;
+  border-color: #059669;
   color: #ffffff;
-  box-shadow: 0 2px 6px rgba(0, 92, 185, 0.25);
+  box-shadow: 0 2px 6px rgba(5, 150, 105, 0.25);
 }
 
 .deposit-custom-amount-wrap {
@@ -2975,8 +2991,8 @@ body.in-game .user-profile-badge {
 }
 
 .deposit-custom-amount-wrap:focus-within {
-  border-color: #005cb9;
-  box-shadow: 0 0 0 3px rgba(0, 92, 185, 0.12);
+  border-color: #059669;
+  box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.12);
 }
 
 .currency-prefix {
@@ -3013,8 +3029,8 @@ body.in-game .user-profile-badge {
 }
 
 .simple-input-wrap:focus-within {
-  border-color: #005cb9;
-  box-shadow: 0 0 0 3px rgba(0, 92, 185, 0.12);
+  border-color: #059669;
+  box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.12);
 }
 
 #depositTxnIdInput {
@@ -3052,19 +3068,19 @@ body.in-game .user-profile-badge {
 .deposit-submit-btn {
   width: 100%;
   padding: 13px;
-  font-size: 16px;
-  font-weight: 800;
-  background: linear-gradient(135deg, #10b981, #059669);
+  font-size: 15px;
+  font-weight: 700;
+  background: #059669;
   color: #ffffff;
   border: none;
   border-radius: 12px;
   cursor: pointer;
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
+  box-shadow: 0 2px 8px rgba(5, 150, 105, 0.25);
   transition: all 0.2s;
 }
 
 .deposit-submit-btn:hover {
-  background: #059669;
+  background: #047857;
   transform: translateY(-1px);
 }
 

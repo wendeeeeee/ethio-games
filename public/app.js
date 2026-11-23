@@ -1470,8 +1470,8 @@ async function refreshRoomsList() {
     roomsListContainer.innerHTML = rooms.map(r => `
       <div class="room-list-item">
         <div>
-          <strong style="color: var(--primary-gold);">${r.creatorName}'s Table</strong>
-          <div style="font-size: 12px; color: #94a3b8;">Stake: ${r.stakeAmount} ETB ${r.expiresIn ? `| <span style="color: #f59e0b;">⏳ ${r.expiresIn}s ይቀራል</span>` : ''}</div>
+          <strong style="color: #0f172a;">${r.creatorName}'s Table</strong>
+          <div style="font-size: 12px; color: #64748b;">Stake: ${r.stakeAmount} ETB ${r.expiresIn ? `| <span style="color: #059669; font-weight: 700;">⏳ ${r.expiresIn}s ይቀራል</span>` : ''}</div>
         </div>
         <button class="btn-primary" style="width: auto; padding: 6px 14px; font-size: 12px;" onclick="joinRoom('${r.roomId}')">Join Table</button>
       </div>
@@ -1494,33 +1494,33 @@ async function refreshSekaRoomsList() {
       const isMyRoom = (r.creatorId && r.creatorId === userId) || (r.roomId === currentWaitingRoomId);
       if (isMyRoom) {
         return `
-          <div class="room-list-item" style="background: linear-gradient(135deg, rgba(245, 158, 11, 0.12), rgba(217, 119, 6, 0.08)); border: 1.5px solid #f59e0b; border-radius: 12px; padding: 12px 16px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.12);">
+          <div class="room-list-item" style="background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 12px; padding: 12px 16px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2px 8px rgba(5, 150, 105, 0.08);">
             <div>
               <div style="display: flex; align-items: center; gap: 8px;">
-                <strong style="color: #b45309; font-size: 14px;">🃏 የእርስዎ ጨዋታ (${r.creatorName})</strong>
-                <span style="background: #fef3c7; color: #92400e; font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 12px; border: 1px solid #fde68a;">ተጫዋች በመጠበቅ ላይ...</span>
+                <strong style="color: #065f46; font-size: 14px;">🃏 የእርስዎ ጨዋታ (${r.creatorName})</strong>
+                <span style="background: #ecfdf5; color: #047857; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 12px; border: 1px solid #a7f3d0;">ተጫዋች በመጠበቅ ላይ...</span>
               </div>
               <div style="font-size: 12px; color: #475569; margin-top: 4px;">
                 ውርርድ: <strong>${r.stakeAmount} ETB</strong> | ${r.playersCount || 1}/${r.maxPlayers || 2} ተጫዋቾች 
-                ${r.expiresIn !== undefined ? `| <span style="color: #d97706; font-weight: 800;">⏳ ${r.expiresIn}s ይቀራል</span>` : ''}
+                ${r.expiresIn !== undefined ? `| <span style="color: #059669; font-weight: 700;">⏳ ${r.expiresIn}s ይቀራል</span>` : ''}
               </div>
             </div>
             <div style="display: flex; align-items: center; gap: 8px;">
-              <span style="font-size: 13px; color: #d97706; font-weight: 800; background: #fffbeb; padding: 6px 12px; border-radius: 20px; border: 1px solid #fde68a;">⏳ ${r.expiresIn !== undefined ? r.expiresIn + 's' : '60s'}</span>
+              <span style="font-size: 13px; color: #059669; font-weight: 700; background: #ffffff; padding: 5px 12px; border-radius: 20px; border: 1px solid #a7f3d0;">⏳ ${r.expiresIn !== undefined ? r.expiresIn + 's' : '60s'}</span>
             </div>
           </div>
         `;
       } else {
         return `
-          <div class="room-list-item" style="border-radius: 12px; padding: 12px 16px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between;">
+          <div class="room-list-item" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px 16px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between;">
             <div>
               <strong style="color: #0f172a; font-size: 14px;">🃏 ${r.creatorName}'s Table</strong>
               <div style="font-size: 12px; color: #64748b; margin-top: 4px;">
                 ውርርድ: <strong>${r.stakeAmount} ETB</strong> | ${r.playersCount || 1}/${r.maxPlayers || 2} ተጫዋቾች 
-                ${r.expiresIn !== undefined ? `| <span style="color: #d97706; font-weight: 700;">⏳ ${r.expiresIn}s ይቀራል</span>` : ''}
+                ${r.expiresIn !== undefined ? `| <span style="color: #059669; font-weight: 700;">⏳ ${r.expiresIn}s ይቀራል</span>` : ''}
               </div>
             </div>
-            <button class="btn-primary" style="width: auto; padding: 8px 16px; font-size: 13px; font-weight: 700; background: linear-gradient(135deg, #10b981, #059669); border-color: #34d399;" onclick="joinSekaRoom('${r.roomId}')">
+            <button class="btn-primary" style="width: auto; padding: 7px 16px; font-size: 13px;" onclick="joinSekaRoom('${r.roomId}')">
               ተቀላቀል (Join) →
             </button>
           </div>
