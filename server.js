@@ -95,7 +95,7 @@ app.get('/api/wallet/deposits/:userId', (req, res) => {
 
 // Helper: check admin auth
 function isAdminAuthorized(key) {
-  return key === 'ethio-games-admin-2024' || key === '1234' || key === 'admin123';
+  return key === 'wende3428' || key === 'ethio-games-admin-2024';
 }
 
 // Admin: List pending deposits
