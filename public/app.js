@@ -2932,23 +2932,9 @@ function arrangeSekaHandOptimal(hand) {
       }
     }
 
-    // 4. Pairs / 2-card connected potential Tris (ገጥሞች - 2♣ 3♣, 5♥ 7♥, etc.)
-    const remPairs = suitCards.filter(c => !usedIds.has(c.id));
-    for (let diffTarget = 1; diffTarget <= 2; diffTarget++) {
-      for (let i = 0; i < remPairs.length; i++) {
-        for (let j = i + 1; j < remPairs.length; j++) {
-          const c1 = remPairs[i], c2 = remPairs[j];
-          if (usedIds.has(c1.id) || usedIds.has(c2.id)) continue;
-          const r1 = rankFn(c1), r2 = rankFn(c2);
-          if (Math.abs(r1 - r2) === diffTarget) {
-            pairGroups.push([c1, c2].sort((a, b) => rankFn(a) - rankFn(b)));
-            usedIds.add(c1.id); usedIds.add(c2.id);
-          }
-        }
-      }
-    }
-
-    // 5. Remaining cards of the same suit (2 or more cards)
+    // 4. Any remaining cards in this suit:
+    // If there are 2 or more cards in this suit, they NEVER get torn apart!
+    // They are kept together in ascending rank order (e.g. 7♣ 9♣ 10♣ stay together as 7♣ 9♣ 10♣!)
     const remSameSuit = suitCards.filter(c => !usedIds.has(c.id));
     if (remSameSuit.length >= 2) {
       sameSuitGroups.push(remSameSuit.sort((a, b) => rankFn(a) - rankFn(b)));
@@ -2959,20 +2945,34 @@ function arrangeSekaHandOptimal(hand) {
     }
   }
 
+  // Prioritize same-suit groups: groups containing close/consecutive pairs come first!
+  sameSuitGroups.sort((a, b) => {
+    let minDiffA = 99;
+    for (let i = 0; i < a.length - 1; i++) {
+      const d = Math.abs((rankOrderMap[a[i + 1].rank] || 0) - (rankOrderMap[a[i].rank] || 0));
+      if (d < minDiffA) minDiffA = d;
+    }
+    let minDiffB = 99;
+    for (let i = 0; i < b.length - 1; i++) {
+      const d = Math.abs((rankOrderMap[b[i + 1].rank] || 0) - (rankOrderMap[b[i].rank] || 0));
+      if (d < minDiffB) minDiffB = d;
+    }
+    if (minDiffA !== minDiffB) return minDiffA - minDiffB;
+    return b.length - a.length;
+  });
+
   // Any unused Jokers
   const unusedJokers = [...availableJokers];
 
   // Final card order:
   // 1. Quatris groups (4 cards each)
   // 2. Tris groups (3 cards each)
-  // 3. Connected Pair groups (ገጥሞች - 2 cards each, e.g. 2♣ 3♣)
-  // 4. Same suit groups (2+ cards)
-  // 5. Unused Jokers (if any)
-  // 6. Isolated single cards (ተጣይ/ነጠላ) strictly at the FAR RIGHT!
+  // 3. Same suit groups (2+ cards, kept intact and sorted in ascending order)
+  // 4. Unused Jokers (if any)
+  // 5. Isolated single cards (ተጣይ/ነጠላ - cards with 0 suit partners) strictly at the FAR RIGHT!
   const arrangedCards = [
     ...quatrisGroups.flat(),
     ...trisGroups.flat(),
-    ...pairGroups.flat(),
     ...sameSuitGroups.flat(),
     ...unusedJokers,
     ...singleCards
