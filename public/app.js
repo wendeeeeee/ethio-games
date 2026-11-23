@@ -3725,7 +3725,6 @@ function renderGame(state) {
     if (iWon) playWinSound();
     return;
   }
-  }
 }
 
 // Helper: renders winning melds face-up with clean visual grouping
