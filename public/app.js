@@ -1470,7 +1470,7 @@ async function refreshRoomsList() {
     roomsListContainer.innerHTML = rooms.map(r => `
       <div class="room-list-item">
         <div>
-          <strong style="color: #0f172a;">${r.creatorName}'s Table</strong>
+          <strong style="color: #0f172a;">${r.creatorName}</strong>
           <div style="font-size: 12px; color: #64748b;">Stake: ${r.stakeAmount} ETB ${r.expiresIn ? `| <span style="color: #059669; font-weight: 700;">⏳ ${r.expiresIn}s ይቀራል</span>` : ''}</div>
         </div>
         <button class="btn-primary" style="width: auto; padding: 6px 14px; font-size: 12px;" onclick="joinRoom('${r.roomId}')">Join Table</button>
@@ -1514,7 +1514,7 @@ async function refreshSekaRoomsList() {
         return `
           <div class="room-list-item" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px 16px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between;">
             <div>
-              <strong style="color: #0f172a; font-size: 14px;">🃏 ${r.creatorName}'s Table</strong>
+              <strong style="color: #0f172a; font-size: 14px;">🃏 ${r.creatorName}</strong>
               <div style="font-size: 12px; color: #64748b; margin-top: 4px;">
                 ውርርድ: <strong>${r.stakeAmount} ETB</strong> | ${r.playersCount || 1}/${r.maxPlayers || 2} ተጫዋቾች 
                 ${r.expiresIn !== undefined ? `| <span style="color: #059669; font-weight: 700;">⏳ ${r.expiresIn}s ይቀራል</span>` : ''}
@@ -3242,12 +3242,10 @@ function renderGame(state) {
   const isMyTurn = state.isMyTurn !== undefined ? state.isMyTurn : (state.currentTurnPlayerId === userId);
   const gameModeBadge = document.getElementById('gameModeBadge');
   if (gameModeBadge) {
-    gameModeBadge.textContent = isSeka ? '🃏 ሴካ (SEKA)' : '👑 ኮንከር (CONQUER)';
-    gameModeBadge.style.borderColor = isSeka ? '#f59e0b' : 'var(--primary-gold)';
-    gameModeBadge.style.color = isSeka ? '#f59e0b' : 'var(--primary-gold)';
+    gameModeBadge.textContent = '';
   }
 
-  tableIdDisplay.textContent = `#${state.roomId.replace('room_', '').replace('bot_', 'BOT-').replace('seka_', 'SEKA-')}`;
+  tableIdDisplay.textContent = '';
   potDisplay.textContent = `POT: ${state.pot} ETB`;
   deckCount.textContent = state.deckCount !== undefined ? state.deckCount : (state.deckCardCount !== undefined ? state.deckCardCount : 0);
 

@@ -96,7 +96,6 @@
     <div id="sekaLobbySection" style="display: none;">
       <div style="margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between;">
         <button id="backToHomeBtn" class="back-home-btn">← ወደ ጨዋታ መምረጫ ተመለስ (Back)</button>
-        <span style="font-weight: 800; font-size: 15px; color: #059669;">🃏 የሴካ ጠረጴዛ (Seka)</span>
       </div>
 
       <div class="lobby-grid">
@@ -168,15 +167,10 @@
   <div id="gameView" class="view-container" style="display: none;">
     <div class="game-table">
 
-      <!-- Top Bar: Room ID, Stakes, Pot, Poke Button -->
+      <!-- Top Bar: Room ID (hidden), Pot, Poke, Timer, Sound -->
       <div class="table-top-bar">
-        <div style="display: flex; align-items: center; gap: 10px;">
-          <span id="gameModeBadge" class="game-mode-badge"
-            style="background: rgba(5, 150, 105, 0.2); border: 1px solid #059669; padding: 4px 10px; border-radius: 8px; font-weight: bold; font-size: 13px; color: #a7f3d0;">👑
-            ኮንከር</span>
-          <span style="font-size: 13px; color: #94a3b8;">TABLE: <strong id="tableIdDisplay"
-              style="color:#fff;">#1234</strong></span>
-        </div>
+        <span id="gameModeBadge" style="display: none;"></span>
+        <span id="tableIdDisplay" style="display: none;"></span>
         <div class="pot-badge" id="potDisplay">
           POT: 200 ETB
         </div>
