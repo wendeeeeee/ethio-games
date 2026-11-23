@@ -2831,7 +2831,7 @@ function arrangeSekaHandOptimal(hand) {
     }
   }
 
-  // Sort groups: Quatris (4) first, then Tris (3), then leftovers — ኳትሪስ → ጦር 1 → ጦር 2 → ያልገቡ
+  // Sort groups: Quatris (4) first, then Tris (3), then leftovers — ኳትሪስ → ትሪስ 1 → ትሪስ 2 → ያልገቡ
   const quatrisGroups = [];
   const trisGroups = [];
   const leftoverGroups = [];
@@ -2855,12 +2855,11 @@ smartSortBtn.addEventListener('click', () => {
   if (!currentGameState || !currentGameState.myHand || currentGameState.myHand.length === 0) return;
   playCardSound();
 
-  // If Seka game: sort by suited sequences (ጦር) placing Jokers in exact spots (ኳትሪስ ➔ ጦር 1 ➔ ጦር 2)
+  // If Seka game: sort by suited sequences placing Jokers in exact spots (ኳትሪስ ➔ ትሪስ 1 ➔ ትሪስ 2)
   if (currentGameState.gameType === 'SEKA') {
     const sekaArranged = arrangeSekaHandOptimal(currentGameState.myHand);
     currentGameState.myHand = sekaArranged.arrangedCards;
     playerOrderedCardIds = sekaArranged.arrangedCards.map(c => c.id);
-    showSortToast('✨ ካርታዎችህ ተደርድረዋል (ኳትሪስ ➔ ጦር ➔ ጦር)');
     renderPlayerHand(currentGameState.myHand);
     return;
   }
@@ -2879,7 +2878,6 @@ smartSortBtn.addEventListener('click', () => {
   } else {
     currentGameState._winningMelds = null;
     currentGameState._tetayCardId = null;
-    showSortToast(`✨ ካርታዎችህ በተሻለ ሁኔታ ተደርድረዋል`);
   }
 
   smartSortBtn.textContent = '✨ ደርድር';
@@ -3492,7 +3490,7 @@ function renderWinningMeldsHTML(melds, tetayCard) {
   let html = '';
   if (melds && melds.length > 0) {
     melds.forEach((m, idx) => {
-      const typeLabel = m.type === 'QUATRIS' ? `ኳትሪስ (${m.cards.length} ካርታ ጦር)` : `ትሪስ ${idx + 1} (${m.cards.length} ካርታ ጦር)`;
+      const typeLabel = m.type === 'QUATRIS' ? `ኳትሪስ (${m.cards.length} ካርታ)` : `ትሪስ ${idx + 1} (${m.cards.length} ካርታ)`;
       html += `
         <div style="background: rgba(30, 41, 59, 0.85); border: 1px solid #475569; border-radius: 8px; padding: 8px 12px; width: 100%;">
           <div style="font-size: 12px; color: #38bdf8; font-weight: bold; margin-bottom: 6px;">${typeLabel}</div>
