@@ -509,105 +509,60 @@
     <div class="modal-content deposit-modal-content">
       <button class="modal-close-btn" id="closeDepositModalBtn" title="ዝጋ (Close)">✕</button>
 
-      <!-- Telebirr Hero Header -->
-      <div class="deposit-modal-header">
-        <div class="telebirr-brand-pill">
-          <span class="telebirr-logo-dot"></span>
-          <span style="font-weight: 900; letter-spacing: 0.5px;">telebirr</span>
-          <span class="telebirr-badge">Auto-Credit ⚡</span>
-        </div>
-        <div class="deposit-title">ገንዘብ አስገባ (Telebirr Deposit)</div>
-        <div class="deposit-current-balance">
-          <span>የአሁን ቀሪ ሂሳብ:</span>
-          <strong id="depositModalBalanceDisplay">1,000 ETB</strong>
-        </div>
+      <div class="simple-deposit-header">
+        <h3 class="simple-deposit-title">📱 ቴሌብር ዲፖዚት (Telebirr)</h3>
+        <span class="simple-deposit-balance">ቀሪ ሂሳብ: <strong id="depositModalBalanceDisplay">1,000 ETB</strong></span>
       </div>
 
-      <!-- Telebirr Account Card -->
-      <div class="telebirr-card">
-        <div class="telebirr-card-top">
-          <div class="telebirr-card-info">
-            <span class="telebirr-card-label">የቴሌብር ስልክ (Receiver Phone)</span>
-            <div class="telebirr-phone-row">
-              <span class="telebirr-phone-number" id="depositPhoneVal">0960995213</span>
-              <button type="button" class="telebirr-copy-btn" id="copyTelebirrBtn" title="ስልኩን ኮፒ አድርግ">
-                📋 ኮፒ
-              </button>
-            </div>
+      <!-- Telebirr Account Info Box -->
+      <div class="simple-pay-box">
+        <div class="simple-pay-row">
+          <div>
+            <div class="simple-pay-label">የመክፈያ ስልክ</div>
+            <div class="simple-pay-phone" id="depositPhoneVal">0960995213</div>
+            <div class="simple-pay-name" id="depositAccountNameVal">Wendosen</div>
           </div>
-          <div class="telebirr-name-badge">
-            <span class="telebirr-name-label">የተቀባይ ስም</span>
-            <span class="telebirr-name-val" id="depositAccountNameVal">Wendosen <span class="verified-icon">✓</span></span>
-          </div>
+          <button type="button" class="simple-copy-btn" id="copyTelebirrBtn">📋 ኮፒ</button>
         </div>
       </div>
 
-      <!-- Quick Step Guide -->
-      <div class="deposit-steps-row">
-        <div class="deposit-step">
-          <span class="step-num">1</span>
-          <span>በቴሌብር ላክ</span>
-        </div>
-        <div class="step-arrow">→</div>
-        <div class="deposit-step">
-          <span class="step-num">2</span>
-          <span>TXN ID አስገባ</span>
-        </div>
-        <div class="step-arrow">→</div>
-        <div class="deposit-step">
-          <span class="step-num">3</span>
-          <span>ገቢ ሆነ! ⚡</span>
-        </div>
-      </div>
-
-      <!-- Preset Amounts -->
-      <div class="deposit-amount-section">
-        <label class="deposit-label">የገንዘብ መጠን ይምረጡ (Select Amount)</label>
+      <!-- Quick Amounts -->
+      <div class="simple-amount-section">
         <div class="deposit-amount-presets" id="depositAmountPresets">
-          <button type="button" class="amount-preset-btn" data-amount="50">+50 ETB</button>
-          <button type="button" class="amount-preset-btn active" data-amount="100">+100 ETB</button>
-          <button type="button" class="amount-preset-btn" data-amount="250">+250 ETB</button>
-          <button type="button" class="amount-preset-btn" data-amount="500">+500 ETB</button>
-          <button type="button" class="amount-preset-btn" data-amount="1000">+1,000 ETB</button>
-          <button type="button" class="amount-preset-btn" data-amount="2000">+2,000 ETB</button>
+          <button type="button" class="amount-preset-btn" data-amount="50">50</button>
+          <button type="button" class="amount-preset-btn active" data-amount="100">100</button>
+          <button type="button" class="amount-preset-btn" data-amount="200">200</button>
+          <button type="button" class="amount-preset-btn" data-amount="500">500</button>
+          <button type="button" class="amount-preset-btn" data-amount="1000">1,000</button>
         </div>
 
         <div class="deposit-custom-amount-wrap">
           <span class="currency-prefix">ETB</span>
-          <input type="number" id="depositCustomAmountInput" placeholder="ሌላ መጠን ያስገቡ" value="100" min="10" max="50000" step="10">
+          <input type="number" id="depositCustomAmountInput" placeholder="የብር መጠን" value="100" min="10" max="50000" step="10">
         </div>
       </div>
 
       <!-- Transaction ID Input -->
-      <div class="deposit-txn-section">
-        <label class="deposit-label">
-          🧾 Transaction ID (የክፍያ ማረጋገጫ ቁጥር)
-        </label>
-        <div class="deposit-txn-input-wrap">
-          <input type="text" id="depositTxnIdInput" placeholder="ለምሳሌ: FT24XYZ789 ወይም OCC7ABC" autocomplete="off" maxlength="40">
-          <button type="button" id="pasteTxnBtn" class="telebirr-paste-btn" title="TXN ID ለጥፍ">📋 ለጥፍ</button>
+      <div class="simple-txn-section">
+        <div class="simple-input-wrap">
+          <input type="text" id="depositTxnIdInput" placeholder="Transaction ID እዚህ ያስገቡ" autocomplete="off" maxlength="40">
+          <button type="button" id="pasteTxnBtn" class="simple-paste-btn">📋 ለጥፍ</button>
         </div>
-        <p class="deposit-txn-hint">💡 ከቴሌብር የደረሰዎትን የግብይት ቁጥር (Transaction number/ID) እዚህ ያስገቡ</p>
       </div>
 
-      <div id="depositErrorMsg" style="display: none; color: #dc2626; font-size: 12px; margin-bottom: 10px; padding: 8px 12px; background: #fef2f2; border: 1.5px solid #fecaca; border-radius: 10px; text-align: left;">
+      <div id="depositErrorMsg" style="display: none; color: #dc2626; font-size: 12px; margin-bottom: 10px; padding: 6px 10px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; text-align: left;">
       </div>
 
       <!-- Pending Deposits List -->
       <div id="depositPendingList" class="deposit-pending-list" style="display: none;">
-        <label class="deposit-label">📋 ያልተረጋገጡ ጥያቄዎች (Pending Deposits)</label>
+        <label class="deposit-label" style="font-size: 11px;">📋 በመጠባበቅ ላይ ያሉ ጥያቄዎች</label>
         <div id="depositPendingItems"></div>
       </div>
 
-      <!-- Action Button -->
+      <!-- Submit Button -->
       <button class="btn-primary deposit-submit-btn" id="confirmDepositBtn">
-        💰 <span id="depositBtnText">100 ETB በ Telebirr አስገባ</span>
+        💰 <span id="depositBtnText">100 ETB አስገባ</span>
       </button>
-
-      <!-- Instant Security Banner -->
-      <div class="deposit-security-footer">
-        🔒 ፈጣን እና አስተማማኝ አውቶማቲክ ክፍያ (Secure Real-Time Verification)
-      </div>
     </div>
   </div>
 

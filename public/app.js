@@ -1194,10 +1194,10 @@ const DEPOSIT_METHODS = {
 function updateDepositUI() {
   const methodInfo = DEPOSIT_METHODS[selectedDepositMethod] || DEPOSIT_METHODS.telebirr;
   if (depositPhoneVal) depositPhoneVal.textContent = methodInfo.phone;
-  if (depositAccountNameVal) depositAccountNameVal.innerHTML = `${methodInfo.accountName} <span class="verified-icon">✓</span>`;
+  if (depositAccountNameVal) depositAccountNameVal.textContent = methodInfo.accountName;
   if (depositInstructions) depositInstructions.innerHTML = methodInfo.instruction;
   if (depositBtnText) {
-    depositBtnText.textContent = `${selectedDepositAmount.toLocaleString()} ETB በ ${methodInfo.name} አስገባ`;
+    depositBtnText.textContent = `${selectedDepositAmount.toLocaleString()} ETB አስገባ`;
   }
 }
 

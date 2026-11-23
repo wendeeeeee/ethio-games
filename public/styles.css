@@ -2829,307 +2829,159 @@ body.in-game .user-profile-badge {
 }
 
 /* ============================================================
-   DEPOSIT MODAL STYLES
+   SIMPLIFIED DEPOSIT MODAL STYLES
    ============================================================ */
 .deposit-modal-content {
   position: relative;
-  max-width: 440px;
+  max-width: 400px;
   width: 92vw;
   box-sizing: border-box;
-  padding: 26px 20px;
+  padding: 24px 22px;
   background: #ffffff;
-  border: 1.5px solid #e2e8f0;
-  border-radius: 22px;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.16);
   color: #0f172a;
   text-align: center;
-  animation: modalScaleIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  animation: modalScaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.deposit-modal-header {
+.simple-deposit-header {
   margin-bottom: 16px;
 }
 
-.deposit-icon {
-  font-size: 40px;
-  margin-bottom: 4px;
-}
-
-.deposit-title {
-  font-size: 20px;
+.simple-deposit-title {
+  margin: 0 0 4px 0;
+  font-size: 19px;
   font-weight: 900;
   color: #0f172a;
-  margin-bottom: 4px;
 }
 
-.deposit-subtitle {
+.simple-deposit-balance {
   font-size: 13px;
   color: #64748b;
-  margin: 0 0 10px 0;
-  line-height: 1.4;
 }
 
-.deposit-current-balance {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  background: #f8fafc;
-  border: 1px solid #cbd5e1;
-  padding: 5px 14px;
-  border-radius: 20px;
-  font-size: 13px;
-  color: #334155;
-}
-
-.deposit-current-balance strong {
+.simple-deposit-balance strong {
   color: #16a34a;
-  font-size: 14px;
-}
-
-/* Telebirr Hero Card & Brand Pill */
-.telebirr-brand-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  background: linear-gradient(135deg, rgba(0, 92, 185, 0.08), rgba(0, 168, 232, 0.12));
-  border: 1.5px solid rgba(0, 92, 185, 0.25);
-  color: #005cb9;
-  padding: 5px 14px;
-  border-radius: 20px;
-  font-size: 13px;
-  margin-bottom: 8px;
-}
-
-.telebirr-logo-dot {
-  width: 9px;
-  height: 9px;
-  background: #0072ce;
-  border-radius: 50%;
-  box-shadow: 0 0 6px rgba(0, 114, 206, 0.7);
-}
-
-.telebirr-badge {
-  background: #005cb9;
-  color: #ffffff;
-  font-size: 10px;
   font-weight: 800;
-  padding: 2px 7px;
-  border-radius: 10px;
-  letter-spacing: 0.3px;
 }
 
-/* Telebirr Card */
-.telebirr-card {
-  background: linear-gradient(135deg, #005cb9 0%, #0078d4 50%, #0098f4 100%);
-  color: #ffffff;
-  border-radius: 18px;
-  padding: 18px 20px;
-  margin-bottom: 14px;
-  box-shadow: 0 10px 26px rgba(0, 92, 185, 0.28);
-  position: relative;
-  overflow: hidden;
+/* Pay Box */
+.simple-pay-box {
+  background: #f8fafc;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 14px 16px;
+  margin-bottom: 16px;
   text-align: left;
 }
 
-.telebirr-card::after {
-  content: '';
-  position: absolute;
-  top: -30px;
-  right: -30px;
-  width: 120px;
-  height: 120px;
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.25) 0%, transparent 70%);
-  border-radius: 50%;
-  pointer-events: none;
-}
-
-.telebirr-card-top {
+.simple-pay-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 12px;
 }
 
-.telebirr-card-label {
-  display: block;
+.simple-pay-label {
   font-size: 11px;
-  font-weight: 700;
-  color: #e0f2fe;
-  margin-bottom: 4px;
+  font-weight: 600;
+  color: #64748b;
+  margin-bottom: 2px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
-.telebirr-phone-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.telebirr-phone-number {
+.simple-pay-phone {
   font-size: 22px;
   font-weight: 900;
-  letter-spacing: 1px;
-  color: #ffffff;
+  color: #005cb9;
+  letter-spacing: 0.5px;
   font-family: monospace, sans-serif;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  line-height: 1.2;
 }
 
-.telebirr-copy-btn {
-  background: rgba(255, 255, 255, 0.24);
-  border: 1px solid rgba(255, 255, 255, 0.5);
+.simple-pay-name {
+  font-size: 13px;
+  color: #334155;
+  font-weight: 700;
+  margin-top: 2px;
+}
+
+.simple-copy-btn {
+  background: #005cb9;
   color: #ffffff;
-  padding: 4px 10px;
-  border-radius: 8px;
-  font-size: 11px;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 10px;
+  font-size: 13px;
   font-weight: 800;
   cursor: pointer;
-  transition: all 0.2s;
+  box-shadow: 0 2px 8px rgba(0, 92, 185, 0.25);
+  transition: all 0.15s;
 }
 
-.telebirr-copy-btn:hover {
-  background: #ffffff;
-  color: #005cb9;
+.simple-copy-btn:hover {
+  background: #004b96;
   transform: translateY(-1px);
 }
 
-.telebirr-name-badge {
-  text-align: right;
-}
-
-.telebirr-name-label {
-  display: block;
-  font-size: 10px;
-  color: #bae6fd;
-  text-transform: uppercase;
-  font-weight: 600;
-}
-
-.telebirr-name-val {
-  font-size: 15px;
-  font-weight: 800;
-  color: #ffffff;
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 5px;
-}
-
-.verified-icon {
-  background: #10b981;
-  color: white;
-  width: 14px;
-  height: 14px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  font-size: 9px;
-  font-weight: 900;
-}
-
-/* Steps Row */
-.deposit-steps-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  padding: 8px 14px;
+/* Amount Section */
+.simple-amount-section {
   margin-bottom: 14px;
-  font-size: 11px;
-  color: #475569;
-  font-weight: 700;
-}
-
-.deposit-step {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.step-num {
-  width: 18px;
-  height: 18px;
-  background: #005cb9;
-  color: #fff;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 10px;
-  font-weight: 800;
-}
-
-.step-arrow {
-  color: #94a3b8;
-  font-weight: 800;
-}
-
-/* Amount Presets */
-.deposit-amount-section {
   text-align: left;
-  margin-bottom: 14px;
-}
-
-.deposit-label {
-  display: block;
-  font-size: 12px;
-  font-weight: 700;
-  color: #334155;
-  margin-bottom: 8px;
 }
 
 .deposit-amount-presets {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-  margin-bottom: 10px;
+  display: flex;
+  gap: 6px;
+  margin-bottom: 8px;
 }
 
 .amount-preset-btn {
+  flex: 1;
   background: #ffffff;
   border: 1.5px solid #cbd5e1;
   border-radius: 10px;
-  padding: 8px 4px;
+  padding: 8px 0;
   font-size: 13px;
   font-weight: 800;
-  color: #0f172a;
+  color: #334155;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all 0.15s;
+  text-align: center;
 }
 
 .amount-preset-btn:hover {
-  border-color: #0078d4;
-  background: rgba(0, 120, 212, 0.06);
+  border-color: #005cb9;
+  background: rgba(0, 92, 185, 0.04);
 }
 
 .amount-preset-btn.active {
-  background: linear-gradient(135deg, #005cb9, #0078d4);
+  background: #005cb9;
   border-color: #005cb9;
   color: #ffffff;
-  box-shadow: 0 2px 8px rgba(0, 92, 185, 0.3);
+  box-shadow: 0 2px 6px rgba(0, 92, 185, 0.25);
 }
 
 .deposit-custom-amount-wrap {
   display: flex;
   align-items: center;
-  background: #f8fafc;
   border: 1.5px solid #cbd5e1;
-  border-radius: 12px;
+  border-radius: 10px;
+  background: #ffffff;
   overflow: hidden;
   transition: border-color 0.2s, box-shadow 0.2s;
 }
 
 .deposit-custom-amount-wrap:focus-within {
   border-color: #005cb9;
-  box-shadow: 0 0 0 3px rgba(0, 92, 185, 0.15);
+  box-shadow: 0 0 0 3px rgba(0, 92, 185, 0.12);
 }
 
 .currency-prefix {
-  padding: 10px 14px;
-  background: #e2e8f0;
+  padding: 9px 14px;
+  background: #f1f5f9;
   font-size: 13px;
   font-weight: 800;
   color: #475569;
@@ -3138,80 +2990,76 @@ body.in-game .user-profile-badge {
 #depositCustomAmountInput {
   flex: 1;
   border: none;
-  background: transparent;
-  padding: 10px 12px;
+  padding: 9px 12px;
   font-size: 16px;
   font-weight: 800;
   color: #0f172a;
   outline: none;
 }
 
-.telebirr-paste-btn {
+/* TXN ID Input */
+.simple-txn-section {
+  margin-bottom: 16px;
+}
+
+.simple-input-wrap {
+  display: flex;
+  align-items: center;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 10px;
+  background: #ffffff;
+  overflow: hidden;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.simple-input-wrap:focus-within {
+  border-color: #005cb9;
+  box-shadow: 0 0 0 3px rgba(0, 92, 185, 0.12);
+}
+
+#depositTxnIdInput {
+  flex: 1;
+  border: none;
+  padding: 11px 12px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #0f172a;
+  outline: none;
+}
+
+#depositTxnIdInput::placeholder {
+  color: #94a3b8;
+  font-weight: 400;
+}
+
+.simple-paste-btn {
   background: #f1f5f9;
-  border: 1px solid #cbd5e1;
+  border: none;
+  border-left: 1px solid #e2e8f0;
   color: #334155;
-  padding: 6px 12px;
-  border-radius: 8px;
+  padding: 11px 14px;
   font-size: 12px;
   font-weight: 700;
   cursor: pointer;
-  margin-right: 4px;
-  transition: all 0.15s;
-}
-
-.telebirr-paste-btn:hover {
-  background: #005cb9;
-  border-color: #005cb9;
-  color: #fff;
-}
-
-.deposit-security-footer {
-  margin-top: 12px;
-  font-size: 11px;
-  color: #64748b;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-}
-  font-weight: 800;
-}
-
-.info-value.copyable {
-  color: #2563eb;
-  cursor: pointer;
-  background: rgba(37, 99, 235, 0.08);
-  padding: 2px 8px;
-  border-radius: 6px;
-  user-select: all;
   transition: background 0.15s;
 }
 
-.info-value.copyable:hover {
-  background: rgba(37, 99, 235, 0.18);
-}
-
-.deposit-instructions {
-  font-size: 11px;
-  color: #64748b;
-  margin: 6px 0 0 0;
-  line-height: 1.4;
-  border-top: 1px dashed #e2e8f0;
-  padding-top: 6px;
+.simple-paste-btn:hover {
+  background: #e2e8f0;
 }
 
 /* Submit Button */
 .deposit-submit-btn {
   width: 100%;
-  padding: 14px;
+  padding: 13px;
   font-size: 16px;
   font-weight: 800;
   background: linear-gradient(135deg, #10b981, #059669);
   color: #ffffff;
-  border: 2px solid #34d399;
-  border-radius: 14px;
+  border: none;
+  border-radius: 12px;
   cursor: pointer;
-  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
   transition: all 0.2s;
 }
 
@@ -3226,125 +3074,56 @@ body.in-game .user-profile-badge {
   transform: none;
 }
 
-/* Transaction ID Input */
-.deposit-txn-section {
-  margin-bottom: 14px;
-}
-
-.deposit-txn-input-wrap {
-  display: flex;
-  align-items: center;
-  background: #fff;
-  border: 2px solid #cbd5e1;
-  border-radius: 12px;
-  padding: 2px;
-  transition: border-color 0.2s;
-}
-
-.deposit-txn-input-wrap:focus-within {
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
-}
-
-#depositTxnIdInput {
-  flex: 1;
-  border: none;
-  outline: none;
-  padding: 10px 12px;
-  font-size: 15px;
-  font-weight: 600;
-  letter-spacing: 1px;
-  background: transparent;
-  color: #0f172a;
-}
-
-#depositTxnIdInput::placeholder {
-  color: #94a3b8;
-  font-weight: 400;
-  letter-spacing: 0;
-}
-
-.deposit-txn-hint {
-  font-size: 11px;
-  color: #64748b;
-  margin: 6px 0 0 4px;
-}
-
 /* Pending Deposits List */
 .deposit-pending-list {
-  margin-bottom: 14px;
+  margin-bottom: 12px;
+  text-align: left;
 }
 
 .deposit-pending-item {
   background: #f8fafc;
   border: 1px solid #e2e8f0;
   border-radius: 10px;
-  padding: 10px 12px;
-  margin-bottom: 8px;
+  padding: 8px 12px;
+  margin-bottom: 6px;
+  font-size: 12px;
 }
 
 .pending-item-top {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 4px;
+  margin-bottom: 2px;
 }
 
 .pending-amount {
   font-weight: 700;
-  font-size: 14px;
   color: #0f172a;
 }
 
 .pending-status {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
 }
 
 .pending-item-bottom {
   display: flex;
-  gap: 10px;
-  font-size: 11px;
+  gap: 8px;
+  font-size: 10px;
   color: #64748b;
-  flex-wrap: wrap;
-}
-
-.pending-method {
-  font-weight: 500;
 }
 
 .pending-txn {
   font-family: monospace;
-  font-size: 10px;
   background: #e2e8f0;
-  padding: 1px 6px;
-  border-radius: 4px;
+  padding: 1px 4px;
+  border-radius: 3px;
 }
 
-/* Deposit Modal Mobile Responsive */
+/* Mobile responsive */
 @media (max-width: 480px) {
   .deposit-modal-content {
-    width: 95%;
-    max-height: 90vh;
-    padding: 16px;
-    border-radius: 16px;
-  }
-  .deposit-method-tabs {
-    gap: 6px;
-  }
-  .deposit-tab-btn {
-    padding: 8px 10px;
-    font-size: 11px;
-  }
-  .deposit-amount-presets {
-    grid-template-columns: repeat(3, 1fr);
-    gap: 8px;
-  }
-  .deposit-info-card {
-    padding: 12px;
-  }
-  .deposit-submit-btn {
-    padding: 12px;
-    font-size: 15px;
+    width: 94%;
+    padding: 18px 14px;
   }
 }
