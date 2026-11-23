@@ -51,7 +51,7 @@ function getAudioContext() {
 }
 
 function updateSoundButtons() {
-  const btns = [document.getElementById('soundToggleBtn'), document.getElementById('soundToggleBtnTable')];
+  const btns = [document.getElementById('soundToggleBtn')];
   btns.forEach(btn => {
     if (btn) {
       btn.textContent = soundEnabled ? '🔊' : '🔇';
@@ -203,9 +203,7 @@ function playWinSound() {
 }
 
 const soundToggleBtn = document.getElementById('soundToggleBtn');
-const soundToggleBtnTable = document.getElementById('soundToggleBtnTable');
 if (soundToggleBtn) soundToggleBtn.addEventListener('click', toggleSound);
-if (soundToggleBtnTable) soundToggleBtnTable.addEventListener('click', toggleSound);
 updateSoundButtons();
 
 // UI Elements

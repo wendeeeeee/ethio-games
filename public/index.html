@@ -167,7 +167,7 @@
   <div id="gameView" class="view-container" style="display: none;">
     <div class="game-table">
 
-      <!-- Top Bar: Room ID (hidden), Pot, Poke, Timer, Sound -->
+      <!-- Top Bar: Pot, Poke -->
       <div class="table-top-bar">
         <span id="gameModeBadge" style="display: none;"></span>
         <span id="tableIdDisplay" style="display: none;"></span>
@@ -175,9 +175,7 @@
           POT: 200 ETB
         </div>
         <div style="display: flex; align-items: center; gap: 8px;">
-          <div class="turn-timer-badge" id="turnTimerBadge" title="የካርታ መጣያ ቀሪ ጊዜ">⏳ <span
-              id="turnSecondsVal">60</span>s</div>
-          <button class="sound-toggle-btn" id="soundToggleBtnTable" title="Toggle Sound (ድምፅ)">🔊</button>
+          <span id="turnTimerBadge" style="display: none;"><span id="turnSecondsVal"></span></span>
           <button class="poke-btn" id="pokeBtn" style="display: none;">
             <span>⏰</span> POKE (30s)
           </button>
