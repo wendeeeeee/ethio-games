@@ -2566,6 +2566,11 @@ function syncHandPreservingOrder(newHand) {
     return [];
   }
   if (!playerOrderedCardIds || playerOrderedCardIds.length === 0) {
+    if (typeof currentGameState !== 'undefined' && currentGameState && currentGameState.gameType === 'SEKA') {
+      const arranged = arrangeSekaHandOptimal(newHand).arrangedCards;
+      playerOrderedCardIds = arranged.map(c => c.id);
+      return arranged;
+    }
     playerOrderedCardIds = newHand.map(c => c.id);
     return newHand;
   }
@@ -2826,8 +2831,21 @@ function arrangeSekaHandOptimal(hand) {
     }
   }
 
+  // Sort groups: Quatris (4) first, then Tris (3), then leftovers — ኳትሪስ → ጦር 1 → ጦር 2 → ያልገቡ
+  const quatrisGroups = [];
+  const trisGroups = [];
+  const leftoverGroups = [];
+  for (const grp of arrangedGroups) {
+    const isQuatris = grp.length === 4 && checkValidSekaQuatris(grp);
+    const isTris = grp.length === 3 && checkValidSekaTris(grp);
+    if (isQuatris) quatrisGroups.push(grp);
+    else if (isTris) trisGroups.push(grp);
+    else leftoverGroups.push(grp);
+  }
+  const sortedGroups = [...quatrisGroups, ...trisGroups, ...leftoverGroups];
+
   return {
-    arrangedCards: arrangedGroups.flat(),
+    arrangedCards: sortedGroups.flat(),
     isWin: false
   };
 }
@@ -2837,11 +2855,12 @@ smartSortBtn.addEventListener('click', () => {
   if (!currentGameState || !currentGameState.myHand || currentGameState.myHand.length === 0) return;
   playCardSound();
 
-  // If Seka game: sort by suited sequences (ጦር) placing Jokers in exact spots
+  // If Seka game: sort by suited sequences (ጦር) placing Jokers in exact spots (ኳትሪስ ➔ ጦር 1 ➔ ጦር 2)
   if (currentGameState.gameType === 'SEKA') {
     const sekaArranged = arrangeSekaHandOptimal(currentGameState.myHand);
     currentGameState.myHand = sekaArranged.arrangedCards;
     playerOrderedCardIds = sekaArranged.arrangedCards.map(c => c.id);
+    showSortToast('✨ ካርታዎችህ ተደርድረዋል (ኳትሪስ ➔ ጦር ➔ ጦር)');
     renderPlayerHand(currentGameState.myHand);
     return;
   }
