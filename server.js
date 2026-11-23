@@ -693,6 +693,13 @@ io.on('connection', (socket) => {
 
   // Create Seka Table
   socket.on('create_seka_room', ({ userId, name, stakeAmount, maxPlayers }) => {
+    const stake = Number(stakeAmount) || 100;
+    const userWallet = walletManager.getWallet(userId);
+    if (!userWallet || userWallet.balance < stake) {
+      const bal = userWallet ? userWallet.balance : 0;
+      return socket.emit('error_msg', `⚠️ በቂ balance የለዎትም! ያለዎት ሂሳብ ${bal.toLocaleString()} ETB ሲሆን የውርርድ መጠኑ ${stake.toLocaleString()} ETB ነው። እባክዎ መጀመሪያ Deposit ያድርጉ ወይም አነስ ያለ ውርርድ ይምረጡ።`);
+    }
+
     // 1. Clean up any existing waiting room created by this user
     sekaRooms.forEach((r, rId) => {
       if (r.status === 'WAITING' && r.creator && r.creator.id === userId) {
@@ -711,7 +718,7 @@ io.on('connection', (socket) => {
 
     const roomId = `seka_${Math.floor(1000 + Math.random() * 9000)}`;
     const numPlayers = Number(maxPlayers) === 3 ? 3 : 2;
-    const room = new SekaGameRoom(roomId, { id: userId, name, socketId: socket.id }, Number(stakeAmount) || 100, numPlayers);
+    const room = new SekaGameRoom(roomId, { id: userId, name, socketId: socket.id }, stake, numPlayers);
     attachSekaRoomCallbacks(room);
     room.createdAt = Date.now();
     room.expiresAt = Date.now() + 60 * 1000; // 1-minute expiration if no opponent joins
@@ -749,6 +756,13 @@ io.on('connection', (socket) => {
     const room = sekaRooms.get(roomId);
     if (!room || room.status === 'EXPIRED') return socket.emit('error_msg', 'Seka room expired or not found');
 
+    const stake = room.stakeAmount || 100;
+    const userWallet = walletManager.getWallet(userId);
+    if (!userWallet || userWallet.balance < stake) {
+      const bal = userWallet ? userWallet.balance : 0;
+      return socket.emit('error_msg', `⚠️ በቂ balance የለዎትም! ያለዎት ሂሳብ ${bal.toLocaleString()} ETB ሲሆን የውርርድ መጠኑ ${stake.toLocaleString()} ETB ነው። እባክዎ መጀመሪያ Deposit ያድርጉ።`);
+    }
+
     const result = room.join({ id: userId, name, socketId: socket.id });
     if (!result.success) return socket.emit('error_msg', result.message);
 
@@ -768,8 +782,15 @@ io.on('connection', (socket) => {
 
   // Play Seka against AI Bot
   socket.on('play_seka_bot', ({ userId, name, stakeAmount }) => {
+    const stake = Number(stakeAmount) || 100;
+    const userWallet = walletManager.getWallet(userId);
+    if (!userWallet || userWallet.balance < stake) {
+      const bal = userWallet ? userWallet.balance : 0;
+      return socket.emit('error_msg', `⚠️ በቂ balance የለዎትም! ያለዎት ሂሳብ ${bal.toLocaleString()} ETB ሲሆን የውርርድ መጠኑ ${stake.toLocaleString()} ETB ነው። እባክዎ መጀመሪያ Deposit ያድርጉ ወይም አነስ ያለ ውርርድ ይምረጡ።`);
+    }
+
     const roomId = `seka_bot_${Math.floor(1000 + Math.random() * 9000)}`;
-    const room = new SekaGameRoom(roomId, { id: userId, name, socketId: socket.id }, Number(stakeAmount) || 100);
+    const room = new SekaGameRoom(roomId, { id: userId, name, socketId: socket.id }, stake);
     attachSekaRoomCallbacks(room);
     sekaRooms.set(roomId, room);
     socketPlayerMap.set(socket.id, { userId, name, roomId, gameType: 'SEKA' });
@@ -962,6 +983,58 @@ function handleBotTurn(room) {
     }, 1500);
   }, 1200);
 }
+
+// Proactive background interval to expire waiting rooms older than 60 seconds
+setInterval(() => {
+  const now = Date.now();
+  let changed = false;
+
+  sekaRooms.forEach((room, rId) => {
+    if (room.status === 'WAITING' && room.expiresAt && now >= room.expiresAt) {
+      room.status = 'EXPIRED';
+      if (room.expireTimeout) clearTimeout(room.expireTimeout);
+      walletManager.refundEscrow(room.roomId);
+      if (room.creator && room.creator.id) {
+        broadcastWallet(room.creator.id);
+      }
+      const expiredMsg = '⏳ በ 60 ሰከንድ ውስጥ ተጋጣሚ ስላልገባ የሴካ ጨዋታው ተሰርዟል! አሁን አዲስ ጨዋታ መፍጠር ይችላሉ።';
+      io.to(room.roomId).emit('room_expired', { roomId: room.roomId, message: expiredMsg });
+      socketPlayerMap.forEach((p, sId) => {
+        if (p.roomId === room.roomId) {
+          io.to(sId).emit('room_expired', { roomId: room.roomId, message: expiredMsg });
+          p.roomId = null;
+        }
+      });
+      sekaRooms.delete(rId);
+      changed = true;
+    }
+  });
+
+  rooms.forEach((room, rId) => {
+    if (room.status === 'WAITING' && room.expiresAt && now >= room.expiresAt) {
+      room.status = 'EXPIRED';
+      if (room.expireTimeout) clearTimeout(room.expireTimeout);
+      walletManager.refundEscrow(room.roomId);
+      if (room.creator && room.creator.id) {
+        broadcastWallet(room.creator.id);
+      }
+      const expiredMsg = '⏳ በ 60 ሰከንድ ውስጥ ተጋጣሚ ስላልገባ ጨዋታው ተሰርዟል!';
+      io.to(room.roomId).emit('room_expired', { roomId: room.roomId, message: expiredMsg });
+      socketPlayerMap.forEach((p, sId) => {
+        if (p.roomId === room.roomId) {
+          io.to(sId).emit('room_expired', { roomId: room.roomId, message: expiredMsg });
+          p.roomId = null;
+        }
+      });
+      rooms.delete(rId);
+      changed = true;
+    }
+  });
+
+  if (changed) {
+    io.emit('rooms_updated');
+  }
+}, 2000);
 
 // Start server only when NOT running on Vercel (Vercel uses serverless)
 if (!process.env.VERCEL) {

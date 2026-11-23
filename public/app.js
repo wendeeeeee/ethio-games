@@ -18,6 +18,7 @@ let storedName = localStorage.getItem('conquer_user_name') || '';
 let userPhone = localStorage.getItem('conquer_user_phone') || '';
 let isUserRegistered = localStorage.getItem('conquer_user_registered') === 'true' && Boolean(userPhone);
 let playerName = storedName || (isUserRegistered ? 'ተጫዋች' : '');
+let currentUserBalance = 0;
 let socket = io();
 let currentRoomId = null;
 let currentGameState = null;
@@ -409,8 +410,8 @@ setInterval(() => {
 // Initial setup
 if (playerNameInput) playerNameInput.value = playerName;
 if (walletUserDisplay) walletUserDisplay.textContent = playerName;
-const initialSekaNameInput = document.getElementById('sekaPlayerNameInput');
-if (initialSekaNameInput) initialSekaNameInput.value = playerName;
+const sekaDisplayNameVal = document.getElementById('sekaPlayerNameDisplayVal');
+if (sekaDisplayNameVal) sekaDisplayNameVal.textContent = playerName || 'ተጫዋች';
 
 // Auth Header Elements (Login, Sign Up & Logout)
 const headerLoginBtn = document.getElementById('headerLoginBtn');
@@ -437,15 +438,18 @@ function updateAuthUI() {
     if (dBtn) dBtn.style.display = 'none';
   }
   if (playerNameInput) playerNameInput.value = playerName;
-  const sNameInp = document.getElementById('sekaPlayerNameInput');
-  if (sNameInp) sNameInp.value = playerName;
+  const sNameDisp = document.getElementById('sekaPlayerNameDisplayVal');
+  if (sNameDisp) sNameDisp.textContent = playerName || 'ተጫዋች';
 }
 
 function applyWalletUpdate(wallet) {
   if (!wallet) return;
   const w = (wallet.wallet && typeof wallet.wallet === 'object' && (wallet.wallet.id || wallet.wallet.phone)) ? wallet.wallet : wallet;
-  if (walletBalanceDisplay && w.balance !== undefined) {
-    walletBalanceDisplay.textContent = `${Number(w.balance).toLocaleString()} ETB`;
+  if (w.balance !== undefined) {
+    currentUserBalance = Number(w.balance) || 0;
+    if (walletBalanceDisplay) {
+      walletBalanceDisplay.textContent = `${currentUserBalance.toLocaleString()} ETB`;
+    }
   }
   if (w.name) {
     playerName = w.name;
@@ -467,8 +471,8 @@ function applyWalletUpdate(wallet) {
       localStorage.setItem('conquer_user_name', playerName);
     }
   }
-  const sNameInp = document.getElementById('sekaPlayerNameInput');
-  if (sNameInp && playerName) sNameInp.value = playerName;
+  const sNameDisp = document.getElementById('sekaPlayerNameDisplayVal');
+  if (sNameDisp && playerName) sNameDisp.textContent = playerName;
   if (playerNameInput && playerName) playerNameInput.value = playerName;
   updateAuthUI();
 }
@@ -495,10 +499,11 @@ if (headerLogoutBtn) {
     userPhone = '';
     isUserRegistered = false;
 
+    currentUserBalance = 0;
     if (regNameInput) regNameInput.value = '';
     if (regPhoneInput) regPhoneInput.value = '';
-    const sNameInp = document.getElementById('sekaPlayerNameInput');
-    if (sNameInp) sNameInp.value = '';
+    const sNameDisp = document.getElementById('sekaPlayerNameDisplayVal');
+    if (sNameDisp) sNameDisp.textContent = 'ተጫዋች';
     if (walletUserDisplay) walletUserDisplay.textContent = '';
     if (walletBalanceDisplay) walletBalanceDisplay.textContent = '0 ETB';
 
@@ -900,22 +905,8 @@ if (playerNameInput) {
       playerName = val;
       localStorage.setItem('conquer_user_name', playerName);
       if (walletUserDisplay) walletUserDisplay.textContent = playerName;
-      const sNameInp = document.getElementById('sekaPlayerNameInput');
-      if (sNameInp) sNameInp.value = playerName;
-      if (userPhone) socket.emit('register_user', { userId, name: playerName, phone: userPhone });
-    }
-  });
-}
-
-const initialSekaInput = document.getElementById('sekaPlayerNameInput');
-if (initialSekaInput) {
-  initialSekaInput.addEventListener('change', () => {
-    const val = initialSekaInput.value.trim();
-    if (val && val.toLowerCase() !== 'player' && !val.toLowerCase().startsWith('player ')) {
-      playerName = val;
-      localStorage.setItem('conquer_user_name', playerName);
-      if (walletUserDisplay) walletUserDisplay.textContent = playerName;
-      if (playerNameInput) playerNameInput.value = playerName;
+      const sNameDisp = document.getElementById('sekaPlayerNameDisplayVal');
+      if (sNameDisp) sNameDisp.textContent = playerName;
       if (userPhone) socket.emit('register_user', { userId, name: playerName, phone: userPhone });
     }
   });
@@ -1021,6 +1012,13 @@ function showWaitingForOpponentModal(roomId, expiresAt, stakeAmount) {
     if (remaining <= 0) {
       clearInterval(waitingCountdownTimer);
       waitingCountdownTimer = null;
+      const expiredRoomId = currentWaitingRoomId;
+      closeWaitingForOpponentModal();
+      showSortToast('⏳ በ 60 ሰከንድ ውስጥ ተጋጣሚ ስላልገባ የሴካ ጨዋታው ተሰርዟል! አሁን አዲስ ጨዋታ መፍጠር ይችላሉ።');
+      if (expiredRoomId) {
+        socket.emit('leave_seka_room', { roomId: expiredRoomId, userId });
+      }
+      refreshSekaRoomsList();
     }
   }
   updateTimer();
@@ -1175,14 +1173,18 @@ if (createSekaRoomBtn) {
     if (!requireAuth('⚠️ ጨዋታ ለመፍጠር እባክዎ መጀመሪያ ይግቡ ወይም ይመዝገቡ!')) {
       return;
     }
-    const sekaNameInput = document.getElementById('sekaPlayerNameInput');
     const sekaStakeSelect = document.getElementById('sekaStakeSelect');
     const sekaPlayersSelect = document.getElementById('sekaPlayersSelect');
-    let sName = sekaNameInput && sekaNameInput.value ? sekaNameInput.value.trim() : playerName;
-    if (!sName || sName.toLowerCase() === 'player' || sName.toLowerCase().startsWith('player ')) {
-      sName = playerName;
-    }
     const stakeAmount = sekaStakeSelect ? Number(sekaStakeSelect.value) : 100;
+
+    // Check balance
+    if (currentUserBalance < stakeAmount) {
+      showSortToast(`⚠️ በቂ balance የለዎትም! ያለዎት ሂሳብ ${currentUserBalance.toLocaleString()} ETB ሲሆን የውርርድ መጠኑ ${stakeAmount.toLocaleString()} ETB ነው። እባክዎ መጀመሪያ Deposit ያድርጉ ወይም አነስ ያለ ውርርድ ይምረጡ።`);
+      openDepositModal();
+      return;
+    }
+
+    const sName = playerName || 'ተጫዋች';
     const maxPlayers = sekaPlayersSelect ? (Number(sekaPlayersSelect.value) === 3 ? 3 : 2) : 2;
     isCreatingSekaRoom = true;
     setTimeout(() => { isCreatingSekaRoom = false; }, 2000);
@@ -1197,13 +1199,17 @@ if (playSekaBotBtn) {
     if (!requireAuth('⚠️ ከቦት ጋር ለመጫወት እባክዎ መጀመሪያ ይግቡ ወይም ይመዝገቡ!')) {
       return;
     }
-    const sekaNameInput = document.getElementById('sekaPlayerNameInput');
     const sekaStakeSelect = document.getElementById('sekaStakeSelect');
-    let sName = sekaNameInput && sekaNameInput.value ? sekaNameInput.value.trim() : playerName;
-    if (!sName || sName.toLowerCase() === 'player' || sName.toLowerCase().startsWith('player ')) {
-      sName = playerName;
-    }
     const stakeAmount = sekaStakeSelect ? Number(sekaStakeSelect.value) : 100;
+
+    // Check balance
+    if (currentUserBalance < stakeAmount) {
+      showSortToast(`⚠️ በቂ balance የለዎትም! ያለዎት ሂሳብ ${currentUserBalance.toLocaleString()} ETB ሲሆን የውርርድ መጠኑ ${stakeAmount.toLocaleString()} ETB ነው። እባክዎ መጀመሪያ Deposit ያድርጉ ወይም አነስ ያለ ውርርድ ይምረጡ።`);
+      openDepositModal();
+      return;
+    }
+
+    const sName = playerName || 'ተጫዋች';
     playCardSound();
     socket.emit('play_seka_bot', { userId, name: sName, stakeAmount });
   });
@@ -1605,11 +1611,7 @@ window.joinSekaRoom = function (roomId) {
   if (!requireAuth('⚠️ ጨዋታውን ለመቀላቀል እባክዎ መጀመሪያ ይግቡ ወይም ይመዝገቡ!')) {
     return;
   }
-  const sekaNameInput = document.getElementById('sekaPlayerNameInput');
-  let sName = sekaNameInput && sekaNameInput.value ? sekaNameInput.value.trim() : playerName;
-  if (!sName || sName.toLowerCase() === 'player' || sName.toLowerCase().startsWith('player ')) {
-    sName = playerName;
-  }
+  const sName = playerName || 'ተጫዋች';
   currentRoomId = roomId;
   playCardSound();
   socket.emit('join_seka_room', { roomId, userId, name: sName });
