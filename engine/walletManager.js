@@ -53,6 +53,12 @@ class WalletManager {
     }
   }
 
+  _normPhone(phone) {
+    if (!phone) return '';
+    const digits = String(phone).replace(/[^0-9]/g, '');
+    return digits.length >= 9 ? digits.slice(-9) : digits;
+  }
+
   async registerUser({ name, phone, password, userId }) {
     const cleanPhone = (phone || '').trim();
     const cleanName = (name || '').trim();
@@ -60,21 +66,25 @@ class WalletManager {
     if (!cleanName || this._isGenericName(cleanName)) throw new Error('እባክዎ ትክክለኛ ስም ያስገቡ (Player ወይም ተጫዋች መጠቀም አይቻልም)');
     if (!password || password.length < 4) throw new Error('የይለፍ ቃል ቢያንስ 4 ፊደል ወይም ቁጥር መሆን አለበት');
 
+    const norm = this._normPhone(cleanPhone);
+
     // Check local file
-    const existingLocal = this.usersList.find(u => u.phone === cleanPhone);
+    const existingLocal = this.usersList.find(u => u.phone === cleanPhone || (norm && this._normPhone(u.phone) === norm));
     if (existingLocal) {
       throw new Error('ይህ ስልክ ቁጥር ቀድሞ ተመዝግቧል! እባክዎ ይግቡ (Login)');
     }
 
     // Check in Supabase
     try {
-      const { data: existingRemote } = await supabase
-        .from('users')
-        .select('*')
-        .eq('phone', cleanPhone)
-        .maybeSingle();
-      if (existingRemote) {
-        throw new Error('ይህ ስልክ ቁጥር ቀድሞ ተመዝግቧል! እባክዎ ይግቡ (Login)');
+      if (norm) {
+        const { data: existingRows } = await supabase
+          .from('users')
+          .select('id, name, phone')
+          .ilike('phone', `%${norm}%`)
+          .limit(1);
+        if (existingRows && existingRows.length > 0) {
+          throw new Error('ይህ ስልክ ቁጥር ቀድሞ ተመዝግቧል! እባክዎ ይግቡ (Login)');
+        }
       }
     } catch (e) {
       if (e.message && e.message.includes('ቀድሞ ተመዝግቧል')) throw e;
@@ -131,24 +141,44 @@ class WalletManager {
     if (!password) throw new Error('እባክዎ የይለፍ ቃል ያስገቡ');
 
     const passHash = hashPassword(password);
+    const norm = this._normPhone(cleanPhone);
 
-    // 1. Check local file
-    let user = this.usersList.find(u => u.phone === cleanPhone);
+    // 1. Check local file (exact match first, then normalized last 9 digits)
+    let user = this.usersList.find(u => u.phone === cleanPhone) ||
+      this.usersList.find(u => u.phone && norm && this._normPhone(u.phone) === norm);
 
     // 2. Check Supabase if not found locally
     if (!user) {
       try {
-        const { data: remote } = await supabase
-          .from('users')
-          .select('*')
-          .eq('phone', cleanPhone)
-          .maybeSingle();
+        let remote = null;
+        if (norm) {
+          const { data: remoteRows } = await supabase
+            .from('users')
+            .select('*')
+            .ilike('phone', `%${norm}%`)
+            .order('created_at', { ascending: false })
+            .limit(1);
+          if (remoteRows && remoteRows.length > 0) {
+            remote = remoteRows[0];
+          }
+        }
+        if (!remote) {
+          const { data: directRows } = await supabase
+            .from('users')
+            .select('*')
+            .eq('phone', cleanPhone)
+            .order('created_at', { ascending: false })
+            .limit(1);
+          if (directRows && directRows.length > 0) {
+            remote = directRows[0];
+          }
+        }
         if (remote) {
           user = {
             id: remote.id,
             name: remote.name,
             phone: remote.phone,
-            passwordHash: passHash, // Set initial password
+            passwordHash: remote.password_hash || passHash, // Set initial password if not set
             balance: remote.balance !== undefined ? remote.balance : 1000,
             locked: remote.locked || 0,
             createdAt: remote.created_at
@@ -156,7 +186,9 @@ class WalletManager {
           this.usersList.unshift(user);
           this._saveUsersToFile();
         }
-      } catch (e) { }
+      } catch (e) {
+        console.error('[WalletManager] Supabase login error:', e.message);
+      }
     }
 
     if (!user) {
@@ -180,9 +212,9 @@ class WalletManager {
       locked: user.locked || 0,
       transactions: []
     };
-    this.wallets.set(wallet.id, wallet);
+    this.wallets.set(user.id, wallet);
 
-    return wallet;
+    return { user, wallet };
   }
 
   _isGenericName(name) {
@@ -196,13 +228,26 @@ class WalletManager {
   async getWalletAsync(userId, name = '', phone = '') {
     // If phone is provided, check if a registered user with this phone exists in Supabase
     if (phone) {
-      const { data: userByPhone } = await supabase
-        .from('users')
-        .select('*')
-        .eq('phone', phone)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+      const norm = this._normPhone(phone);
+      let userByPhone = null;
+      if (norm) {
+        const { data: rows } = await supabase
+          .from('users')
+          .select('*')
+          .ilike('phone', `%${norm}%`)
+          .order('created_at', { ascending: false })
+          .limit(1);
+        if (rows && rows.length > 0) userByPhone = rows[0];
+      }
+      if (!userByPhone) {
+        const { data: rows } = await supabase
+          .from('users')
+          .select('*')
+          .eq('phone', phone)
+          .order('created_at', { ascending: false })
+          .limit(1);
+        if (rows && rows.length > 0) userByPhone = rows[0];
+      }
 
       if (userByPhone) {
         const wallet = {

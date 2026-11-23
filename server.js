@@ -392,9 +392,18 @@ app.get('/api/user/profile/:userId', async (req, res) => {
 
 app.get('/api/rooms', (req, res) => {
   const list = [];
-  rooms.forEach((room) => {
+  const now = Date.now();
+  rooms.forEach((room, rId) => {
     if (room.status === 'WAITING') {
-      const expiresIn = room.expiresAt ? Math.max(0, Math.round((room.expiresAt - Date.now()) / 1000)) : 60;
+      if (room.expiresAt && now >= room.expiresAt) {
+        room.status = 'EXPIRED';
+        if (room.expireTimeout) clearTimeout(room.expireTimeout);
+        walletManager.refundEscrow(room.roomId);
+        if (room.creator && room.creator.id) broadcastWallet(room.creator.id);
+        rooms.delete(rId);
+        return;
+      }
+      const expiresIn = room.expiresAt ? Math.max(0, Math.round((room.expiresAt - now) / 1000)) : 60;
       list.push({
         roomId: room.roomId,
         creatorName: room.creator.name,
@@ -409,9 +418,18 @@ app.get('/api/rooms', (req, res) => {
 // REST API for Seka Rooms
 app.get('/api/seka/rooms', (req, res) => {
   const list = [];
-  sekaRooms.forEach((room) => {
+  const now = Date.now();
+  sekaRooms.forEach((room, rId) => {
     if (room.status === 'WAITING') {
-      const expiresIn = room.expiresAt ? Math.max(0, Math.round((room.expiresAt - Date.now()) / 1000)) : 60;
+      if (room.expiresAt && now >= room.expiresAt) {
+        room.status = 'EXPIRED';
+        if (room.expireTimeout) clearTimeout(room.expireTimeout);
+        walletManager.refundEscrow(room.roomId);
+        if (room.creator && room.creator.id) broadcastWallet(room.creator.id);
+        sekaRooms.delete(rId);
+        return;
+      }
+      const expiresIn = room.expiresAt ? Math.max(0, Math.round((room.expiresAt - now) / 1000)) : 60;
       list.push({
         roomId: room.roomId,
         creatorId: room.creator ? room.creator.id : null,
@@ -444,6 +462,22 @@ io.on('connection', (socket) => {
 
   // Create Table
   socket.on('create_room', ({ userId, name, stakeAmount }) => {
+    // 1. Clean up any existing waiting room created by this user
+    rooms.forEach((r, rId) => {
+      if (r.status === 'WAITING' && r.creator && r.creator.id === userId) {
+        if (r.expireTimeout) clearTimeout(r.expireTimeout);
+        walletManager.refundEscrow(r.roomId);
+        rooms.delete(rId);
+      }
+    });
+    sekaRooms.forEach((r, rId) => {
+      if (r.status === 'WAITING' && r.creator && r.creator.id === userId) {
+        if (r.expireTimeout) clearTimeout(r.expireTimeout);
+        walletManager.refundEscrow(r.roomId);
+        sekaRooms.delete(rId);
+      }
+    });
+
     const roomId = `room_${Math.floor(1000 + Math.random() * 9000)}`;
     const room = new GameRoom(roomId, { id: userId, name, socketId: socket.id }, Number(stakeAmount) || 100);
     room.createdAt = Date.now();
@@ -452,9 +486,16 @@ io.on('connection', (socket) => {
       if (room.status === 'WAITING') {
         room.status = 'EXPIRED';
         walletManager.refundEscrow(room.roomId);
-        io.to(roomId).emit('room_expired', {
-          roomId,
-          message: '⏳ የጨዋታው ጊዜ አልቋል! በ1 ደቂቃ ውስጥ ተጋጣሚ ስላልገባ ጠረጴዛው ፈርሷል (Game expired: No opponent joined within 1 minute).'
+        if (room.creator && room.creator.id) {
+          broadcastWallet(room.creator.id);
+        }
+        const expiredMsg = '⏳ በ 60 ሰከንድ ውስጥ ተጋጣሚ ስላልገባ ጨዋታው ተሰርዟል! አሁን አዲስ ጨዋታ መፍጠር ይችላሉ።';
+        io.to(roomId).emit('room_expired', { roomId, message: expiredMsg });
+        socketPlayerMap.forEach((p, sId) => {
+          if (p.userId === (room.creator && room.creator.id)) {
+            io.to(sId).emit('room_expired', { roomId, message: expiredMsg });
+            if (p.roomId === roomId) p.roomId = null;
+          }
         });
         rooms.delete(roomId);
         io.emit('rooms_updated');
@@ -467,6 +508,20 @@ io.on('connection', (socket) => {
     socket.join(roomId);
     socket.emit('room_created', { roomId, expiresAt: room.expiresAt });
     broadcastRoomUpdate(room);
+  });
+
+  // Leave Conquer Waiting Room
+  socket.on('leave_room', ({ roomId, userId }) => {
+    const room = rooms.get(roomId);
+    if (room && room.status === 'WAITING') {
+      if (room.expireTimeout) clearTimeout(room.expireTimeout);
+      walletManager.refundEscrow(room.roomId);
+      rooms.delete(roomId);
+      io.emit('rooms_updated');
+      if (userId) broadcastWallet(userId);
+      const pInfo = socketPlayerMap.get(socket.id);
+      if (pInfo && pInfo.roomId === roomId) pInfo.roomId = null;
+    }
   });
 
   // Join Table
@@ -634,6 +689,22 @@ io.on('connection', (socket) => {
 
   // Create Seka Table
   socket.on('create_seka_room', ({ userId, name, stakeAmount, maxPlayers }) => {
+    // 1. Clean up any existing waiting room created by this user
+    sekaRooms.forEach((r, rId) => {
+      if (r.status === 'WAITING' && r.creator && r.creator.id === userId) {
+        if (r.expireTimeout) clearTimeout(r.expireTimeout);
+        walletManager.refundEscrow(r.roomId);
+        sekaRooms.delete(rId);
+      }
+    });
+    rooms.forEach((r, rId) => {
+      if (r.status === 'WAITING' && r.creator && r.creator.id === userId) {
+        if (r.expireTimeout) clearTimeout(r.expireTimeout);
+        walletManager.refundEscrow(r.roomId);
+        rooms.delete(rId);
+      }
+    });
+
     const roomId = `seka_${Math.floor(1000 + Math.random() * 9000)}`;
     const numPlayers = Number(maxPlayers) === 3 ? 3 : 2;
     const room = new SekaGameRoom(roomId, { id: userId, name, socketId: socket.id }, Number(stakeAmount) || 100, numPlayers);
@@ -644,9 +715,16 @@ io.on('connection', (socket) => {
       if (room.status === 'WAITING') {
         room.status = 'EXPIRED';
         walletManager.refundEscrow(room.roomId);
-        io.to(roomId).emit('room_expired', {
-          roomId,
-          message: '⏳ የሴካ ጨዋታ ጊዜ አልቋል! በ1 ደቂቃ ውስጥ ተጋጣሚ ስላልገባ ጠረጴዛው ፈርሷል (Seka game expired: No opponent joined within 1 minute).'
+        if (room.creator && room.creator.id) {
+          broadcastWallet(room.creator.id);
+        }
+        const expiredMsg = '⏳ በ 60 ሰከንድ ውስጥ ተጋጣሚ ስላልገባ የሴካ ጨዋታው ተሰርዟል! አሁን አዲስ ጨዋታ መፍጠር ይችላሉ።';
+        io.to(roomId).emit('room_expired', { roomId, message: expiredMsg });
+        socketPlayerMap.forEach((p, sId) => {
+          if (p.userId === (room.creator && room.creator.id)) {
+            io.to(sId).emit('room_expired', { roomId, message: expiredMsg });
+            if (p.roomId === roomId) p.roomId = null;
+          }
         });
         sekaRooms.delete(roomId);
         io.emit('rooms_updated');
@@ -746,6 +824,8 @@ io.on('connection', (socket) => {
       sekaRooms.delete(roomId);
       io.emit('rooms_updated');
       if (userId) broadcastWallet(userId);
+      const pInfo = socketPlayerMap.get(socket.id);
+      if (pInfo && pInfo.roomId === roomId) pInfo.roomId = null;
     }
   });
 

@@ -900,7 +900,7 @@ socket.on('room_expired', ({ roomId, message }) => {
   closeWaitingForOpponentModal();
   currentWaitingRoomId = null;
   if (currentRoomId === roomId) currentRoomId = null;
-  showSortToast(message || '⏳ ጨዋታው በ1 ደቂቃ ውስጥ ተጋጣሚ ስላልገባ ፈርሷል');
+  showSortToast(message || '⏳ በ 60 ሰከንድ ውስጥ ተጋጣሚ ስላልገባ ጨዋታው ተሰርዟል! አሁን አዲስ ጨዋታ መፍጠር ይችላሉ።');
   switchToLobbyView();
   refreshRoomsList();
   refreshSekaRoomsList();
@@ -986,11 +986,15 @@ if (cancelWaitingRoomBtn) {
   cancelWaitingRoomBtn.addEventListener('click', () => {
     if (currentWaitingRoomId) {
       socket.emit('leave_seka_room', { roomId: currentWaitingRoomId, userId });
+      socket.emit('leave_room', { roomId: currentWaitingRoomId, userId });
     }
     closeWaitingForOpponentModal();
+    currentWaitingRoomId = null;
+    currentRoomId = null;
     playCardSound();
-    showSortToast('ጠረጴዛው ተሰርዟል፤ ውርርድዎ ተመልሷል');
+    showSortToast('ጠረጴዛው ተሰርዟል፤ አዲስ ጨዋታ መፍጠር ይችላሉ');
     refreshSekaRoomsList();
+    refreshRoomsList();
   });
 }
 
@@ -1480,7 +1484,10 @@ async function refreshSekaRoomsList() {
                 ${r.expiresIn !== undefined ? `| <span style="color: #d97706; font-weight: 800;">⏳ ${r.expiresIn}s ይቀራል</span>` : ''}
               </div>
             </div>
-            <span style="font-size: 12px; color: #d97706; font-weight: 700;">⏳ ${r.expiresIn !== undefined ? r.expiresIn + 's' : '...'}</span>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="font-size: 12px; color: #d97706; font-weight: 700;">⏳ ${r.expiresIn !== undefined ? r.expiresIn + 's' : '...'}</span>
+              <button class="btn-secondary" style="width: auto; padding: 6px 12px; font-size: 12px; background: rgba(239, 68, 68, 0.1); border: 1px solid #ef4444; color: #ef4444; border-radius: 8px; cursor: pointer;" onclick="cancelCreatedRoom('${r.roomId}')">❌ ሰርዝ (Cancel)</button>
+            </div>
           </div>
         `;
       } else {
@@ -1505,11 +1512,13 @@ async function refreshSekaRoomsList() {
 
 window.cancelCreatedRoom = function (roomId) {
   socket.emit('leave_seka_room', { roomId, userId });
+  socket.emit('leave_room', { roomId, userId });
   currentWaitingRoomId = null;
   currentRoomId = null;
   playCardSound();
-  showSortToast('ጠረጴዛው ተሰርዟል፤ ውርርድዎ ተመልሷል');
+  showSortToast('ጠረጴዛው ተሰርዟል፤ አዲስ ጨዋታ መፍጠር ይችላሉ');
   refreshSekaRoomsList();
+  refreshRoomsList();
 };
 
 if (!window.sekaRoomsAutoRefresh) {
