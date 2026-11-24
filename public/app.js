@@ -3914,8 +3914,6 @@ function renderGame(state) {
         turnIndicator.style.color = iWon ? '#4ade80' : '#fbbf24';
       }
     }
-    const toastWinnerName = state.winner ? (state.winner.name || state.winner) : 'ተጋጣሚ';
-    showSortToast(iWon ? `🏆 አሸንፈሃል! ደራሽ: ${state.pot || 0} ETB` : `🏆 አሸናፊ፦ ${toastWinnerName}`);
 
     // Show Back to Lobby button on status bar when game is finished
     const statusLobbyBtn = document.getElementById('statusLobbyBtn');
