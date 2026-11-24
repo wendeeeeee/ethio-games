@@ -3699,83 +3699,26 @@ function renderGame(state) {
     if (groundMeldBar) groundMeldBar.style.display = 'none';
     const iWon = state.winner === userId || (state.winner && state.winner.id === userId);
 
-    // NEVER show pop-up modal for any game! Keep table and cards 100% visible on table
+    // NEVER show pop-up modal or overlay banner! Keep table 100% clean and visible
     if (gameResultModal) gameResultModal.style.display = 'none';
-
-    // Show in-table win display banner directly on the table
     const sekaTableWinArea = document.getElementById('sekaTableWinArea');
-    const sekaWinTitle = document.getElementById('sekaWinTitle');
-    const sekaWinSubtitle = document.getElementById('sekaWinSubtitle');
-    const sekaWinCardsRow = document.getElementById('sekaWinCardsRow');
-    const sekaWinCardsSection = document.getElementById('sekaWinCardsSection');
+    if (sekaTableWinArea) sekaTableWinArea.style.display = 'none';
 
-    if (sekaTableWinArea) sekaTableWinArea.style.display = 'block';
-
-    if (sekaWinTitle) {
+    // Show result clearly in status bar without blocking the table
+    if (turnIndicator) {
       if (state.winReason === 'TIMEOUT_FORFEIT') {
-        sekaWinTitle.textContent = iWon ? '🏆 ተጋጣሚ በ 1 ደቂቃ ውስጥ ካርታ ስላልጣለ አሸነፍክ!' : '⏰ የጊዜ ገደብ አለቀ (ተሸንፈሃል)!';
-        sekaWinTitle.style.color = iWon ? '#4ade80' : '#ef4444';
+        turnIndicator.textContent = iWon ? '🏆 ተጋጣሚ በ 1 ደቂቃ ውስጥ ካርታ ስላልጣለ አሸነፍክ!' : '⏰ የጊዜ ገደብ አለቀ (ተሸንፈሃል)!';
+        turnIndicator.style.color = iWon ? '#4ade80' : '#ef4444';
       } else if (state.winReason === 'ABANDON_FORFEIT') {
-        sekaWinTitle.textContent = iWon ? '🚪 ተጋጣሚ ከጠረጴዛው ወጥቶ ስላልተመለሰ አሸነፍክ!' : '❌ ከጠረጴዛው ወጥተህ ባለመመለስህ ተሸንፈሃል!';
-        sekaWinTitle.style.color = iWon ? '#4ade80' : '#ef4444';
+        turnIndicator.textContent = iWon ? '🚪 ተጋጣሚ ከጠረጴዛው ወጥቶ ስላልተመለሰ አሸነፍክ!' : '❌ ከጠረጴዛው ወጥተህ ባለመመለስህ ተሸንፈሃል!';
+        turnIndicator.style.color = iWon ? '#4ade80' : '#ef4444';
       } else {
-        sekaWinTitle.textContent = iWon ? '🏆 አሸንፈሃል!' : '❌ ተሸንፈሃል!';
-        sekaWinTitle.style.color = iWon ? '#4ade80' : '#f87171';
+        const winnerName = state.winner ? (state.winner.name || state.winner) : (iWon ? (playerName || 'ተጫዋች') : 'ተጋጣሚ');
+        turnIndicator.textContent = iWon ? `🏆 አሸንፈሃል! (ደራሽ: ${state.pot || 0} ETB)` : `❌ ተሸንፈሃል! (አሸናፊ: ${winnerName} | ደራሽ: ${state.pot || 0} ETB)`;
+        turnIndicator.style.color = iWon ? '#4ade80' : '#ef4444';
       }
     }
-
-    if (sekaWinSubtitle) {
-      sekaWinSubtitle.style.display = 'block';
-      sekaWinSubtitle.textContent = `💰 ደራሽ: ${state.pot || 0} ETB | አሸናፊ: ${state.winner ? state.winner.name : (iWon ? (playerName || 'ተጫዋች') : 'ተጋጣሚ')}`;
-    }
-
-    if (sekaWinCardsRow) {
-      let myMelds = state.winningMelds;
-      let myDiscard = state.winningDiscard;
-
-      // Always show player's cards partitioned into 2 Tris + 1 Quatris + 1 Tetay
-      if (!myMelds || myMelds.length === 0) {
-        if (state.myHand && (state.myHand.length === 10 || state.myHand.length === 11)) {
-          const opt = arrangeSekaHandOptimal(state.myHand);
-          if (opt.melds && opt.melds.length > 0) {
-            myMelds = opt.melds.map(cards => ({
-              type: cards.length === 4 ? 'QUATRIS' : 'TRIS',
-              cards
-            }));
-            myDiscard = opt.discardedCard;
-          }
-        }
-      }
-
-      if (myMelds && myMelds.length > 0) {
-        if (sekaWinCardsSection) sekaWinCardsSection.style.display = 'block';
-        let meldsHtml = '';
-        myMelds.forEach((m, idx) => {
-          const label = m.type === 'QUATRIS' ? `ኳትሪስ (${m.cards.length} ካርታ)` : `ትሪስ ${idx + 1} (${m.cards.length} ካርታ)`;
-          meldsHtml += `
-            <div class="seka-meld-badge-group">
-              <span class="seka-meld-badge-label">${label}</span>
-              <div style="display: flex; gap: 4px;">
-                ${m.cards.map(c => createCardHTML(c, false, false)).join('')}
-              </div>
-            </div>
-          `;
-        });
-        if (myDiscard) {
-          meldsHtml += `
-            <div class="seka-meld-badge-group tetay-group">
-              <span class="seka-meld-badge-label">ተጣይ (11ኛዋ ካርታ)</span>
-              <div style="display: flex; gap: 4px;">
-                ${createCardHTML(myDiscard, false, false)}
-              </div>
-            </div>
-          `;
-        }
-        sekaWinCardsRow.innerHTML = meldsHtml;
-      } else {
-        if (sekaWinCardsSection) sekaWinCardsSection.style.display = 'none';
-      }
-    }
+    showSortToast(iWon ? `🏆 አሸንፈሃል! ደራሽ: ${state.pot || 0} ETB` : `❌ ተሸንፈሃል!`);
 
     // Hide in-game action buttons
     const sekaWinBtn = document.getElementById('sekaWinBtn');

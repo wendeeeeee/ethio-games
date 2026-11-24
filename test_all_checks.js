@@ -266,6 +266,7 @@ test('Valid winning hand: 11 cards = 2 Tris(3+3) + 1 Quatris(4) + 1 Discard', ()
   const result = validateSekaWinningHand(hand);
   assert(result.valid, 'Should be a valid winning hand');
   assert(result.melds.length === 3, 'Should have 3 melds (2 tris + 1 quatris)');
+  assert(result.melds[0].type === 'QUATRIS', 'Quatris must be first meld in winning hand');
   assert(result.discardedCard, 'Should identify a discard card');
 });
 

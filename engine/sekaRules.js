@@ -564,9 +564,9 @@ function partition10CardsIntoSekaMelds(cards) {
         return {
           valid: true,
           melds: [
+            { type: 'QUATRIS', cards: arrangeSekaMeld(quatrisCards) },
             { type: 'TRIS', cards: arrangeSekaMeld(tris1Cards) },
-            { type: 'TRIS', cards: arrangeSekaMeld(tris2Cards) },
-            { type: 'QUATRIS', cards: arrangeSekaMeld(quatrisCards) }
+            { type: 'TRIS', cards: arrangeSekaMeld(tris2Cards) }
           ]
         };
       }
