@@ -1631,7 +1631,11 @@ function switchToGameView() {
   const sekaTableWinArea = document.getElementById('sekaTableWinArea');
   if (sekaTableWinArea) sekaTableWinArea.style.display = 'none';
   const playerHandFanContainer = document.getElementById('playerHandFanContainer');
-  if (playerHandFanContainer) playerHandFanContainer.style.display = 'block';
+  if (playerHandFanContainer) {
+    playerHandFanContainer.style.display = 'block';
+    playerHandFanContainer.classList.remove('finished-melds-container');
+  }
+  if (playerCardsContainer) playerCardsContainer.classList.remove('finished-melds');
   if (opponentCardsContainer) opponentCardsContainer.style.display = 'flex';
   const myHandLabelFinished = document.getElementById('myHandLabelFinished');
   if (myHandLabelFinished) myHandLabelFinished.style.display = 'none';
@@ -1653,7 +1657,11 @@ function switchToLobbyView() {
   const sekaTableWinArea = document.getElementById('sekaTableWinArea');
   if (sekaTableWinArea) sekaTableWinArea.style.display = 'none';
   const playerHandFanContainer = document.getElementById('playerHandFanContainer');
-  if (playerHandFanContainer) playerHandFanContainer.style.display = 'block';
+  if (playerHandFanContainer) {
+    playerHandFanContainer.style.display = 'block';
+    playerHandFanContainer.classList.remove('finished-melds-container');
+  }
+  if (playerCardsContainer) playerCardsContainer.classList.remove('finished-melds');
   if (opponentCardsContainer) opponentCardsContainer.style.display = 'flex';
   const myHandLabelFinished = document.getElementById('myHandLabelFinished');
   if (myHandLabelFinished) myHandLabelFinished.style.display = 'none';
@@ -3767,25 +3775,40 @@ function renderGame(state) {
     let winDiscard = state.winningDiscard;
 
     if (!winMelds || winMelds.length === 0) {
-      if (state.myHand && (state.myHand.length === 10 || state.myHand.length === 11)) {
-        const opt = arrangeSekaHandOptimal(state.myHand);
-        if (opt.melds && opt.melds.length > 0) {
-          winMelds = opt.melds.map(cards => ({
-            type: cards.length === 4 ? 'QUATRIS' : 'TRIS',
-            cards
-          }));
-          winDiscard = opt.discardedCard;
+      const handToPartition = (iWon && state.myHand && state.myHand.length >= 10)
+        ? state.myHand
+        : (state.opponentHand && state.opponentHand.length >= 10 ? state.opponentHand : (state.myHand || []));
+
+      if (handToPartition.length >= 10) {
+        const opt = arrangeSekaHandOptimal(handToPartition);
+        if (opt && opt.arrangedCards && opt.arrangedCards.length >= 10) {
+          winMelds = [
+            { type: 'QUATRIS', cards: opt.arrangedCards.slice(0, 4) },
+            { type: 'TRIS', cards: opt.arrangedCards.slice(4, 7) },
+            { type: 'TRIS', cards: opt.arrangedCards.slice(7, 10) }
+          ];
+          winDiscard = opt.arrangedCards[10] || opt.tetayCard || opt.discardedCard;
         }
       }
     }
 
     if (winMelds && winMelds.length > 0) {
       // Sort melds so QUATRIS is first!
-      winMelds.sort((a, b) => (b.type === 'QUATRIS' ? 1 : 0) - (a.type === 'QUATRIS' ? 1 : 0));
+      winMelds.sort((a, b) => {
+        const lenA = Array.isArray(a) ? a.length : (a && a.cards ? a.cards.length : 0);
+        const lenB = Array.isArray(b) ? b.length : (b && b.cards ? b.cards.length : 0);
+        return lenB - lenA;
+      });
     }
 
     const playerHandFanContainer = document.getElementById('playerHandFanContainer');
-    if (playerHandFanContainer) playerHandFanContainer.style.display = 'block';
+    if (playerHandFanContainer) {
+      playerHandFanContainer.style.display = 'flex';
+      playerHandFanContainer.classList.add('finished-melds-container');
+    }
+    if (playerCardsContainer) {
+      playerCardsContainer.classList.add('finished-melds');
+    }
 
     // Ensure the tetay discarded card is displayed ONLY on the ground discard pile (never duplicated in hand)
     if (winDiscard && groundCardContainer) {
@@ -3797,7 +3820,7 @@ function renderGame(state) {
       // When I win: render winning 10-card melds directly in my hand space (Option 2)
       if (winMelds && winMelds.length > 0) {
         playerCardsContainer.innerHTML = renderMeldClustersHTML(winMelds);
-        playerCardsContainer.style.display = 'block';
+        playerCardsContainer.style.display = 'flex';
       }
     } else {
       // When opponent wins: flip opponent's 10-card melds face up in opponent's space (Option 2)
@@ -3808,14 +3831,14 @@ function renderGame(state) {
       // Render player's own hand at bottom cleanly arranged
       if (state.myHand && state.myHand.length > 0) {
         const opt = arrangeSekaHandOptimal(state.myHand);
-        if (opt && opt.melds && opt.melds.length > 0) {
-          const myMelds = opt.melds.map(cards => ({
-            type: cards.length === 4 ? 'QUATRIS' : 'TRIS',
-            cards
-          }));
-          myMelds.sort((a, b) => (b.type === 'QUATRIS' ? 1 : 0) - (a.type === 'QUATRIS' ? 1 : 0));
+        if (opt && opt.arrangedCards && opt.arrangedCards.length >= 10) {
+          const myMelds = [
+            { type: 'QUATRIS', cards: opt.arrangedCards.slice(0, 4) },
+            { type: 'TRIS', cards: opt.arrangedCards.slice(4, 7) },
+            { type: 'TRIS', cards: opt.arrangedCards.slice(7, 10) }
+          ];
           playerCardsContainer.innerHTML = renderMeldClustersHTML(myMelds);
-          playerCardsContainer.style.display = 'block';
+          playerCardsContainer.style.display = 'flex';
         } else {
           renderPlayerHand(state.myHand);
         }
@@ -3840,11 +3863,14 @@ function renderMeldClustersHTML(melds) {
   let html = '<div class="hand-meld-clusters">';
   if (melds && melds.length > 0) {
     melds.forEach(m => {
-      html += `
-        <div class="hand-meld-cluster">
-          ${m.cards.map(c => createCardHTML(c, false, false)).join('')}
-        </div>
-      `;
+      const cards = Array.isArray(m) ? m : (m && m.cards ? m.cards : []);
+      if (cards && cards.length > 0) {
+        html += `
+          <div class="hand-meld-cluster">
+            ${cards.map(c => createCardHTML(c, false, false)).join('')}
+          </div>
+        `;
+      }
     });
   }
   html += '</div>';

@@ -179,6 +179,24 @@ body.in-game .app-header {
 }
 
 /* Finished Meld Clusters in Hand and Opponent Positions (Option 2: No Labels, Pure Spaced Cards, Normal Card Size) */
+.fan.finished-melds {
+  position: relative !important;
+  left: 0 !important;
+  bottom: 0 !important;
+  width: 100% !important;
+  height: auto !important;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+}
+
+.fan-container.finished-melds-container {
+  height: auto !important;
+  min-height: 120px !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
 .hand-meld-clusters {
   display: flex !important;
   align-items: center !important;
