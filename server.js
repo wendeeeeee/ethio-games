@@ -871,6 +871,37 @@ io.on('connection', (socket) => {
     broadcastSekaRoomUpdate(room);
   });
 
+  // Handle automatic reconnection on page refresh (F5 / reload)
+  socket.on('reconnect_active_game', ({ roomId, userId }) => {
+    if (!roomId || !userId) return;
+    const sRoom = sekaRooms.get(roomId);
+    if (sRoom) {
+      const isPlayer = sRoom.players && sRoom.players.some(p => p.id === userId);
+      if (isPlayer && (sRoom.status === 'PLAYING' || sRoom.status === 'WAITING')) {
+        sRoom.playerReturn(userId);
+        const p = sRoom.players.find(p => p.id === userId);
+        if (p) p.socketId = socket.id;
+        socketPlayerMap.set(socket.id, { userId, roomId });
+        socket.join(roomId);
+        socket.emit('seka_reconnect_success', { roomId });
+        broadcastSekaRoomUpdate(sRoom);
+        return;
+      }
+    }
+    const cRoom = gameRooms.get(roomId);
+    if (cRoom) {
+      const isPlayer = cRoom.players && cRoom.players.some(p => p.id === userId);
+      if (isPlayer && (cRoom.status === 'PLAYING' || cRoom.status === 'WAITING')) {
+        socketPlayerMap.set(socket.id, { userId, roomId });
+        socket.join(roomId);
+        socket.emit('conquer_reconnect_success', { roomId });
+        broadcastRoomUpdate(cRoom);
+        return;
+      }
+    }
+    socket.emit('active_room_expired', { roomId });
+  });
+
   socket.on('disconnect', () => {
     const playerInfo = socketPlayerMap.get(socket.id);
     if (playerInfo && playerInfo.roomId) {

@@ -916,6 +916,33 @@ if (playerNameInput) {
 socket.on('connect', () => {
   socket.emit('register_user', { userId, name: playerName, phone: userPhone });
   refreshRoomsList();
+  const savedActiveRoom = localStorage.getItem('conquer_active_room_id');
+  if (savedActiveRoom) {
+    socket.emit('reconnect_active_game', { roomId: savedActiveRoom, userId });
+  }
+});
+
+// Auto-reconnect response listeners on page refresh
+socket.on('seka_reconnect_success', ({ roomId }) => {
+  currentRoomId = roomId;
+  localStorage.setItem('conquer_active_room_id', roomId);
+  if (homeGameSelectView) homeGameSelectView.style.display = 'none';
+  if (sekaLobbySection) sekaLobbySection.style.display = 'none';
+  if (lobbyView) lobbyView.style.display = 'none';
+  switchToGameView();
+});
+
+socket.on('conquer_reconnect_success', ({ roomId }) => {
+  currentRoomId = roomId;
+  localStorage.setItem('conquer_active_room_id', roomId);
+  if (homeGameSelectView) homeGameSelectView.style.display = 'none';
+  if (lobbyView) lobbyView.style.display = 'none';
+  switchToGameView();
+});
+
+socket.on('active_room_expired', () => {
+  localStorage.removeItem('conquer_active_room_id');
+  currentRoomId = null;
 });
 
 socket.on('wallet_update', (wallet) => {
@@ -3095,12 +3122,42 @@ function arrangeSekaHandOptimal(hand) {
     }
   }
 
-  // Prioritize same-suit close clusters: larger clusters first (e.g. 3 cards before 2 cards), then tighter gap
+  const SUIT_ORDER = { '♠': 1, '♥': 2, '♦': 3, '♣': 4 };
+
+  // Sort Quatris groups deterministically by suit order
+  quatrisGroups.sort((a, b) => {
+    const sA = (a.find(c => !isSekaWildJoker(c)) || {}).suit;
+    const sB = (b.find(c => !isSekaWildJoker(c)) || {}).suit;
+    return (SUIT_ORDER[sA] || 99) - (SUIT_ORDER[sB] || 99);
+  });
+
+  // Sort Tris groups deterministically by suit order
+  trisGroups.sort((a, b) => {
+    const sA = (a.find(c => !isSekaWildJoker(c)) || {}).suit;
+    const sB = (b.find(c => !isSekaWildJoker(c)) || {}).suit;
+    return (SUIT_ORDER[sA] || 99) - (SUIT_ORDER[sB] || 99);
+  });
+
+  // Prioritize same-suit close clusters deterministically:
+  // 1. Larger clusters first (e.g. 3 cards before 2 cards)
+  // 2. Fixed suit order (♠ -> ♥ -> ♦ -> ♣)
+  // 3. Lowest rank in cluster
   sameSuitGroups.sort((a, b) => {
     if (b.length !== a.length) return b.length - a.length;
-    const spanA = (rankOrderMap[a[a.length - 1].rank] || 0) - (rankOrderMap[a[0].rank] || 0);
-    const spanB = (rankOrderMap[b[b.length - 1].rank] || 0) - (rankOrderMap[b[0].rank] || 0);
-    return spanA - spanB;
+    const sA = a[0] ? a[0].suit : '';
+    const sB = b[0] ? b[0].suit : '';
+    const suitDiff = (SUIT_ORDER[sA] || 99) - (SUIT_ORDER[sB] || 99);
+    if (suitDiff !== 0) return suitDiff;
+    const rA = rankOrderMap[a[0].rank] || 0;
+    const rB = rankOrderMap[b[0].rank] || 0;
+    return rA - rB;
+  });
+
+  // Sort singles deterministically by suit order, then rank
+  singleCards.sort((a, b) => {
+    const suitDiff = (SUIT_ORDER[a.suit] || 99) - (SUIT_ORDER[b.suit] || 99);
+    if (suitDiff !== 0) return suitDiff;
+    return (rankOrderMap[a.rank] || 0) - (rankOrderMap[b.rank] || 0);
   });
 
   // Assemble arranged cards:
@@ -3121,7 +3178,7 @@ function arrangeSekaHandOptimal(hand) {
         const sc = singleCards[i];
         if (!placedSingleIds.has(sc.id) && sc.suit === meldSuit) {
           const meldNats = meldCards.filter(c => !isSekaWildJoker(c));
-          if (meldNats.some(c => getSekaRankDistLocal(c.rank, sc.rank) <= 1)) {
+          if (meldNats.some(c => getSekaRankDistLocal(c.rank, sc.rank) <= 2)) {
             meldCards = arrangeSekaMeld([...meldCards, sc]);
             placedSingleIds.add(sc.id);
           }
@@ -4098,13 +4155,12 @@ function renderPlayerHand(hand) {
 
   } else {
     meldGroupsContainer.style.display = 'none';
+    playerCardsContainer.removeAttribute('style');
     playerCardsContainer.style.display = 'block';
-    playerCardsContainer.className = 'fan';
+    playerCardsContainer.className = 'fan player-cards';
     const playerHandFanContainer = document.getElementById('playerHandFanContainer');
     if (playerHandFanContainer) {
-      playerHandFanContainer.style.height = '';
-      playerHandFanContainer.style.minHeight = '';
-      playerHandFanContainer.style.alignItems = '';
+      playerHandFanContainer.removeAttribute('style');
     }
 
     const total = hand.length;

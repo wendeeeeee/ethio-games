@@ -1303,11 +1303,13 @@ select:focus {
 }
 
 .fan {
-  position: absolute;
-  left: 50%;
+  position: absolute !important;
+  left: 50% !important;
   bottom: 70px;
-  width: 0;
-  height: 0;
+  width: 0 !important;
+  height: 0 !important;
+  margin: 0 !important;
+  transform: none !important;
 }
 
 .fan .card {

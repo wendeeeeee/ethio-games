@@ -496,12 +496,42 @@ function arrangeSekaHandOptimal(hand) {
     }
   }
 
-  // Prioritize same-suit close clusters: larger clusters first (e.g. 3 cards before 2 cards), then tighter gap
+  const SUIT_ORDER = { '♠': 1, '♥': 2, '♦': 3, '♣': 4 };
+
+  // Sort Quatris groups deterministically by suit order
+  quatrisGroups.sort((a, b) => {
+    const sA = (a.find(c => !isSekaJoker(c)) || {}).suit;
+    const sB = (b.find(c => !isSekaJoker(c)) || {}).suit;
+    return (SUIT_ORDER[sA] || 99) - (SUIT_ORDER[sB] || 99);
+  });
+
+  // Sort Tris groups deterministically by suit order
+  trisGroups.sort((a, b) => {
+    const sA = (a.find(c => !isSekaJoker(c)) || {}).suit;
+    const sB = (b.find(c => !isSekaJoker(c)) || {}).suit;
+    return (SUIT_ORDER[sA] || 99) - (SUIT_ORDER[sB] || 99);
+  });
+
+  // Prioritize same-suit close clusters deterministically:
+  // 1. Larger clusters first (e.g. 3 cards before 2 cards)
+  // 2. Fixed suit order (♠ -> ♥ -> ♦ -> ♣)
+  // 3. Lowest rank in cluster
   sameSuitGroups.sort((a, b) => {
     if (b.length !== a.length) return b.length - a.length;
-    const spanA = (RANK_ORDER[a[a.length - 1].rank] || 0) - (RANK_ORDER[a[0].rank] || 0);
-    const spanB = (RANK_ORDER[b[b.length - 1].rank] || 0) - (RANK_ORDER[b[0].rank] || 0);
-    return spanA - spanB;
+    const sA = a[0] ? a[0].suit : '';
+    const sB = b[0] ? b[0].suit : '';
+    const suitDiff = (SUIT_ORDER[sA] || 99) - (SUIT_ORDER[sB] || 99);
+    if (suitDiff !== 0) return suitDiff;
+    const rA = RANK_ORDER[a[0].rank] || 0;
+    const rB = RANK_ORDER[b[0].rank] || 0;
+    return rA - rB;
+  });
+
+  // Sort singles deterministically by suit order, then rank
+  singleCards.sort((a, b) => {
+    const suitDiff = (SUIT_ORDER[a.suit] || 99) - (SUIT_ORDER[b.suit] || 99);
+    if (suitDiff !== 0) return suitDiff;
+    return (RANK_ORDER[a.rank] || 0) - (RANK_ORDER[b.rank] || 0);
   });
 
   // Assemble arranged cards:
@@ -522,7 +552,7 @@ function arrangeSekaHandOptimal(hand) {
         const sc = singleCards[i];
         if (!placedSingleIds.has(sc.id) && sc.suit === meldSuit) {
           const meldNats = meldCards.filter(c => !isSekaJoker(c));
-          if (meldNats.some(c => getSekaRankDist(c.rank, sc.rank) <= 1)) {
+          if (meldNats.some(c => getSekaRankDist(c.rank, sc.rank) <= 2)) {
             meldCards = arrangeSekaMeld([...meldCards, sc]);
             placedSingleIds.add(sc.id);
           }
