@@ -3844,7 +3844,7 @@ function renderGame(state) {
     }
 
     if (iWon) {
-      // When I win: render winning meld clusters in normal card size (76x110px) with clean spacing
+      // When I win: render winning meld clusters in normal card size (76x110px) with clean spacing (Option 2)
       let myMelds = winMelds;
       if (!myMelds || myMelds.length === 0) {
         const hand10 = (state.myHand && state.myHand.length === 11 && winDiscard)
@@ -3864,17 +3864,24 @@ function renderGame(state) {
           playerHandFanContainer.style.display = 'flex';
           playerHandFanContainer.style.justifyContent = 'center';
           playerHandFanContainer.style.alignItems = 'center';
+          playerHandFanContainer.style.height = 'auto';
+          playerHandFanContainer.style.minHeight = '130px';
+          playerHandFanContainer.style.pointerEvents = 'auto';
         }
         if (playerCardsContainer) {
+          playerCardsContainer.className = 'finished-player-melds';
           playerCardsContainer.innerHTML = renderMeldClustersHTML(myMelds);
           playerCardsContainer.style.display = 'flex';
           playerCardsContainer.style.position = 'relative';
           playerCardsContainer.style.left = 'auto';
+          playerCardsContainer.style.bottom = 'auto';
           playerCardsContainer.style.transform = 'none';
           playerCardsContainer.style.width = '100%';
           playerCardsContainer.style.justifyContent = 'center';
+          playerCardsContainer.style.alignItems = 'center';
         }
       } else if (state.myHand && state.myHand.length > 0) {
+        playerCardsContainer.className = 'fan';
         const opt = arrangeSekaHandOptimal(state.myHand);
         const arranged = (opt && opt.arrangedCards && opt.arrangedCards.length > 0) ? opt.arrangedCards : state.myHand;
         renderPlayerHand(arranged);
@@ -4087,6 +4094,13 @@ function renderPlayerHand(hand) {
   } else {
     meldGroupsContainer.style.display = 'none';
     playerCardsContainer.style.display = 'block';
+    playerCardsContainer.className = 'fan';
+    const playerHandFanContainer = document.getElementById('playerHandFanContainer');
+    if (playerHandFanContainer) {
+      playerHandFanContainer.style.height = '';
+      playerHandFanContainer.style.minHeight = '';
+      playerHandFanContainer.style.alignItems = '';
+    }
 
     const total = hand.length;
     const middle = (total - 1) / 2;

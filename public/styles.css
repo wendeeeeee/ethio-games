@@ -233,6 +233,76 @@ body.in-game .app-header {
   justify-content: center !important;
 }
 
+.finished-player-melds {
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  width: 100% !important;
+  position: relative !important;
+  left: auto !important;
+  bottom: auto !important;
+  transform: none !important;
+  height: auto !important;
+  pointer-events: auto !important;
+}
+
+.finished-player-melds .card,
+.finished-player-melds .hand-meld-cluster .card {
+  position: relative !important;
+  transform: none !important;
+  left: auto !important;
+  bottom: auto !important;
+  width: 76px !important;
+  height: 110px !important;
+  border-radius: 9px !important;
+  padding: 6px 7px !important;
+  margin-left: -22px !important;
+  box-shadow: -3px 3px 10px rgba(0, 0, 0, 0.45) !important;
+  cursor: default !important;
+  border: 1px solid rgba(0, 0, 0, 0.22) !important;
+  background: #ffffff !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: space-between !important;
+}
+
+.finished-player-melds .card:first-child,
+.finished-player-melds .hand-meld-cluster .card:first-child {
+  margin-left: 0 !important;
+}
+
+.finished-player-melds .card.red,
+.finished-player-melds .hand-meld-cluster .card.red {
+  color: #dc2626 !important;
+}
+
+.finished-player-melds .card.black,
+.finished-player-melds .hand-meld-cluster .card.black {
+  color: #111827 !important;
+}
+
+.finished-player-melds .card .corner-rank,
+.finished-player-melds .hand-meld-cluster .card .corner-rank {
+  font-size: 18px !important;
+  font-weight: 900 !important;
+  line-height: 1 !important;
+}
+
+.finished-player-melds .card .corner-suit,
+.finished-player-melds .hand-meld-cluster .card .corner-suit {
+  font-size: 15px !important;
+  line-height: 1 !important;
+}
+
+.finished-player-melds .card .card-center-suit,
+.finished-player-melds .hand-meld-cluster .card .card-center-suit {
+  font-size: 26px !important;
+  opacity: 1 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
 .hand-meld-clusters {
   display: flex !important;
   align-items: center !important;
@@ -2928,7 +2998,77 @@ select:focus {
     opacity: 1 !important;
   }
 
-  .hand-meld-clusters {
+  .finished-player-melds {
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    width: 100% !important;
+    position: relative !important;
+    left: auto !important;
+    bottom: auto !important;
+    transform: none !important;
+    height: auto !important;
+    pointer-events: auto !important;
+  }
+
+  .finished-player-melds .card,
+  .finished-player-melds .hand-meld-cluster .card {
+    position: relative !important;
+    transform: none !important;
+    left: auto !important;
+    bottom: auto !important;
+    width: 52px !important;
+    height: 76px !important;
+    border-radius: 6px !important;
+    padding: 3px 4px !important;
+    margin-left: -16px !important;
+    box-shadow: -2px 2px 8px rgba(0, 0, 0, 0.45) !important;
+    cursor: default !important;
+    border: 1px solid rgba(0, 0, 0, 0.22) !important;
+    background: #ffffff !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+  }
+
+  .finished-player-melds .card:first-child,
+  .finished-player-melds .hand-meld-cluster .card:first-child {
+    margin-left: 0 !important;
+  }
+
+  .finished-player-melds .card.red,
+  .finished-player-melds .hand-meld-cluster .card.red {
+    color: #dc2626 !important;
+  }
+
+  .finished-player-melds .card.black,
+  .finished-player-melds .hand-meld-cluster .card.black {
+    color: #111827 !important;
+  }
+
+  .finished-player-melds .card .corner-rank,
+  .finished-player-melds .hand-meld-cluster .card .corner-rank {
+    font-size: 13px !important;
+    font-weight: 900 !important;
+    line-height: 1 !important;
+  }
+
+  .finished-player-melds .card .corner-suit,
+  .finished-player-melds .hand-meld-cluster .card .corner-suit {
+    font-size: 11px !important;
+    line-height: 1 !important;
+  }
+
+  .finished-player-melds .card .card-center-suit,
+  .finished-player-melds .hand-meld-cluster .card .card-center-suit {
+    font-size: 18px !important;
+    opacity: 1 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+.hand-meld-clusters {
     gap: 12px !important;
   }
 
