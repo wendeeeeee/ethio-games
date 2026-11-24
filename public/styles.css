@@ -175,15 +175,76 @@ body.in-game .app-header {
 
 /* Seka In-Table Win Display Styling */
 .seka-table-win-area {
-  width: 100%;
-  max-width: 900px;
-  margin: 6px auto;
-  padding: 6px 12px;
-  background: transparent !important;
-  border: none !important;
-  box-shadow: none !important;
-  backdrop-filter: none !important;
-  z-index: 30;
+  display: none !important;
+}
+
+/* Finished Meld Clusters in Hand and Opponent Positions (Option 2: No Labels, Pure Spaced Cards) */
+.hand-meld-clusters {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 18px !important;
+  width: 100% !important;
+  position: relative !important;
+  transform: none !important;
+  bottom: auto !important;
+  flex-wrap: wrap !important;
+}
+
+.hand-meld-cluster {
+  display: inline-flex !important;
+  align-items: center !important;
+  position: relative !important;
+}
+
+.hand-meld-cluster .card {
+  position: relative !important;
+  transform: none !important;
+  left: auto !important;
+  bottom: auto !important;
+  width: 58px !important;
+  height: 84px !important;
+  border-radius: 8px !important;
+  padding: 4px 5px !important;
+  margin-left: -18px !important;
+  box-shadow: -2px 2px 8px rgba(0, 0, 0, 0.45) !important;
+  cursor: default !important;
+  border: 1px solid rgba(0, 0, 0, 0.22) !important;
+  background: #ffffff !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: space-between !important;
+}
+
+.hand-meld-cluster .card:first-child {
+  margin-left: 0 !important;
+}
+
+.hand-meld-cluster .card.red {
+  color: #dc2626 !important;
+}
+
+.hand-meld-cluster .card.black {
+  color: #111827 !important;
+}
+
+.hand-meld-cluster .card .corner-rank {
+  font-size: 15px !important;
+  font-weight: 900 !important;
+  line-height: 1 !important;
+}
+
+.hand-meld-cluster .card .corner-suit {
+  font-size: 13px !important;
+  line-height: 1 !important;
+}
+
+.hand-meld-cluster .card .card-center-suit {
+  font-size: 22px !important;
+  opacity: 1 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
 }
 
 .seka-win-header {
@@ -2811,6 +2872,33 @@ select:focus {
   .seka-win-cards-row .card .card-center-suit {
     font-size: 18px !important;
     opacity: 1 !important;
+  }
+
+  .hand-meld-clusters {
+    gap: 10px !important;
+  }
+
+  .hand-meld-cluster .card {
+    width: 44px !important;
+    height: 64px !important;
+    padding: 2px 3px !important;
+    margin-left: -14px !important;
+    border-radius: 6px !important;
+  }
+
+  .hand-meld-cluster .card .corner-rank {
+    font-size: 12px !important;
+    font-weight: 900 !important;
+    line-height: 1 !important;
+  }
+
+  .hand-meld-cluster .card .corner-suit {
+    font-size: 10px !important;
+    line-height: 1 !important;
+  }
+
+  .hand-meld-cluster .card .card-center-suit {
+    font-size: 17px !important;
   }
 }
 

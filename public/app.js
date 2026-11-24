@@ -3757,10 +3757,9 @@ function renderGame(state) {
       statusLobbyBtn.onclick = () => switchToLobbyView();
     }
 
-    // Render winning meld cards directly on table (Quatris ➔ Tris 1 ➔ Tris 2 ➔ Tetay)
+    // Hide middle table win area completely (Option 2: cards shown only in player/opponent positions)
     const sekaTableWinArea = document.getElementById('sekaTableWinArea');
-    const sekaWinCardsRow = document.getElementById('sekaWinCardsRow');
-    const sekaWinCardsSection = document.getElementById('sekaWinCardsSection');
+    if (sekaTableWinArea) sekaTableWinArea.style.display = 'none';
 
     let winMelds = state.winningMelds;
     let winDiscard = state.winningDiscard;
@@ -3781,70 +3780,38 @@ function renderGame(state) {
     if (winMelds && winMelds.length > 0) {
       // Sort melds so QUATRIS is first!
       winMelds.sort((a, b) => (b.type === 'QUATRIS' ? 1 : 0) - (a.type === 'QUATRIS' ? 1 : 0));
+    }
 
-      if (sekaTableWinArea) sekaTableWinArea.style.display = 'block';
-      if (sekaWinCardsSection) sekaWinCardsSection.style.display = 'block';
+    const playerHandFanContainer = document.getElementById('playerHandFanContainer');
+    if (playerHandFanContainer) playerHandFanContainer.style.display = 'block';
 
-      const sekaWinSectionTitle = document.getElementById('sekaWinSectionTitle');
-      const playerHandFanContainer = document.getElementById('playerHandFanContainer');
-      const myHandLabelFinished = document.getElementById('myHandLabelFinished');
-
-      if (iWon) {
-        if (sekaWinSectionTitle) sekaWinSectionTitle.textContent = '👑 ያሸነፍክበት ካርታህ (የአንተ ሜልዶች)፦';
-        // Winner hand is shown with full space on table - hide duplicate bottom hand fan!
-        if (playerHandFanContainer) playerHandFanContainer.style.display = 'none';
-        if (myHandLabelFinished) myHandLabelFinished.style.display = 'none';
-      } else {
-        const winnerName = state.winner ? (state.winner.name || state.winner) : 'ተጋጣሚ';
-        if (sekaWinSectionTitle) sekaWinSectionTitle.textContent = `🎴 ${winnerName} ያሸነፈበት ካርታ፦`;
-        // Hide opponent's face-down cards at the top so cards never appear twice
-        if (opponentCardsContainer) opponentCardsContainer.style.display = 'none';
-
-        // Keep player's own hand visible at the bottom so they see what they held
-        if (playerHandFanContainer) playerHandFanContainer.style.display = 'block';
-        if (myHandLabelFinished) myHandLabelFinished.style.display = 'inline';
-        if (state.myHand && state.myHand.length > 0) {
-          const opt = arrangeSekaHandOptimal(state.myHand);
-          if (opt && opt.arrangedCards && opt.arrangedCards.length > 0) {
-            state.myHand = opt.arrangedCards;
-            currentGameState.myHand = opt.arrangedCards;
-            renderPlayerHand(state.myHand);
-          }
-        }
+    if (iWon) {
+      // When I win: render winning melds directly in my hand space with pure spacing (Option 2)
+      if (winMelds && winMelds.length > 0) {
+        playerCardsContainer.innerHTML = renderMeldClustersHTML(winMelds, winDiscard);
+        playerCardsContainer.style.display = 'block';
       }
-
-      let meldsHtml = '';
-      let trisCount = 0;
-      winMelds.forEach((m) => {
-        let label = '';
-        if (m.type === 'QUATRIS') {
-          label = `ኳትሪስ (${m.cards.length} ካርታ)`;
-        } else {
-          trisCount++;
-          label = `ትሪስ ${trisCount} (${m.cards.length} ካርታ)`;
-        }
-        meldsHtml += `
-          <div class="seka-meld-badge-group">
-            <span class="seka-meld-badge-label">${label}</span>
-            <div style="display: flex; gap: 4px;">
-              ${m.cards.map(c => createCardHTML(c, false, false)).join('')}
-            </div>
-          </div>
-        `;
-      });
-      if (winDiscard) {
-        meldsHtml += `
-          <div class="seka-meld-badge-group tetay-group">
-            <span class="seka-meld-badge-label">ተጣይ (11ኛዋ ካርታ)</span>
-            <div style="display: flex; gap: 4px;">
-              ${createCardHTML(winDiscard, false, false)}
-            </div>
-          </div>
-        `;
-      }
-      if (sekaWinCardsRow) sekaWinCardsRow.innerHTML = meldsHtml;
     } else {
-      if (sekaTableWinArea) sekaTableWinArea.style.display = 'none';
+      // When opponent wins: flip opponent's cards face up in opponent's space with pure spacing (Option 2)
+      if (winMelds && winMelds.length > 0 && opponentCardsContainer) {
+        opponentCardsContainer.innerHTML = renderMeldClustersHTML(winMelds, winDiscard);
+        opponentCardsContainer.style.display = 'flex';
+      }
+      // Render player's own hand at bottom cleanly arranged
+      if (state.myHand && state.myHand.length > 0) {
+        const opt = arrangeSekaHandOptimal(state.myHand);
+        if (opt && opt.melds && opt.melds.length > 0) {
+          const myMelds = opt.melds.map(cards => ({
+            type: cards.length === 4 ? 'QUATRIS' : 'TRIS',
+            cards
+          }));
+          myMelds.sort((a, b) => (b.type === 'QUATRIS' ? 1 : 0) - (a.type === 'QUATRIS' ? 1 : 0));
+          playerCardsContainer.innerHTML = renderMeldClustersHTML(myMelds, opt.discardedCard);
+          playerCardsContainer.style.display = 'block';
+        } else {
+          renderPlayerHand(state.myHand);
+        }
+      }
     }
 
     // Hide in-game action buttons
@@ -3858,6 +3825,29 @@ function renderGame(state) {
     if (iWon) playWinSound();
     return;
   }
+}
+
+// Helper: renders meld clusters directly in hand or opponent space with pure spacing (Option 2: No labels, pure cards)
+function renderMeldClustersHTML(melds, tetayCard) {
+  let html = '<div class="hand-meld-clusters">';
+  if (melds && melds.length > 0) {
+    melds.forEach(m => {
+      html += `
+        <div class="hand-meld-cluster">
+          ${m.cards.map(c => createCardHTML(c, false, false)).join('')}
+        </div>
+      `;
+    });
+  }
+  if (tetayCard) {
+    html += `
+      <div class="hand-meld-cluster tetay-cluster">
+        ${createCardHTML(tetayCard, false, false)}
+      </div>
+    `;
+  }
+  html += '</div>';
+  return html;
 }
 
 // Helper: renders winning melds face-up with clean visual grouping
