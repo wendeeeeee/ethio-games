@@ -1630,6 +1630,11 @@ function switchToGameView() {
   selectedCardId = null;
   const sekaTableWinArea = document.getElementById('sekaTableWinArea');
   if (sekaTableWinArea) sekaTableWinArea.style.display = 'none';
+  const playerHandFanContainer = document.getElementById('playerHandFanContainer');
+  if (playerHandFanContainer) playerHandFanContainer.style.display = 'block';
+  if (opponentCardsContainer) opponentCardsContainer.style.display = 'flex';
+  const myHandLabelFinished = document.getElementById('myHandLabelFinished');
+  if (myHandLabelFinished) myHandLabelFinished.style.display = 'none';
   const discardBtn = document.getElementById('discardBtn');
   if (discardBtn) discardBtn.style.display = 'inline-block';
   lobbyView.style.display = 'none';
@@ -1647,6 +1652,11 @@ function switchToLobbyView() {
   playerOrderedCardIds = [];
   const sekaTableWinArea = document.getElementById('sekaTableWinArea');
   if (sekaTableWinArea) sekaTableWinArea.style.display = 'none';
+  const playerHandFanContainer = document.getElementById('playerHandFanContainer');
+  if (playerHandFanContainer) playerHandFanContainer.style.display = 'block';
+  if (opponentCardsContainer) opponentCardsContainer.style.display = 'flex';
+  const myHandLabelFinished = document.getElementById('myHandLabelFinished');
+  if (myHandLabelFinished) myHandLabelFinished.style.display = 'none';
   if (baseJokerCardContainer) {
     baseJokerCardContainer.style.display = 'none';
     baseJokerCardContainer.innerHTML = '';
@@ -3776,17 +3786,32 @@ function renderGame(state) {
       if (sekaWinCardsSection) sekaWinCardsSection.style.display = 'block';
 
       const sekaWinSectionTitle = document.getElementById('sekaWinSectionTitle');
-      if (sekaWinSectionTitle) {
-        if (iWon) {
-          sekaWinSectionTitle.textContent = '👑 ያሸነፍክበት ካርታህ (የአንተ ሜልዶች)፦';
-        } else {
-          const winnerName = state.winner ? (state.winner.name || state.winner) : 'ተጋጣሚ';
-          sekaWinSectionTitle.textContent = `🎴 ${winnerName} ያሸነፈበት ካርታ፦`;
+      const playerHandFanContainer = document.getElementById('playerHandFanContainer');
+      const myHandLabelFinished = document.getElementById('myHandLabelFinished');
+
+      if (iWon) {
+        if (sekaWinSectionTitle) sekaWinSectionTitle.textContent = '👑 ያሸነፍክበት ካርታህ (የአንተ ሜልዶች)፦';
+        // Winner hand is shown with full space on table - hide duplicate bottom hand fan!
+        if (playerHandFanContainer) playerHandFanContainer.style.display = 'none';
+        if (myHandLabelFinished) myHandLabelFinished.style.display = 'none';
+      } else {
+        const winnerName = state.winner ? (state.winner.name || state.winner) : 'ተጋጣሚ';
+        if (sekaWinSectionTitle) sekaWinSectionTitle.textContent = `🎴 ${winnerName} ያሸነፈበት ካርታ፦`;
+        // Hide opponent's face-down cards at the top so cards never appear twice
+        if (opponentCardsContainer) opponentCardsContainer.style.display = 'none';
+
+        // Keep player's own hand visible at the bottom so they see what they held
+        if (playerHandFanContainer) playerHandFanContainer.style.display = 'block';
+        if (myHandLabelFinished) myHandLabelFinished.style.display = 'inline';
+        if (state.myHand && state.myHand.length > 0) {
+          const opt = arrangeSekaHandOptimal(state.myHand);
+          if (opt && opt.arrangedCards && opt.arrangedCards.length > 0) {
+            state.myHand = opt.arrangedCards;
+            currentGameState.myHand = opt.arrangedCards;
+            renderPlayerHand(state.myHand);
+          }
         }
       }
-
-      const myHandLabelFinished = document.getElementById('myHandLabelFinished');
-      if (myHandLabelFinished) myHandLabelFinished.style.display = 'inline';
 
       let meldsHtml = '';
       let trisCount = 0;
@@ -3820,16 +3845,6 @@ function renderGame(state) {
       if (sekaWinCardsRow) sekaWinCardsRow.innerHTML = meldsHtml;
     } else {
       if (sekaTableWinArea) sekaTableWinArea.style.display = 'none';
-    }
-
-    // Re-render player's hand cards arranged cleanly (Quatris ➔ Tris 1 ➔ Tris 2 ➔ Tetay) directly on the hand
-    if (state.myHand && state.myHand.length > 0) {
-      const opt = arrangeSekaHandOptimal(state.myHand);
-      if (opt && opt.arrangedCards && opt.arrangedCards.length > 0) {
-        state.myHand = opt.arrangedCards;
-        currentGameState.myHand = opt.arrangedCards;
-        renderPlayerHand(state.myHand);
-      }
     }
 
     // Hide in-game action buttons
