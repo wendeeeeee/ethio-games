@@ -610,6 +610,26 @@ test('Diamonds non-Ace-bridge: J♦, 1♦, 4♦, 9♦ never arranges as J,1,4,9 
   assert(ranks === '9♦,J♦,A♦,4♦' || ranks === 'A♦,4♦,9♦,J♦', `Expected natural/connected order, got: ${ranks}`);
 });
 
+test('User rule: J, Q and 1 (Ace) of same suit stay together in sequence (never J,Q separated from 1)', () => {
+  const hand = [
+    { id: '1', rank: 'J', suit: '♠' },
+    { id: '2', rank: 'Q', suit: '♠' },
+    { id: '3', rank: 'A', suit: '♠' },
+    { id: '4', rank: '5', suit: '♥' },
+    { id: '5', rank: '6', suit: '♥' },
+    { id: '6', rank: '7', suit: '♥' },
+    { id: '7', rank: '2', suit: '♦' }
+  ];
+  const res = arrangeSekaHandOptimal(hand);
+  const ranks = res.arrangedCards.map(c => c.rank + c.suit);
+  const jIdx = ranks.indexOf('J♠');
+  const qIdx = ranks.indexOf('Q♠');
+  const aIdx = ranks.indexOf('A♠');
+  assert(jIdx !== -1 && qIdx !== -1 && aIdx !== -1, 'All 3 cards must be present');
+  assert(Math.abs(jIdx - qIdx) === 1, 'J♠ and Q♠ must be adjacent');
+  assert(Math.abs(qIdx - aIdx) === 1, 'Q♠ and A♠ must be adjacent (Ace-High proximity)');
+});
+
 // ==============================================================
 console.log('\n📊 SUMMARY');
 // ==============================================================
