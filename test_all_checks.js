@@ -376,6 +376,11 @@ test('Turn timeout: player who fails to move within 1 min forfeits; opponent win
   assert(room.winner.id === 'p2', 'Opponent p2 should be declared winner');
   assert(room.winReason === 'TIMEOUT_FORFEIT', 'Win reason should be TIMEOUT_FORFEIT');
   assert(room.forfeitedPlayer.id === 'p1', 'P1 should be the forfeited player');
+
+  // Verify cards are NOT exposed when game finishes on timeout
+  const p2State = room.getPublicState('p2');
+  assert(!p2State.opponentHand, 'Opponent hand must NOT be revealed in TIMEOUT_FORFEIT');
+  assert(!p2State.opponents[0].hand, 'Opponents card array must NOT be revealed in TIMEOUT_FORFEIT');
   room.clearAllTimers();
 });
 

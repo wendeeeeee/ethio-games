@@ -379,13 +379,14 @@ class SekaGameRoom {
 
   getPublicState(forPlayerId) {
     const myHand = this.hands[forPlayerId] || [];
+    const isTimeoutForfeit = this.winReason === 'TIMEOUT_FORFEIT' || this.winReason === 'ABANDON_FORFEIT';
     const opponents = this.players
       .filter(p => p.id !== forPlayerId)
       .map(p => ({
         id: p.id,
         name: p.name,
         cardCount: (this.hands[p.id] || []).length,
-        hand: this.status === 'FINISHED' ? (this.hands[p.id] || []) : undefined
+        hand: (this.status === 'FINISHED' && !isTimeoutForfeit) ? (this.hands[p.id] || []) : undefined
       }));
 
     const mainOpponent = opponents[0] || null;
@@ -409,7 +410,7 @@ class SekaGameRoom {
       opponentName: opponents.map(o => o.name).join(' & '),
       myHand: myHand,
       opponentCardCount: mainOpponent ? mainOpponent.cardCount : 0,
-      opponentHand: (this.status === 'FINISHED' && mainOpponent) ? mainOpponent.hand : undefined,
+      opponentHand: (this.status === 'FINISHED' && !isTimeoutForfeit && mainOpponent) ? mainOpponent.hand : undefined,
       topDiscard: topDiscard,
       deckCount: this.deck.length,
       currentTurnPlayerId: this.currentTurnPlayerId,

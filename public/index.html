@@ -124,13 +124,18 @@
             </div>
           </div>
           <div class="form-group">
-            <label>የውርርድ መጠን</label>
-            <select id="sekaStakeSelect">
-              <option value="50">50 ETB</option>
-              <option value="100" selected>100 ETB</option>
-              <option value="250">250 ETB</option>
-              <option value="500">500 ETB</option>
-            </select>
+            <label for="sekaStakeInput">የውርርድ መጠን (ETB) <span style="font-size: 11px; color: #10b981; font-weight: normal;">(ዝቅተኛው 5 ብር)</span></label>
+            <div style="position: relative;">
+              <input type="number" id="sekaStakeInput" min="5" step="1" value="10" placeholder="የውርርድ መጠን ጻፍ (ቢያንስ 5)" style="width: 100%; padding: 10px 14px; font-size: 15px; font-weight: 700; border-radius: 8px; border: 1.5px solid #cbd5e1; background: #fff; color: #0f172a; box-sizing: border-box;">
+              <span style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); font-weight: 700; color: #64748b; font-size: 13px;">ETB</span>
+            </div>
+            <div style="display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap;">
+              <button type="button" class="stake-chip" onclick="document.getElementById('sekaStakeInput').value=5;">5 ETB</button>
+              <button type="button" class="stake-chip" onclick="document.getElementById('sekaStakeInput').value=10;">10 ETB</button>
+              <button type="button" class="stake-chip" onclick="document.getElementById('sekaStakeInput').value=25;">25 ETB</button>
+              <button type="button" class="stake-chip" onclick="document.getElementById('sekaStakeInput').value=50;">50 ETB</button>
+              <button type="button" class="stake-chip" onclick="document.getElementById('sekaStakeInput').value=100;">100 ETB</button>
+            </div>
           </div>
           <div class="form-group">
             <label>የተጫዋች ብዛት (Number of Players)</label>

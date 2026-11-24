@@ -693,7 +693,10 @@ io.on('connection', (socket) => {
 
   // Create Seka Table
   socket.on('create_seka_room', ({ userId, name, stakeAmount, maxPlayers }) => {
-    const stake = Number(stakeAmount) || 100;
+    const stake = Math.floor(Number(stakeAmount) || 0);
+    if (stake < 5) {
+      return socket.emit('error_msg', '⚠️ ዝቅተኛው የውርርድ መጠን 5 ብር ነው!');
+    }
     const userWallet = walletManager.getWallet(userId);
     if (!userWallet || userWallet.balance < stake) {
       const bal = userWallet ? userWallet.balance : 0;
@@ -782,7 +785,10 @@ io.on('connection', (socket) => {
 
   // Play Seka against AI Bot
   socket.on('play_seka_bot', ({ userId, name, stakeAmount }) => {
-    const stake = Number(stakeAmount) || 100;
+    const stake = Math.floor(Number(stakeAmount) || 0);
+    if (stake < 5) {
+      return socket.emit('error_msg', '⚠️ ዝቅተኛው የውርርድ መጠን 5 ብር ነው!');
+    }
     const userWallet = walletManager.getWallet(userId);
     if (!userWallet || userWallet.balance < stake) {
       const bal = userWallet ? userWallet.balance : 0;

@@ -1224,6 +1224,18 @@ if (backToHomeBtn) {
   });
 }
 
+function getSekaStakeAmount() {
+  const inputEl = document.getElementById('sekaStakeInput');
+  const selectEl = document.getElementById('sekaStakeSelect');
+  let val = 10;
+  if (inputEl && inputEl.value !== '') {
+    val = Number(inputEl.value);
+  } else if (selectEl && selectEl.value !== '') {
+    val = Number(selectEl.value);
+  }
+  return isNaN(val) ? 0 : Math.floor(val);
+}
+
 // Create Seka Room
 let isCreatingSekaRoom = false;
 if (createSekaRoomBtn) {
@@ -1232,9 +1244,14 @@ if (createSekaRoomBtn) {
     if (!requireAuth('⚠️ ጨዋታ ለመፍጠር እባክዎ መጀመሪያ ይግቡ ወይም ይመዝገቡ!')) {
       return;
     }
-    const sekaStakeSelect = document.getElementById('sekaStakeSelect');
+    const stakeAmount = getSekaStakeAmount();
+    if (stakeAmount < 5) {
+      showSortToast('⚠️ ዝቅተኛው የውርርድ መጠን 5 ብር ነው!');
+      const inputEl = document.getElementById('sekaStakeInput');
+      if (inputEl) inputEl.focus();
+      return;
+    }
     const sekaPlayersSelect = document.getElementById('sekaPlayersSelect');
-    const stakeAmount = sekaStakeSelect ? Number(sekaStakeSelect.value) : 100;
 
     // Check balance
     if (currentUserBalance < stakeAmount) {
@@ -1258,8 +1275,13 @@ if (playSekaBotBtn) {
     if (!requireAuth('⚠️ ከቦት ጋር ለመጫወት እባክዎ መጀመሪያ ይግቡ ወይም ይመዝገቡ!')) {
       return;
     }
-    const sekaStakeSelect = document.getElementById('sekaStakeSelect');
-    const stakeAmount = sekaStakeSelect ? Number(sekaStakeSelect.value) : 100;
+    const stakeAmount = getSekaStakeAmount();
+    if (stakeAmount < 5) {
+      showSortToast('⚠️ ዝቅተኛው የውርርድ መጠን 5 ብር ነው!');
+      const inputEl = document.getElementById('sekaStakeInput');
+      if (inputEl) inputEl.focus();
+      return;
+    }
 
     // Check balance
     if (currentUserBalance < stakeAmount) {
@@ -1745,8 +1767,8 @@ function switchToLobbyView() {
   selectedCardId = null;
   lobbyView.style.display = 'block';
   gameView.style.display = 'none';
-  if (homeGameSelectView) homeGameSelectView.style.display = 'flex';
-  if (sekaLobbySection) sekaLobbySection.style.display = 'none';
+  if (homeGameSelectView) homeGameSelectView.style.display = 'none';
+  if (sekaLobbySection) sekaLobbySection.style.display = 'block';
   cutJokerModal.style.display = 'none';
   if (waitingJokerModal) waitingJokerModal.style.display = 'none';
   closeWaitingForOpponentModal();
@@ -3906,119 +3928,135 @@ function renderGame(state) {
     const sekaTableWinArea = document.getElementById('sekaTableWinArea');
     if (sekaTableWinArea) sekaTableWinArea.style.display = 'none';
 
-    let winMelds = state.winningMelds;
-    let winDiscard = state.winningDiscard;
+    const isTimeoutForfeit = state.winReason === 'TIMEOUT_FORFEIT' || state.winReason === 'ABANDON_FORFEIT';
 
-    if (!winMelds || winMelds.length === 0) {
-      const handToPartition = (iWon && state.myHand && state.myHand.length >= 10)
-        ? state.myHand
-        : (state.opponentHand && state.opponentHand.length >= 10 ? state.opponentHand : (state.myHand || []));
-
-      if (handToPartition.length >= 10) {
-        const opt = arrangeSekaHandOptimal(handToPartition);
-        if (opt && opt.arrangedCards && opt.arrangedCards.length >= 10) {
-          winMelds = [
-            { type: 'QUATRIS', cards: opt.arrangedCards.slice(0, 4) },
-            { type: 'TRIS', cards: opt.arrangedCards.slice(4, 7) },
-            { type: 'TRIS', cards: opt.arrangedCards.slice(7, 10) }
-          ];
-          winDiscard = opt.arrangedCards[10] || opt.tetayCard || opt.discardedCard;
-        }
+    if (isTimeoutForfeit) {
+      // In timeout/abandon forfeit, NO cards are revealed (forfeited cards stay hidden face-down)
+      if (opponentCardsContainer) {
+        renderOpponentCards(oppCount);
       }
-    }
-
-    if (winMelds && winMelds.length > 0) {
-      // Sort melds so QUATRIS is first!
-      winMelds.sort((a, b) => {
-        const lenA = Array.isArray(a) ? a.length : (a && a.cards ? a.cards.length : 0);
-        const lenB = Array.isArray(b) ? b.length : (b && b.cards ? b.cards.length : 0);
-        return lenB - lenA;
-      });
-    }
-
-    const playerHandFanContainer = document.getElementById('playerHandFanContainer');
-    if (playerHandFanContainer) playerHandFanContainer.style.display = 'block';
-
-    // Ensure the tetay discarded card is displayed ONLY on the ground discard pile (never duplicated in hand)
-    if (winDiscard && groundCardContainer) {
-      groundCardContainer.innerHTML = createCardHTML(winDiscard, false, false);
-      groundCardContainer.style.display = 'block';
-    }
-
-    if (iWon) {
-      // When I win: render winning meld clusters in normal card size (76x110px) with clean spacing (Option 2)
-      let myMelds = winMelds;
-      if (!myMelds || myMelds.length === 0) {
-        const hand10 = (state.myHand && state.myHand.length === 11 && winDiscard)
-          ? state.myHand.filter(c => c.id !== winDiscard.id)
-          : (state.myHand || []);
-        const opt = arrangeSekaHandOptimal(hand10);
-        if (opt && opt.arrangedCards && opt.arrangedCards.length >= 10) {
-          myMelds = [
-            { type: 'QUATRIS', cards: opt.arrangedCards.slice(0, 4) },
-            { type: 'TRIS', cards: opt.arrangedCards.slice(4, 7) },
-            { type: 'TRIS', cards: opt.arrangedCards.slice(7, 10) }
-          ];
-        }
-      }
-      if (myMelds && myMelds.length > 0) {
-        if (playerHandFanContainer) {
-          playerHandFanContainer.style.display = 'flex';
-          playerHandFanContainer.style.justifyContent = 'center';
-          playerHandFanContainer.style.alignItems = 'center';
-          playerHandFanContainer.style.height = 'auto';
-          playerHandFanContainer.style.minHeight = '130px';
-          playerHandFanContainer.style.pointerEvents = 'auto';
-        }
-        if (playerCardsContainer) {
-          playerCardsContainer.className = 'finished-player-melds';
-          playerCardsContainer.innerHTML = renderMeldClustersHTML(myMelds);
-          playerCardsContainer.style.display = 'flex';
-          playerCardsContainer.style.position = 'relative';
-          playerCardsContainer.style.left = 'auto';
-          playerCardsContainer.style.bottom = 'auto';
-          playerCardsContainer.style.transform = 'none';
-          playerCardsContainer.style.width = '100%';
-          playerCardsContainer.style.justifyContent = 'center';
-          playerCardsContainer.style.alignItems = 'center';
-        }
-      } else if (state.myHand && state.myHand.length > 0) {
+      if (playerHandFanContainer) playerHandFanContainer.style.display = 'block';
+      if (state.myHand && state.myHand.length > 0) {
         playerCardsContainer.className = 'fan';
         const opt = arrangeSekaHandOptimal(state.myHand);
         const arranged = (opt && opt.arrangedCards && opt.arrangedCards.length > 0) ? opt.arrangedCards : state.myHand;
         renderPlayerHand(arranged);
       }
     } else {
-      // When opponent wins: flip opponent's winning melds in normal card size (76x110px) with clean spacing
-      if (opponentCardsContainer) {
-        let oppMelds = winMelds;
-        if (!oppMelds || oppMelds.length === 0) {
-          let oppCards = (state.opponentHand && state.opponentHand.length > 0) ? state.opponentHand : [];
-          if (oppCards.length === 11 && winDiscard) {
-            oppCards = oppCards.filter(c => c.id !== winDiscard.id);
+      let winMelds = state.winningMelds;
+      let winDiscard = state.winningDiscard;
+
+      if (!winMelds || winMelds.length === 0) {
+        const handToPartition = (iWon && state.myHand && state.myHand.length >= 10)
+          ? state.myHand
+          : (state.opponentHand && state.opponentHand.length >= 10 ? state.opponentHand : (state.myHand || []));
+
+        if (handToPartition.length >= 10) {
+          const opt = arrangeSekaHandOptimal(handToPartition);
+          if (opt && opt.arrangedCards && opt.arrangedCards.length >= 10) {
+            winMelds = [
+              { type: 'QUATRIS', cards: opt.arrangedCards.slice(0, 4) },
+              { type: 'TRIS', cards: opt.arrangedCards.slice(4, 7) },
+              { type: 'TRIS', cards: opt.arrangedCards.slice(7, 10) }
+            ];
+            winDiscard = opt.arrangedCards[10] || opt.tetayCard || opt.discardedCard;
           }
-          if (oppCards.length >= 10) {
-            const optOpp = arrangeSekaHandOptimal(oppCards);
-            if (optOpp && optOpp.arrangedCards && optOpp.arrangedCards.length >= 10) {
-              oppMelds = [
-                { type: 'QUATRIS', cards: optOpp.arrangedCards.slice(0, 4) },
-                { type: 'TRIS', cards: optOpp.arrangedCards.slice(4, 7) },
-                { type: 'TRIS', cards: optOpp.arrangedCards.slice(7, 10) }
-              ];
-            }
-          }
-        }
-        if (oppMelds && oppMelds.length > 0) {
-          opponentCardsContainer.innerHTML = renderMeldClustersHTML(oppMelds);
-          opponentCardsContainer.style.display = 'flex';
-          opponentCardsContainer.style.justifyContent = 'center';
         }
       }
-      // Render player's own hand spread out in full clarity so the player sees all their cards clearly!
-      if (state.myHand && state.myHand.length > 0) {
-        const opt = arrangeSekaHandOptimal(state.myHand);
-        const arranged = (opt && opt.arrangedCards && opt.arrangedCards.length > 0) ? opt.arrangedCards : state.myHand;
-        renderPlayerHand(arranged);
+
+      if (winMelds && winMelds.length > 0) {
+        // Sort melds so QUATRIS is first!
+        winMelds.sort((a, b) => {
+          const lenA = Array.isArray(a) ? a.length : (a && a.cards ? a.cards.length : 0);
+          const lenB = Array.isArray(b) ? b.length : (b && b.cards ? b.cards.length : 0);
+          return lenB - lenA;
+        });
+      }
+
+      const playerHandFanContainer = document.getElementById('playerHandFanContainer');
+      if (playerHandFanContainer) playerHandFanContainer.style.display = 'block';
+
+      // Ensure the tetay discarded card is displayed ONLY on the ground discard pile (never duplicated in hand)
+      if (winDiscard && groundCardContainer) {
+        groundCardContainer.innerHTML = createCardHTML(winDiscard, false, false);
+        groundCardContainer.style.display = 'block';
+      }
+
+      if (iWon) {
+        // When I win: render winning meld clusters in normal card size (76x110px) with clean spacing (Option 2)
+        let myMelds = winMelds;
+        if (!myMelds || myMelds.length === 0) {
+          const hand10 = (state.myHand && state.myHand.length === 11 && winDiscard)
+            ? state.myHand.filter(c => c.id !== winDiscard.id)
+            : (state.myHand || []);
+          const opt = arrangeSekaHandOptimal(hand10);
+          if (opt && opt.arrangedCards && opt.arrangedCards.length >= 10) {
+            myMelds = [
+              { type: 'QUATRIS', cards: opt.arrangedCards.slice(0, 4) },
+              { type: 'TRIS', cards: opt.arrangedCards.slice(4, 7) },
+              { type: 'TRIS', cards: opt.arrangedCards.slice(7, 10) }
+            ];
+          }
+        }
+        if (myMelds && myMelds.length > 0) {
+          if (playerHandFanContainer) {
+            playerHandFanContainer.style.display = 'flex';
+            playerHandFanContainer.style.justifyContent = 'center';
+            playerHandFanContainer.style.alignItems = 'center';
+            playerHandFanContainer.style.height = 'auto';
+            playerHandFanContainer.style.minHeight = '130px';
+            playerHandFanContainer.style.pointerEvents = 'auto';
+          }
+          if (playerCardsContainer) {
+            playerCardsContainer.className = 'finished-player-melds';
+            playerCardsContainer.innerHTML = renderMeldClustersHTML(myMelds);
+            playerCardsContainer.style.display = 'flex';
+            playerCardsContainer.style.position = 'relative';
+            playerCardsContainer.style.left = 'auto';
+            playerCardsContainer.style.bottom = 'auto';
+            playerCardsContainer.style.transform = 'none';
+            playerCardsContainer.style.width = '100%';
+            playerCardsContainer.style.justifyContent = 'center';
+            playerCardsContainer.style.alignItems = 'center';
+          }
+        } else if (state.myHand && state.myHand.length > 0) {
+          playerCardsContainer.className = 'fan';
+          const opt = arrangeSekaHandOptimal(state.myHand);
+          const arranged = (opt && opt.arrangedCards && opt.arrangedCards.length > 0) ? opt.arrangedCards : state.myHand;
+          renderPlayerHand(arranged);
+        }
+      } else {
+        // When opponent wins: flip opponent's winning melds in normal card size (76x110px) with clean spacing
+        if (opponentCardsContainer) {
+          let oppMelds = winMelds;
+          if (!oppMelds || oppMelds.length === 0) {
+            let oppCards = (state.opponentHand && state.opponentHand.length > 0) ? state.opponentHand : [];
+            if (oppCards.length === 11 && winDiscard) {
+              oppCards = oppCards.filter(c => c.id !== winDiscard.id);
+            }
+            if (oppCards.length >= 10) {
+              const optOpp = arrangeSekaHandOptimal(oppCards);
+              if (optOpp && optOpp.arrangedCards && optOpp.arrangedCards.length >= 10) {
+                oppMelds = [
+                  { type: 'QUATRIS', cards: optOpp.arrangedCards.slice(0, 4) },
+                  { type: 'TRIS', cards: optOpp.arrangedCards.slice(4, 7) },
+                  { type: 'TRIS', cards: optOpp.arrangedCards.slice(7, 10) }
+                ];
+              }
+            }
+          }
+          if (oppMelds && oppMelds.length > 0) {
+            opponentCardsContainer.innerHTML = renderMeldClustersHTML(oppMelds);
+            opponentCardsContainer.style.display = 'flex';
+            opponentCardsContainer.style.justifyContent = 'center';
+          }
+        }
+        // Render player's own hand spread out in full clarity so the player sees all their cards clearly!
+        if (state.myHand && state.myHand.length > 0) {
+          const opt = arrangeSekaHandOptimal(state.myHand);
+          const arranged = (opt && opt.arrangedCards && opt.arrangedCards.length > 0) ? opt.arrangedCards : state.myHand;
+          renderPlayerHand(arranged);
+        }
       }
     }
 
