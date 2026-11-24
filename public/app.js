@@ -3461,8 +3461,8 @@ function renderGame(state) {
 
   tableIdDisplay.textContent = '';
   if (potDisplay) {
-    potDisplay.textContent = '';
-    potDisplay.style.display = 'none';
+    potDisplay.textContent = `💰 ደራሽ: ${state.pot || 0} ETB`;
+    potDisplay.style.display = 'inline-flex';
   }
   deckCount.textContent = state.deckCount !== undefined ? state.deckCount : (state.deckCardCount !== undefined ? state.deckCardCount : 0);
 
@@ -3679,8 +3679,8 @@ function renderGame(state) {
     }
 
     if (sekaWinSubtitle) {
-      sekaWinSubtitle.style.display = 'none';
-      sekaWinSubtitle.textContent = '';
+      sekaWinSubtitle.style.display = 'block';
+      sekaWinSubtitle.textContent = `💰 ደራሽ: ${state.pot || 0} ETB | አሸናፊ: ${state.winner ? state.winner.name : (iWon ? (playerName || 'ተጫዋች') : 'ተጋጣሚ')}`;
     }
 
     if (sekaWinCardsRow) {
@@ -3848,8 +3848,8 @@ function getResponsiveFanGeometry(totalCards) {
     spacing = Math.min(28, Math.max(19, Math.floor(340 / count)));
   } else {
     // Desktop screens
-    maxAngle = 36;
-    spacing = Math.min(32, Math.max(22, Math.floor(440 / count)));
+    maxAngle = 32;
+    spacing = Math.min(38, Math.max(26, Math.floor(480 / count)));
   }
 
   return { maxAngle, spacing };

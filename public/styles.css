@@ -1711,6 +1711,17 @@ select:focus {
    RESPONSIVE DESIGN — All Screen Sizes
    ============================================================ */
 
+/* --- Large Desktop Screens (1025px+) --- */
+@media (min-width: 1025px) {
+  .fan .card {
+    width: 74px !important;
+    height: 106px !important;
+    left: -37px !important;
+    border-radius: 9px !important;
+    padding: 5px 6px !important;
+  }
+}
+
 /* --- Extra Large Screens (1400px+) --- */
 @media (min-width: 1400px) {
   .lobby-container {
@@ -1718,9 +1729,11 @@ select:focus {
   }
 
   .fan .card {
-    width: 68px !important;
-    height: 98px !important;
-    left: -34px !important;
+    width: 78px !important;
+    height: 112px !important;
+    left: -39px !important;
+    border-radius: 9px !important;
+    padding: 6px 8px !important;
   }
 }
 
