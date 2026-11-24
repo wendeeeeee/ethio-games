@@ -178,44 +178,59 @@ body.in-game .app-header {
   display: none !important;
 }
 
-/* Face-up Opponent Cards on Game Finish */
-.opponent-cards .card {
-  width: 48px !important;
-  height: 70px !important;
-  border-radius: 6px !important;
-  padding: 3px 4px !important;
-  margin-left: -14px !important;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.45) !important;
+/* Face-up Opponent Cards on Game Finish - Authentic Casino Normal Size (76x110px) */
+.opponent-cards .card,
+.opponent-cards .hand-meld-cluster .card {
+  width: 76px !important;
+  height: 110px !important;
+  border-radius: 9px !important;
+  padding: 6px 7px !important;
+  margin-left: -22px !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45) !important;
   border: 1px solid rgba(0, 0, 0, 0.22) !important;
   background: #ffffff !important;
+  position: relative !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: space-between !important;
+  cursor: default !important;
 }
 
-.opponent-cards .card:first-child {
+.opponent-cards .card:first-child,
+.opponent-cards .hand-meld-cluster .card:first-child {
   margin-left: 0 !important;
 }
 
-.opponent-cards .card.red {
+.opponent-cards .card.red,
+.opponent-cards .hand-meld-cluster .card.red {
   color: #dc2626 !important;
 }
 
-.opponent-cards .card.black {
+.opponent-cards .card.black,
+.opponent-cards .hand-meld-cluster .card.black {
   color: #111827 !important;
 }
 
-.opponent-cards .card .corner-rank {
-  font-size: 13px !important;
+.opponent-cards .card .corner-rank,
+.opponent-cards .hand-meld-cluster .card .corner-rank {
+  font-size: 18px !important;
   font-weight: 900 !important;
   line-height: 1 !important;
 }
 
-.opponent-cards .card .corner-suit {
-  font-size: 11px !important;
+.opponent-cards .card .corner-suit,
+.opponent-cards .hand-meld-cluster .card .corner-suit {
+  font-size: 15px !important;
   line-height: 1 !important;
 }
 
-.opponent-cards .card .card-center-suit {
-  font-size: 18px !important;
+.opponent-cards .card .card-center-suit,
+.opponent-cards .hand-meld-cluster .card .card-center-suit {
+  font-size: 26px !important;
   opacity: 1 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
 }
 
 .hand-meld-clusters {

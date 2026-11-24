@@ -483,7 +483,7 @@ test('Neighbor extension: 9♠ stays adjacent to [5♠, Joker, 7♠] because 8�
   assert(Math.abs(nineIdx - sevenIdx) <= 2, '9♠ should stay adjacent to [5♠, Joker, 7♠]');
 });
 
-test('Transitive neighbor extension: 8♠ and 9♠ stay adjacent in sequence to J♠ Q♠ K♠', () => {
+test('Transitive neighbor extension: 8♠ and 9♠ stay adjacent in sequence to Tris J♠ Q♠ K♠', () => {
   const hand = [
     { id: '1', rank: 'J', suit: '♠' },
     { id: '2', rank: 'Q', suit: '♠' },
@@ -496,7 +496,27 @@ test('Transitive neighbor extension: 8♠ and 9♠ stay adjacent in sequence to 
   const res = arrangeSekaHandOptimal(hand);
   const ranks = res.arrangedCards.map(c => c.rank + c.suit);
   const seq5 = ranks.slice(0, 5).join(',');
-  assert(seq5 === '8♠,9♠,J♠,Q♠,K♠', `Expected 8♠,9♠,J♠,Q♠,K♠ together in sequence, got: ${seq5}`);
+  assert(seq5 === 'J♠,Q♠,K♠,8♠,9♠' || seq5 === '8♠,9♠,J♠,Q♠,K♠', `Expected Tris J♠,Q♠,K♠ and pair 8♠,9♠ together in sequence, got: ${seq5}`);
+});
+
+test('User rule: 5♠, 6♠, 8♠, 9♠, 10♠ preserves 8♠, 9♠, 10♠ as complete Tris first, never 5,6,8,9,10', () => {
+  const hand = [
+    { id: '1', rank: '5', suit: '♠' },
+    { id: '2', rank: '6', suit: '♠' },
+    { id: '3', rank: '8', suit: '♠' },
+    { id: '4', rank: '9', suit: '♠' },
+    { id: '5', rank: '10', suit: '♠' },
+    { id: '6', rank: '2', suit: '♦' },
+    { id: '7', rank: '3', suit: '♦' }
+  ];
+  const res = arrangeSekaHandOptimal(hand);
+  const ranks = res.arrangedCards.map(c => c.rank + c.suit);
+  const tris3 = ranks.slice(0, 3).join(',');
+  assert(tris3 === '8♠,9♠,10♠', `Expected 8♠,9♠,10♠ as complete Tris first, got: ${tris3}`);
+  const pair2 = ranks.slice(3, 5).join(',');
+  assert(pair2 === '5♠,6♠', `Expected 5♠,6♠ as separate pair, got: ${pair2}`);
+  const fullSeq = ranks.slice(0, 5).join(',');
+  assert(fullSeq !== '5♠,6♠,8♠,9♠,10♠', `Must NEVER arrange as 5,6,8,9,10 (violates Tris priority), got: ${fullSeq}`);
 });
 
 test('Ace-bridge extension: K♦, A♦, 2♦, 3♦ stay together in sequence (never 2,3,K,A)', () => {

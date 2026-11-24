@@ -3038,37 +3038,31 @@ function arrangeSekaHandOptimal(hand) {
     }
   }
 
-  // Phase 4 & 5: Attach neighbors & cluster remaining cards per suit
+  // Phase 4: Promote Tris to Quatris ONLY if 4th card forms a valid Seka Quatris!
   for (const s of suits) {
     const suitCards = suitCardsMap[s] || [];
-
-    // 4. Attach unmelded neighbors/extensions of this suit directly to melds in this suit!
-    const suitMelds = [...trisGroups].filter(m => m.some(c => c.suit === s && !isSekaWildJoker(c)));
-    let attachedAny = true;
-    while (attachedAny) {
-      attachedAny = false;
-      const remForNeighbors = suitCards.filter(c => !usedIds.has(c.id));
-      for (const remCard of remForNeighbors) {
-        for (const meld of suitMelds) {
-          if (usedIds.has(remCard.id)) break;
-          const meldNats = meld.filter(c => !isSekaWildJoker(c));
-          const canAttach = meldNats.some(c => getSekaRankDistLocal(c.rank, remCard.rank) <= 2);
-          if (canAttach) {
-            meld.push(remCard);
-            usedIds.add(remCard.id);
-            attachedAny = true;
-            break;
-          }
+    const remForQuatPromote = suitCards.filter(c => !usedIds.has(c.id));
+    const suitTris = trisGroups.filter(m => m.some(c => c.suit === s && !isSekaWildJoker(c)));
+    for (const remCard of remForQuatPromote) {
+      if (usedIds.has(remCard.id)) continue;
+      for (let t = 0; t < suitTris.length; t++) {
+        const meld = suitTris[t];
+        if (meld.length === 3 && checkValidSekaQuatris([...meld, remCard])) {
+          const quat = arrangeSekaMeld([...meld, remCard]);
+          quatrisGroups.push(quat);
+          const idx = trisGroups.indexOf(meld);
+          if (idx !== -1) trisGroups.splice(idx, 1);
+          suitTris.splice(t, 1);
+          usedIds.add(remCard.id);
+          break;
         }
       }
     }
-    // Re-sort melds with attached cards into natural sequence order
-    for (const meld of suitMelds) {
-      const sorted = arrangeSekaMeld(meld);
-      meld.splice(0, meld.length, ...sorted);
-    }
+  }
 
-    // 5. Cluster remaining cards of this suit using circular proximity (dist <= 2)
+  // Phase 5: Cluster remaining cards per suit using circular proximity (dist <= 2)
+  for (const s of suits) {
+    const suitCards = suitCardsMap[s] || [];
     const remSuit = suitCards.filter(c => !usedIds.has(c.id));
     if (remSuit.length > 0) {
       let currentCluster = [remSuit[0]];
@@ -3104,22 +3098,61 @@ function arrangeSekaHandOptimal(hand) {
     return spanA - spanB;
   });
 
+  // Assemble arranged cards:
+  // Melds come FIRST (Quatris then Tris).
+  // Any same-suit neighbor cards/clusters stay immediately adjacent to that suit's melds!
+  const arrangedCards = [];
+  const meldsToPlace = [...quatrisGroups, ...trisGroups];
+  const placedClusterIdxs = new Set();
+  const placedSingleIds = new Set();
+
+  for (const meld of meldsToPlace) {
+    let meldCards = [...meld];
+    const meldNat = meld.find(c => !isSekaWildJoker(c));
+    if (meldNat) {
+      const meldSuit = meldNat.suit;
+      // Check if any close single of this same suit connects directly (dist <= 1, e.g. K connects to A)
+      for (let i = 0; i < singleCards.length; i++) {
+        const sc = singleCards[i];
+        if (!placedSingleIds.has(sc.id) && sc.suit === meldSuit) {
+          const meldNats = meldCards.filter(c => !isSekaWildJoker(c));
+          if (meldNats.some(c => getSekaRankDistLocal(c.rank, sc.rank) <= 1)) {
+            meldCards = arrangeSekaMeld([...meldCards, sc]);
+            placedSingleIds.add(sc.id);
+          }
+        }
+      }
+      arrangedCards.push(...meldCards);
+
+      // Place any same-suit cluster (e.g. 5♠ 6♠ or 8♠ 9♠ pair) right next to this meld
+      for (let i = 0; i < sameSuitGroups.length; i++) {
+        if (!placedClusterIdxs.has(i) && sameSuitGroups[i].some(c => c.suit === meldSuit)) {
+          arrangedCards.push(...sameSuitGroups[i]);
+          placedClusterIdxs.add(i);
+        }
+      }
+    } else {
+      arrangedCards.push(...meldCards);
+    }
+  }
+
+  // Append remaining same-suit clusters that don't belong to an existing meld
+  for (let i = 0; i < sameSuitGroups.length; i++) {
+    if (!placedClusterIdxs.has(i)) {
+      arrangedCards.push(...sameSuitGroups[i]);
+    }
+  }
+
   // Any unused Jokers
   const unusedJokers = [...availableJokers];
+  arrangedCards.push(...unusedJokers);
 
-  // Final card order:
-  // 1. Quatris groups (4 cards each)
-  // 2. Tris groups (3 cards each)
-  // 3. Close Proximity clusters (e.g. 7♣ 9♣ 10♣, 2♣ 3♣, 5♠ 6♠ - potential Tris)
-  // 4. Unused Jokers (if any)
-  // 5. Isolated distant single cards (ተጣይ/ነጠላ) strictly at the FAR RIGHT!
-  const arrangedCards = [
-    ...quatrisGroups.flat(),
-    ...trisGroups.flat(),
-    ...sameSuitGroups.flat(),
-    ...unusedJokers,
-    ...singleCards
-  ];
+  // Append remaining isolated distant singles
+  for (const sc of singleCards) {
+    if (!placedSingleIds.has(sc.id)) {
+      arrangedCards.push(sc);
+    }
+  }
 
   return {
     arrangedCards,
@@ -3811,24 +3844,65 @@ function renderGame(state) {
     }
 
     if (iWon) {
-      // When I win: render my hand arranged into melds (Quatris ➔ Tris 1 ➔ Tris 2) spread out in full view
-      if (state.myHand && state.myHand.length > 0) {
+      // When I win: render winning meld clusters in normal card size (76x110px) with clean spacing
+      let myMelds = winMelds;
+      if (!myMelds || myMelds.length === 0) {
+        const hand10 = (state.myHand && state.myHand.length === 11 && winDiscard)
+          ? state.myHand.filter(c => c.id !== winDiscard.id)
+          : (state.myHand || []);
+        const opt = arrangeSekaHandOptimal(hand10);
+        if (opt && opt.arrangedCards && opt.arrangedCards.length >= 10) {
+          myMelds = [
+            { type: 'QUATRIS', cards: opt.arrangedCards.slice(0, 4) },
+            { type: 'TRIS', cards: opt.arrangedCards.slice(4, 7) },
+            { type: 'TRIS', cards: opt.arrangedCards.slice(7, 10) }
+          ];
+        }
+      }
+      if (myMelds && myMelds.length > 0) {
+        if (playerHandFanContainer) {
+          playerHandFanContainer.style.display = 'flex';
+          playerHandFanContainer.style.justifyContent = 'center';
+          playerHandFanContainer.style.alignItems = 'center';
+        }
+        if (playerCardsContainer) {
+          playerCardsContainer.innerHTML = renderMeldClustersHTML(myMelds);
+          playerCardsContainer.style.display = 'flex';
+          playerCardsContainer.style.position = 'relative';
+          playerCardsContainer.style.left = 'auto';
+          playerCardsContainer.style.transform = 'none';
+          playerCardsContainer.style.width = '100%';
+          playerCardsContainer.style.justifyContent = 'center';
+        }
+      } else if (state.myHand && state.myHand.length > 0) {
         const opt = arrangeSekaHandOptimal(state.myHand);
         const arranged = (opt && opt.arrangedCards && opt.arrangedCards.length > 0) ? opt.arrangedCards : state.myHand;
         renderPlayerHand(arranged);
       }
     } else {
-      // When opponent wins: flip opponent's winning cards face up in opponent's space
+      // When opponent wins: flip opponent's winning melds in normal card size (76x110px) with clean spacing
       if (opponentCardsContainer) {
-        let oppCards = (state.opponentHand && state.opponentHand.length > 0) ? state.opponentHand : [];
-        if (oppCards.length === 0 && winMelds && winMelds.length > 0) {
-          oppCards = winMelds.flatMap(m => Array.isArray(m) ? m : (m.cards || []));
+        let oppMelds = winMelds;
+        if (!oppMelds || oppMelds.length === 0) {
+          let oppCards = (state.opponentHand && state.opponentHand.length > 0) ? state.opponentHand : [];
+          if (oppCards.length === 11 && winDiscard) {
+            oppCards = oppCards.filter(c => c.id !== winDiscard.id);
+          }
+          if (oppCards.length >= 10) {
+            const optOpp = arrangeSekaHandOptimal(oppCards);
+            if (optOpp && optOpp.arrangedCards && optOpp.arrangedCards.length >= 10) {
+              oppMelds = [
+                { type: 'QUATRIS', cards: optOpp.arrangedCards.slice(0, 4) },
+                { type: 'TRIS', cards: optOpp.arrangedCards.slice(4, 7) },
+                { type: 'TRIS', cards: optOpp.arrangedCards.slice(7, 10) }
+              ];
+            }
+          }
         }
-        if (oppCards.length > 0) {
-          const optOpp = arrangeSekaHandOptimal(oppCards);
-          const arrangedOpp = (optOpp && optOpp.arrangedCards && optOpp.arrangedCards.length > 0) ? optOpp.arrangedCards : oppCards;
-          opponentCardsContainer.innerHTML = arrangedOpp.map(c => createCardHTML(c, false, false)).join('');
+        if (oppMelds && oppMelds.length > 0) {
+          opponentCardsContainer.innerHTML = renderMeldClustersHTML(oppMelds);
           opponentCardsContainer.style.display = 'flex';
+          opponentCardsContainer.style.justifyContent = 'center';
         }
       }
       // Render player's own hand spread out in full clarity so the player sees all their cards clearly!
