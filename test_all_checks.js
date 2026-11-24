@@ -551,6 +551,20 @@ test('Global Quatris with Joker priority: 1♦, 3♦, 4♦ + Joker forms Quatris
   assert(first4 === 'A♦,JK★,3♦,4♦', `Expected Quatris A♦,JK★,3♦,4♦ first, got: ${ranks.join(', ')}`);
 });
 
+test('Ace-bridge with J & K: J♥, K♥, A♥, 3♥ stay together in sequence (never separating J♥ to the end)', () => {
+  const hand = [
+    { id: '1', rank: 'J', suit: '♥', isJoker: false },
+    { id: '2', rank: 'K', suit: '♥', isJoker: false },
+    { id: '3', rank: 'A', suit: '♥', isJoker: false },
+    { id: '4', rank: '3', suit: '♥', isJoker: false },
+    { id: '5', rank: '7', suit: '♠', isJoker: false }
+  ];
+  const res = arrangeSekaHandOptimal(hand);
+  const ranks = res.arrangedCards.map(c => c.rank + c.suit);
+  const heartsPart = ranks.filter(r => r.endsWith('♥')).join(',');
+  assert(heartsPart === 'J♥,K♥,A♥,3♥', `Expected J♥,K♥,A♥,3♥ in sequence, got: ${ranks.join(', ')}`);
+});
+
 // ==============================================================
 console.log('\n📊 SUMMARY');
 // ==============================================================

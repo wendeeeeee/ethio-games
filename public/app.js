@@ -2663,11 +2663,11 @@ function arrangeSekaMeld(cards) {
   const hasLow = natural.some(c => ['2', '3', '4', '5'].includes(c.rank));
 
   if (jokers.length === 0) {
-    // Ace-bridge: both high (Q/K) and low (2/3) exist with Ace -> natural run [Q, K, A, 2, 3]
+    // Ace-bridge: both high (10/J/Q/K) and low (2/3/4/5) exist with Ace -> natural run [10, J, Q, K, A, 2, 3]
     if (hasA && hasHigh && hasLow) {
-      const highCards = natural.filter(c => ['Q', 'K', 'J'].includes(c.rank)).sort((a, b) => (rankOrderMap[a.rank] || 0) - (rankOrderMap[b.rank] || 0));
+      const highCards = natural.filter(c => ['10', 'J', 'Q', 'K'].includes(c.rank)).sort((a, b) => (rankOrderMap[a.rank] || 0) - (rankOrderMap[b.rank] || 0));
       const aCards = natural.filter(c => c.rank === 'A');
-      const lowCards = natural.filter(c => !['Q', 'K', 'J', 'A'].includes(c.rank)).sort((a, b) => (rankOrderMap[a.rank] || 0) - (rankOrderMap[b.rank] || 0));
+      const lowCards = natural.filter(c => !['10', 'J', 'Q', 'K', 'A'].includes(c.rank)).sort((a, b) => (rankOrderMap[a.rank] || 0) - (rankOrderMap[b.rank] || 0));
       return [...highCards, ...aCards, ...lowCards];
     }
 
@@ -2678,9 +2678,9 @@ function arrangeSekaMeld(cards) {
 
   const joker = jokers[0];
   if (hasA && hasHigh && hasLow) {
-    const highCards = natural.filter(c => ['Q', 'K', 'J'].includes(c.rank)).sort((a, b) => (rankOrderMap[a.rank] || 0) - (rankOrderMap[b.rank] || 0));
+    const highCards = natural.filter(c => ['10', 'J', 'Q', 'K'].includes(c.rank)).sort((a, b) => (rankOrderMap[a.rank] || 0) - (rankOrderMap[b.rank] || 0));
     const aCards = natural.filter(c => c.rank === 'A');
-    const lowCards = natural.filter(c => !['Q', 'K', 'J', 'A'].includes(c.rank)).sort((a, b) => (rankOrderMap[a.rank] || 0) - (rankOrderMap[b.rank] || 0));
+    const lowCards = natural.filter(c => !['10', 'J', 'Q', 'K', 'A'].includes(c.rank)).sort((a, b) => (rankOrderMap[a.rank] || 0) - (rankOrderMap[b.rank] || 0));
     const baseSeq = [...highCards, ...aCards, ...lowCards];
     const getDist = (r1, r2) => {
       const n1 = rankOrderMap[r1] || 0;
@@ -2891,22 +2891,9 @@ function arrangeSekaHandOptimal(hand) {
     const suitNatural = bySuit[s];
     if (suitNatural.length === 0) continue;
 
-    const hasA = suitNatural.some(c => c.rank === 'A');
-    const hasHigh = suitNatural.some(c => ['K', 'Q', 'J', '10'].includes(c.rank));
-    const hasLow = suitNatural.some(c => ['2', '3', '4', '5'].includes(c.rank));
-    const isAceHigh = hasA && hasHigh && !hasLow;
-    const rankFn = (c) => (isAceHigh && c.rank === 'A' ? 14 : (rankOrderMap[c.rank] || 0));
-
-    let suitCards = suitNatural.sort((a, b) => rankFn(a) - rankFn(b));
-
-    // Special Ace-bridge sort if both Q/K and 2/3 exist with A: [Q, K, A, 2, 3, ...]
-    if (hasA && hasHigh && hasLow) {
-      const qkCards = suitCards.filter(c => ['Q', 'K'].includes(c.rank)).sort((a, b) => (rankOrderMap[a.rank] - rankOrderMap[b.rank]));
-      const aCards = suitCards.filter(c => c.rank === 'A');
-      const numCards = suitCards.filter(c => !['Q', 'K', 'A'].includes(c.rank)).sort((a, b) => (rankOrderMap[a.rank] - rankOrderMap[b.rank]));
-      suitCards = [...qkCards, ...aCards, ...numCards];
-    }
-    suitCardsMap[s] = suitCards;
+    // Standard ascending order for natural meld checks
+    const rankFn = (c) => (c.rank === 'A' ? 1 : (rankOrderMap[c.rank] || 0));
+    let suitCards = [...suitNatural].sort((a, b) => rankFn(a) - rankFn(b));
 
     // 0a. Check 6-card natural run FIRST: produces TWO TRIS! (e.g. 1-2-3-4-5-6 or 3-4-5-6-7-8)
     for (let i = 0; i <= suitCards.length - 6; i++) {
@@ -2967,6 +2954,20 @@ function arrangeSekaHandOptimal(hand) {
           aceHighTrio.forEach(c => usedIds.add(c.id));
         }
       }
+    }
+
+    // Now re-sort remaining unmelded cards with Ace-bridge if A + High + Low exist
+    const remAfterNatural = suitCards.filter(c => !usedIds.has(c.id));
+    const hasA = remAfterNatural.some(c => c.rank === 'A');
+    const hasHigh = remAfterNatural.some(c => ['10', 'J', 'Q', 'K'].includes(c.rank));
+    const hasLow = remAfterNatural.some(c => ['2', '3', '4', '5'].includes(c.rank));
+    if (hasA && hasHigh && hasLow) {
+      const highCards = remAfterNatural.filter(c => ['10', 'J', 'Q', 'K'].includes(c.rank)).sort((a, b) => (rankOrderMap[a.rank] - rankOrderMap[b.rank]));
+      const aCards = remAfterNatural.filter(c => c.rank === 'A');
+      const lowCards = remAfterNatural.filter(c => !['10', 'J', 'Q', 'K', 'A'].includes(c.rank)).sort((a, b) => (rankOrderMap[a.rank] - rankOrderMap[b.rank]));
+      suitCardsMap[s] = [...highCards, ...aCards, ...lowCards];
+    } else {
+      suitCardsMap[s] = remAfterNatural;
     }
   }
 
@@ -3711,10 +3712,8 @@ function renderGame(state) {
     if (groundMeldBar) groundMeldBar.style.display = 'none';
     const iWon = state.winner === userId || (state.winner && state.winner.id === userId);
 
-    // NEVER show pop-up modal or overlay banner! Keep table 100% clean and visible
+    // NEVER show pop-up modal!
     if (gameResultModal) gameResultModal.style.display = 'none';
-    const sekaTableWinArea = document.getElementById('sekaTableWinArea');
-    if (sekaTableWinArea) sekaTableWinArea.style.display = 'none';
 
     // Show result clearly in status bar without blocking the table
     if (turnIndicator) {
@@ -3731,6 +3730,68 @@ function renderGame(state) {
       }
     }
     showSortToast(iWon ? `🏆 አሸንፈሃል! ደራሽ: ${state.pot || 0} ETB` : `❌ ተሸንፈሃል!`);
+
+    // Render winning meld cards directly on table (Quatris ➔ Tris 1 ➔ Tris 2 ➔ Tetay)
+    const sekaTableWinArea = document.getElementById('sekaTableWinArea');
+    const sekaWinCardsRow = document.getElementById('sekaWinCardsRow');
+    const sekaWinCardsSection = document.getElementById('sekaWinCardsSection');
+
+    let winMelds = state.winningMelds;
+    let winDiscard = state.winningDiscard;
+
+    if (!winMelds || winMelds.length === 0) {
+      if (state.myHand && (state.myHand.length === 10 || state.myHand.length === 11)) {
+        const opt = arrangeSekaHandOptimal(state.myHand);
+        if (opt.melds && opt.melds.length > 0) {
+          winMelds = opt.melds.map(cards => ({
+            type: cards.length === 4 ? 'QUATRIS' : 'TRIS',
+            cards
+          }));
+          winDiscard = opt.discardedCard;
+        }
+      }
+    }
+
+    if (winMelds && winMelds.length > 0) {
+      // Sort melds so QUATRIS is first!
+      winMelds.sort((a, b) => (b.type === 'QUATRIS' ? 1 : 0) - (a.type === 'QUATRIS' ? 1 : 0));
+
+      if (sekaTableWinArea) sekaTableWinArea.style.display = 'block';
+      if (sekaWinCardsSection) sekaWinCardsSection.style.display = 'block';
+
+      let meldsHtml = '';
+      let trisCount = 0;
+      winMelds.forEach((m) => {
+        let label = '';
+        if (m.type === 'QUATRIS') {
+          label = `ኳትሪስ (${m.cards.length} ካርታ)`;
+        } else {
+          trisCount++;
+          label = `ትሪስ ${trisCount} (${m.cards.length} ካርታ)`;
+        }
+        meldsHtml += `
+          <div class="seka-meld-badge-group">
+            <span class="seka-meld-badge-label">${label}</span>
+            <div style="display: flex; gap: 4px;">
+              ${m.cards.map(c => createCardHTML(c, false, false)).join('')}
+            </div>
+          </div>
+        `;
+      });
+      if (winDiscard) {
+        meldsHtml += `
+          <div class="seka-meld-badge-group tetay-group">
+            <span class="seka-meld-badge-label">ተጣይ (11ኛዋ ካርታ)</span>
+            <div style="display: flex; gap: 4px;">
+              ${createCardHTML(winDiscard, false, false)}
+            </div>
+          </div>
+        `;
+      }
+      if (sekaWinCardsRow) sekaWinCardsRow.innerHTML = meldsHtml;
+    } else {
+      if (sekaTableWinArea) sekaTableWinArea.style.display = 'none';
+    }
 
     // Re-render player's hand cards arranged cleanly (Quatris ➔ Tris 1 ➔ Tris 2 ➔ Tetay) directly on the hand
     if (state.myHand && state.myHand.length > 0) {

@@ -175,42 +175,32 @@ body.in-game .app-header {
 
 /* Seka In-Table Win Display Styling */
 .seka-table-win-area {
-  width: 96%;
-  max-width: 720px;
+  width: 100%;
+  max-width: 900px;
   margin: 6px auto;
-  padding: 10px 14px;
-  background: rgba(15, 23, 42, 0.95);
-  border: 2px solid #10b981;
-  border-radius: 14px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6), 0 0 16px rgba(16, 185, 129, 0.35);
-  backdrop-filter: blur(8px);
-  z-index: 40;
+  padding: 6px 12px;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  z-index: 30;
 }
 
 .seka-win-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
+  display: none !important;
 }
 
 .seka-win-title {
-  font-size: 16px;
-  font-weight: 800;
-  color: #10b981;
+  display: none !important;
 }
 
 .seka-win-subtitle {
-  font-size: 13px;
-  color: #f5b041;
-  font-weight: 700;
-  margin-top: 2px;
+  display: none !important;
 }
 
 .seka-win-cards-row {
   display: flex;
-  gap: 8px;
+  gap: 10px;
   flex-wrap: wrap;
   justify-content: center;
   align-items: center;
@@ -221,21 +211,21 @@ body.in-game .app-header {
   flex-direction: column;
   align-items: center;
   padding: 6px 8px;
-  background: rgba(30, 41, 59, 0.85);
-  border: 1.5px solid rgba(56, 189, 248, 0.6);
+  background: rgba(0, 0, 0, 0.45);
+  border: 1.5px solid rgba(255, 255, 255, 0.25);
   border-radius: 10px;
   gap: 4px;
 }
 
 .seka-meld-badge-group.tetay-group {
   border-color: rgba(239, 68, 68, 0.8);
-  background: rgba(239, 68, 68, 0.12);
+  background: rgba(239, 68, 68, 0.2);
 }
 
 .seka-meld-badge-label {
   font-size: 11px;
   font-weight: 700;
-  color: #38bdf8;
+  color: #fbbf24;
 }
 
 .seka-meld-badge-group.tetay-group .seka-meld-badge-label {
