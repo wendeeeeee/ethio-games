@@ -413,6 +413,7 @@ class SekaGameRoom {
       opponentHand: (this.status === 'FINISHED' && !isTimeoutForfeit && mainOpponent) ? mainOpponent.hand : undefined,
       topDiscard: topDiscard,
       deckCount: this.deck.length,
+      remainingDeckCards: (this.status === 'FINISHED') ? [...this.deck] : undefined,
       currentTurnPlayerId: this.currentTurnPlayerId,
       turnState: this.turnState,
       isMyTurn: this.currentTurnPlayerId === forPlayerId,

@@ -2084,6 +2084,11 @@ cancelGroundMeldBtn.addEventListener('click', () => {
 
 // Draw Card (Stock deck) - Both Slot & Button
 stockDeckSlot.addEventListener('click', (e) => {
+  if (currentGameState && currentGameState.status === 'FINISHED' && currentGameState.remainingDeckCards && currentGameState.remainingDeckCards.length > 0) {
+    e.stopPropagation();
+    openRemainingDeckModal(currentGameState.remainingDeckCards);
+    return;
+  }
   if (e.target !== drawDeckBtn) handleDrawAction('deck');
 });
 drawDeckBtn.addEventListener('click', () => handleDrawAction('deck'));
@@ -3699,7 +3704,18 @@ function renderGame(state) {
     potDisplay.textContent = `💰 ደራሽ: ${state.pot || 0} ETB`;
     potDisplay.style.display = 'inline-flex';
   }
-  deckCount.textContent = state.deckCount !== undefined ? state.deckCount : (state.deckCardCount !== undefined ? state.deckCardCount : 0);
+  const deckCnt = state.deckCount !== undefined ? state.deckCount : (state.deckCardCount !== undefined ? state.deckCardCount : 0);
+  if (deckCount) {
+    deckCount.textContent = deckCnt;
+  }
+  const remainingDeckDisplay = document.getElementById('remainingDeckDisplay');
+  const stockDeckTopCard = document.getElementById('stockDeckTopCard');
+  const stockDeckSlotLabel = document.getElementById('stockDeckSlotLabel');
+  if (state.status !== 'FINISHED') {
+    if (remainingDeckDisplay) remainingDeckDisplay.style.display = 'none';
+    if (stockDeckTopCard) stockDeckTopCard.style.display = 'flex';
+    if (stockDeckSlotLabel) stockDeckSlotLabel.textContent = 'ዴክ (Deck)';
+  }
 
   // Turn status with live countdown
   updateTurnDisplay(state);
@@ -4066,6 +4082,35 @@ function renderGame(state) {
     if (weredBtn) weredBtn.style.display = 'none';
     if (pokeBtn) pokeBtn.style.display = 'none';
 
+    // Reveal remaining deck cards on the deck slot when game finishes!
+    const remainingDeckDisplay = document.getElementById('remainingDeckDisplay');
+    const stockDeckTopCard = document.getElementById('stockDeckTopCard');
+    const stockDeckSlotLabel = document.getElementById('stockDeckSlotLabel');
+    const remCards = state.remainingDeckCards;
+
+    if (remCards && remCards.length > 0 && remainingDeckDisplay) {
+      if (stockDeckTopCard) stockDeckTopCard.style.display = 'none';
+      remainingDeckDisplay.style.display = 'flex';
+
+      const topSlice = remCards.slice(-3); // top 3 cascading cards
+      let html = '<div class="remaining-deck-cascade" title="የቀሩ ካርታዎችን ለማየት ይጫኑ (Click to see all)">';
+      topSlice.forEach((c, idx) => {
+        const offsetX = (idx - (topSlice.length - 1)) * 10;
+        const offsetY = (idx - (topSlice.length - 1)) * 4;
+        const rot = (idx - (topSlice.length - 1)) * 6;
+        html += `<div style="position: absolute; transform: translate(${offsetX}px, ${offsetY}px) rotate(${rot}deg); z-index: ${idx + 1}; pointer-events: none;">
+          ${createCardHTML(c, false, false)}
+        </div>`;
+      });
+      html += `<div class="remaining-deck-badge-chip">የቀረ: ${remCards.length} ካርታ 🔍</div>`;
+      html += '</div>';
+      remainingDeckDisplay.innerHTML = html;
+
+      if (stockDeckSlotLabel) {
+        stockDeckSlotLabel.innerHTML = `የቀረ (${remCards.length}) <span style="font-size: 10px; color: #38bdf8;">(እይ)</span>`;
+      }
+    }
+
     if (iWon) playWinSound();
     return;
   }
@@ -4117,6 +4162,37 @@ function renderWinningMeldsHTML(melds, tetayCard) {
     `;
   }
   return html;
+}
+
+
+function openRemainingDeckModal(cards) {
+  const modal = document.getElementById('remainingDeckModal');
+  const grid = document.getElementById('remainingDeckModalGrid');
+  const title = document.getElementById('remainingDeckModalTitle');
+  if (!modal || !grid) return;
+  if (title) title.innerHTML = `🃏 በዴኩ ውስጥ ሳይሳቡ የቀሩ ካርታዎች (${cards.length} ካርታዎች)`;
+  grid.innerHTML = cards.map(c => `
+    <div style="margin: 3px;">
+      ${createCardHTML(c, false, false)}
+    </div>
+  `).join('');
+  modal.style.display = 'flex';
+}
+
+const closeRemainingDeckModalBtn = document.getElementById('closeRemainingDeckModalBtn');
+if (closeRemainingDeckModalBtn) {
+  closeRemainingDeckModalBtn.addEventListener('click', () => {
+    const modal = document.getElementById('remainingDeckModal');
+    if (modal) modal.style.display = 'none';
+  });
+}
+
+const closeRemainingDeckModalBottomBtn = document.getElementById('closeRemainingDeckModalBottomBtn');
+if (closeRemainingDeckModalBottomBtn) {
+  closeRemainingDeckModalBottomBtn.addEventListener('click', () => {
+    const modal = document.getElementById('remainingDeckModal');
+    if (modal) modal.style.display = 'none';
+  });
 }
 
 const sekaWinLobbyBtn = document.getElementById('sekaWinLobbyBtn');

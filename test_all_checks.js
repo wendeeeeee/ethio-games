@@ -381,6 +381,8 @@ test('Turn timeout: player who fails to move within 1 min forfeits; opponent win
   const p2State = room.getPublicState('p2');
   assert(!p2State.opponentHand, 'Opponent hand must NOT be revealed in TIMEOUT_FORFEIT');
   assert(!p2State.opponents[0].hand, 'Opponents card array must NOT be revealed in TIMEOUT_FORFEIT');
+  assert(Array.isArray(p2State.remainingDeckCards), 'remainingDeckCards must be sent when game is FINISHED');
+  assert(p2State.remainingDeckCards.length === room.deck.length, 'remainingDeckCards count matches deck length');
   room.clearAllTimers();
 });
 
