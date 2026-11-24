@@ -211,7 +211,7 @@ body.in-game .app-header {
   flex-direction: column;
   align-items: center;
   padding: 6px 8px;
-  background: rgba(0, 0, 0, 0.45);
+  background: rgba(0, 0, 0, 0.55);
   border: 1.5px solid rgba(255, 255, 255, 0.25);
   border-radius: 10px;
   gap: 4px;
@@ -219,17 +219,62 @@ body.in-game .app-header {
 
 .seka-meld-badge-group.tetay-group {
   border-color: rgba(239, 68, 68, 0.8);
-  background: rgba(239, 68, 68, 0.2);
+  background: rgba(239, 68, 68, 0.25);
 }
 
 .seka-meld-badge-label {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   color: #fbbf24;
+  letter-spacing: 0.3px;
 }
 
 .seka-meld-badge-group.tetay-group .seka-meld-badge-label {
   color: #f87171;
+}
+
+/* Seka winning cards: authentic casino playing card layout in its own colors directly on table */
+.seka-win-cards-row .card {
+  width: 58px !important;
+  height: 84px !important;
+  background: #ffffff !important;
+  border-radius: 8px !important;
+  padding: 4px 5px !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45) !important;
+  border: 1px solid rgba(0, 0, 0, 0.22) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: space-between !important;
+  position: relative !important;
+  cursor: default !important;
+  transform: none !important;
+}
+
+.seka-win-cards-row .card.red {
+  color: #dc2626 !important;
+}
+
+.seka-win-cards-row .card.black {
+  color: #111827 !important;
+}
+
+.seka-win-cards-row .card .corner-rank {
+  font-size: 15px !important;
+  font-weight: 900 !important;
+  line-height: 1 !important;
+}
+
+.seka-win-cards-row .card .corner-suit {
+  font-size: 13px !important;
+  line-height: 1 !important;
+}
+
+.seka-win-cards-row .card .card-center-suit {
+  font-size: 24px !important;
+  opacity: 1 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
 }
 
 body.in-game .app-header .logo-title {
@@ -2732,34 +2777,40 @@ select:focus {
   }
 
   .seka-win-cards-row {
-    gap: 4px !important;
+    gap: 6px !important;
   }
 
   .seka-meld-badge-group {
     padding: 4px 6px !important;
-    gap: 2px !important;
+    gap: 3px !important;
   }
 
   .seka-meld-badge-label {
-    font-size: 9px !important;
+    font-size: 10px !important;
   }
 
   .seka-win-cards-row .card {
-    width: 32px !important;
-    height: 46px !important;
+    width: 44px !important;
+    height: 64px !important;
     padding: 2px 3px !important;
+    border-radius: 6px !important;
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.4) !important;
   }
 
   .seka-win-cards-row .card .corner-rank {
-    font-size: 9px !important;
+    font-size: 12px !important;
+    font-weight: 900 !important;
+    line-height: 1 !important;
   }
 
   .seka-win-cards-row .card .corner-suit {
-    font-size: 8px !important;
+    font-size: 10px !important;
+    line-height: 1 !important;
   }
 
   .seka-win-cards-row .card .card-center-suit {
-    font-size: 14px !important;
+    font-size: 18px !important;
+    opacity: 1 !important;
   }
 }
 
