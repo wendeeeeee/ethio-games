@@ -428,7 +428,7 @@ function arrangeSekaHandOptimal(hand) {
     // 4. Attach unmelded neighbors/extensions of this suit directly to melds in this suit!
     // (e.g. 9♠ when [5♠, Joker, 7♠] is formed! 9 is dist 2 from 7; or 8-9 extending J-Q-K)
     // Run iteratively so transitive neighbors (8 connected to 9 which connects to J) all attach!
-    const suitMelds = [...quatrisGroups, ...trisGroups].filter(m => m.some(c => c.suit === s && !isSekaJoker(c)));
+    const suitMelds = [...trisGroups].filter(m => m.some(c => c.suit === s && !isSekaJoker(c)));
     let attachedAny = true;
     while (attachedAny) {
       attachedAny = false;

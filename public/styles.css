@@ -1120,7 +1120,9 @@ select:focus {
 }
 
 .fan .card .card-center-suit {
-  display: none !important;
+  font-size: 22px !important;
+  opacity: 1 !important;
+  display: block !important;
 }
 
 .fan .card:hover {
@@ -1748,7 +1750,8 @@ select:focus {
   }
 
   .fan .card .card-center-suit {
-    display: none !important;
+    font-size: 24px !important;
+    opacity: 1 !important;
   }
 
   .card {
@@ -1836,7 +1839,8 @@ select:focus {
   }
 
   .fan .card .card-center-suit {
-    display: none !important;
+    font-size: 26px !important;
+    opacity: 1 !important;
   }
 
   .card {

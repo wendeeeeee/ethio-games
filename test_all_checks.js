@@ -514,6 +514,27 @@ test('Ace-bridge extension: K♦, A♦, 2♦, 3♦ stay together in sequence (ne
   assert(diaSeq === 'K♦,A♦,2♦,3♦', `Expected K♦,A♦,2♦,3♦ in continuous sequence, got: ${diaSeq}`);
 });
 
+test('Quatris 8-9-10-J stays intact, K-A-2 separate (never J-K-A-2-8-9-10)', () => {
+  const hand = [
+    { id: '1', rank: '8', suit: '♦' },
+    { id: '2', rank: '9', suit: '♦' },
+    { id: '3', rank: '10', suit: '♦' },
+    { id: '4', rank: 'J', suit: '♦' },
+    { id: '5', rank: 'K', suit: '♦' },
+    { id: '6', rank: 'A', suit: '♦' },
+    { id: '7', rank: '2', suit: '♦' }
+  ];
+  const res = arrangeSekaHandOptimal(hand);
+  const ranks = res.arrangedCards.map(c => c.rank + c.suit);
+  // Quatris [8,9,10,J] should appear as first 4 cards, not merged with K,A,2
+  const first4 = ranks.slice(0, 4).join(',');
+  assert(first4 === '8♦,9♦,10♦,J♦', `Expected Quatris 8♦,9♦,10♦,J♦ first, got: ${ranks.join(', ')}`);
+  // K,A,2 should be clustered together after the quatris
+  const rest = ranks.slice(4).join(',');
+  assert(rest.includes('K♦') && rest.includes('A♦') && rest.includes('2♦'),
+    `Expected K♦,A♦,2♦ in remaining cards, got: ${rest}`);
+});
+
 // ==============================================================
 console.log('\n📊 SUMMARY');
 // ==============================================================
