@@ -1119,6 +1119,10 @@ select:focus {
   color: #000000 !important;
 }
 
+.fan .card .card-center-suit {
+  display: none !important;
+}
+
 .fan .card:hover {
   transform: translateX(var(--offset, 0px)) translateY(-20px) rotate(var(--angle, 0deg)) !important;
   box-shadow: 0 12px 22px rgba(0, 0, 0, 0.75) !important;
@@ -1744,8 +1748,7 @@ select:focus {
   }
 
   .fan .card .card-center-suit {
-    font-size: 24px !important;
-    opacity: 1 !important;
+    display: none !important;
   }
 
   .card {
@@ -1833,8 +1836,7 @@ select:focus {
   }
 
   .fan .card .card-center-suit {
-    font-size: 26px !important;
-    opacity: 1 !important;
+    display: none !important;
   }
 
   .card {

@@ -3546,7 +3546,7 @@ function renderGame(state) {
   opponentCardCount.textContent = oppCount;
   const isInitialDeal = !hasPlayedDealingAnim && state.status === 'PLAYING';
   const isFinished = state.status === 'FINISHED';
-  renderOpponentCards(oppCount, isInitialDeal, isFinished, state.winningMelds, state.winningDiscard, state.opponentHand);
+  renderOpponentCards(oppCount, isInitialDeal);
 
   // Center Field: Base Joker Card (Conquer only)
   const canShowJokerCard = !isSeka && state.status === 'PLAYING' && (state.baseCard || state.jokerCard);
@@ -3730,10 +3730,27 @@ function renderGame(state) {
     }
 
     if (sekaWinCardsRow) {
-      if (state.winningMelds && state.winningMelds.length > 0) {
+      let myMelds = state.winningMelds;
+      let myDiscard = state.winningDiscard;
+
+      // Always show player's cards partitioned into 2 Tris + 1 Quatris + 1 Tetay
+      if (!myMelds || myMelds.length === 0) {
+        if (state.myHand && (state.myHand.length === 10 || state.myHand.length === 11)) {
+          const opt = arrangeSekaHandOptimal(state.myHand);
+          if (opt.melds && opt.melds.length > 0) {
+            myMelds = opt.melds.map(cards => ({
+              type: cards.length === 4 ? 'QUATRIS' : 'TRIS',
+              cards
+            }));
+            myDiscard = opt.discardedCard;
+          }
+        }
+      }
+
+      if (myMelds && myMelds.length > 0) {
         if (sekaWinCardsSection) sekaWinCardsSection.style.display = 'block';
         let meldsHtml = '';
-        state.winningMelds.forEach((m, idx) => {
+        myMelds.forEach((m, idx) => {
           const label = m.type === 'QUATRIS' ? `ኳትሪስ (${m.cards.length} ካርታ)` : `ትሪስ ${idx + 1} (${m.cards.length} ካርታ)`;
           meldsHtml += `
             <div class="seka-meld-badge-group">
@@ -3744,12 +3761,12 @@ function renderGame(state) {
             </div>
           `;
         });
-        if (state.winningDiscard) {
+        if (myDiscard) {
           meldsHtml += `
             <div class="seka-meld-badge-group tetay-group">
               <span class="seka-meld-badge-label">ተጣይ (11ኛዋ ካርታ)</span>
               <div style="display: flex; gap: 4px;">
-                ${createCardHTML(state.winningDiscard, false, false)}
+                ${createCardHTML(myDiscard, false, false)}
               </div>
             </div>
           `;
@@ -3820,38 +3837,8 @@ if (closeResultModalBtn) {
   });
 }
 
-function renderOpponentCards(count, isInitialDeal = false, isFinished = false, winningMelds = null, winningDiscard = null, opponentHand = null) {
-  // If game is finished, lay opponent cards face-up on table!
-  if (isFinished) {
-    if (opponentHand && opponentHand.length > 0) {
-      let oppCardsHtml = '<div style="display: flex; gap: 4px; justify-content: center; flex-wrap: wrap; align-items: center;">';
-      oppCardsHtml += opponentHand.map(c => createCardHTML(c, false, false)).join('');
-      oppCardsHtml += '</div>';
-      opponentCardsContainer.innerHTML = oppCardsHtml;
-      return;
-    }
-    if (winningMelds && winningMelds.length > 0) {
-      let meldCardsHtml = '<div style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; align-items: center;">';
-      winningMelds.forEach((m, mIdx) => {
-        meldCardsHtml += `
-          <div style="display: inline-flex; gap: 4px; padding: 4px 6px; background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(245, 158, 11, 0.6); border-radius: 6px;">
-            ${m.cards.map(c => createCardHTML(c, false, false)).join('')}
-          </div>
-        `;
-      });
-      if (winningDiscard) {
-        meldCardsHtml += `
-          <div style="display: inline-flex; gap: 4px; padding: 4px 6px; background: rgba(220, 38, 38, 0.25); border: 1px solid #ef4444; border-radius: 6px;" title="ተጣይ">
-            ${createCardHTML(winningDiscard, false, false)}
-          </div>
-        `;
-      }
-      meldCardsHtml += '</div>';
-      opponentCardsContainer.innerHTML = meldCardsHtml;
-      return;
-    }
-  }
-
+function renderOpponentCards(count, isInitialDeal = false) {
+  // Opponent cards ALWAYS remain face-down (never reveal opponent cards face-up)
   const isSingleDraw = count === previousOpponentCardCount + 1 && previousOpponentCardCount > 0;
   previousOpponentCardCount = count;
 
