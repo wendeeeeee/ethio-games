@@ -3737,19 +3737,20 @@ function renderGame(state) {
 
     // Show result clearly in status bar without blocking the table
     if (turnIndicator) {
+      const winnerName = state.winner ? (state.winner.name || state.winner) : (iWon ? (playerName || 'ተጫዋች') : 'ተጋጣሚ');
       if (state.winReason === 'TIMEOUT_FORFEIT') {
-        turnIndicator.textContent = iWon ? '🏆 ተጋጣሚ በ 1 ደቂቃ ውስጥ ካርታ ስላልጣለ አሸነፍክ!' : '⏰ የጊዜ ገደብ አለቀ (ተሸንፈሃል)!';
-        turnIndicator.style.color = iWon ? '#4ade80' : '#ef4444';
+        turnIndicator.textContent = iWon ? '🏆 ተጋጣሚ በ 1 ደቂቃ ውስጥ ካርታ ስላልጣለ አሸነፍክ!' : `⏰ የጊዜ ገደብ አለቀ (አሸናፊ፦ ${winnerName})`;
+        turnIndicator.style.color = iWon ? '#4ade80' : '#fbbf24';
       } else if (state.winReason === 'ABANDON_FORFEIT') {
-        turnIndicator.textContent = iWon ? '🚪 ተጋጣሚ ከጠረጴዛው ወጥቶ ስላልተመለሰ አሸነፍክ!' : '❌ ከጠረጴዛው ወጥተህ ባለመመለስህ ተሸንፈሃል!';
-        turnIndicator.style.color = iWon ? '#4ade80' : '#ef4444';
+        turnIndicator.textContent = iWon ? '🚪 ተጋጣሚ ከጠረጴዛው ወጥቶ ስላልተመለሰ አሸነፍክ!' : `🚪 ተጫዋች ከጠረጴዛው ወጥቷል (አሸናፊ፦ ${winnerName})`;
+        turnIndicator.style.color = iWon ? '#4ade80' : '#fbbf24';
       } else {
-        const winnerName = state.winner ? (state.winner.name || state.winner) : (iWon ? (playerName || 'ተጫዋች') : 'ተጋጣሚ');
-        turnIndicator.textContent = iWon ? `🏆 አሸንፈሃል! (ደራሽ: ${state.pot || 0} ETB)` : `❌ ተሸንፈሃል! (አሸናፊ: ${winnerName} | ደራሽ: ${state.pot || 0} ETB)`;
-        turnIndicator.style.color = iWon ? '#4ade80' : '#ef4444';
+        turnIndicator.textContent = iWon ? `🏆 አሸንፈሃል! (ደራሽ: ${state.pot || 0} ETB)` : `🏆 አሸናፊ፦ ${winnerName} (ደራሽ: ${state.pot || 0} ETB)`;
+        turnIndicator.style.color = iWon ? '#4ade80' : '#fbbf24';
       }
     }
-    showSortToast(iWon ? `🏆 አሸንፈሃል! ደራሽ: ${state.pot || 0} ETB` : `❌ ተሸንፈሃል!`);
+    const toastWinnerName = state.winner ? (state.winner.name || state.winner) : 'ተጋጣሚ';
+    showSortToast(iWon ? `🏆 አሸንፈሃል! ደራሽ: ${state.pot || 0} ETB` : `🏆 አሸናፊ፦ ${toastWinnerName}`);
 
     // Show Back to Lobby button on status bar when game is finished
     const statusLobbyBtn = document.getElementById('statusLobbyBtn');
