@@ -3787,16 +3787,22 @@ function renderGame(state) {
     const playerHandFanContainer = document.getElementById('playerHandFanContainer');
     if (playerHandFanContainer) playerHandFanContainer.style.display = 'block';
 
+    // Ensure the tetay discarded card is displayed ONLY on the ground discard pile (never duplicated in hand)
+    if (winDiscard && groundCardContainer) {
+      groundCardContainer.innerHTML = createCardHTML(winDiscard, false, false);
+      groundCardContainer.style.display = 'block';
+    }
+
     if (iWon) {
-      // When I win: render winning melds directly in my hand space with pure spacing (Option 2)
+      // When I win: render winning 10-card melds directly in my hand space (Option 2)
       if (winMelds && winMelds.length > 0) {
-        playerCardsContainer.innerHTML = renderMeldClustersHTML(winMelds, winDiscard);
+        playerCardsContainer.innerHTML = renderMeldClustersHTML(winMelds);
         playerCardsContainer.style.display = 'block';
       }
     } else {
-      // When opponent wins: flip opponent's cards face up in opponent's space with pure spacing (Option 2)
+      // When opponent wins: flip opponent's 10-card melds face up in opponent's space (Option 2)
       if (winMelds && winMelds.length > 0 && opponentCardsContainer) {
-        opponentCardsContainer.innerHTML = renderMeldClustersHTML(winMelds, winDiscard);
+        opponentCardsContainer.innerHTML = renderMeldClustersHTML(winMelds);
         opponentCardsContainer.style.display = 'flex';
       }
       // Render player's own hand at bottom cleanly arranged
@@ -3808,7 +3814,7 @@ function renderGame(state) {
             cards
           }));
           myMelds.sort((a, b) => (b.type === 'QUATRIS' ? 1 : 0) - (a.type === 'QUATRIS' ? 1 : 0));
-          playerCardsContainer.innerHTML = renderMeldClustersHTML(myMelds, opt.discardedCard);
+          playerCardsContainer.innerHTML = renderMeldClustersHTML(myMelds);
           playerCardsContainer.style.display = 'block';
         } else {
           renderPlayerHand(state.myHand);
@@ -3829,8 +3835,8 @@ function renderGame(state) {
   }
 }
 
-// Helper: renders meld clusters directly in hand or opponent space with pure spacing (Option 2: No labels, pure cards)
-function renderMeldClustersHTML(melds, tetayCard) {
+// Helper: renders meld clusters directly in hand or opponent space with pure spacing (Option 2: No labels, pure cards, 10-card melds only)
+function renderMeldClustersHTML(melds) {
   let html = '<div class="hand-meld-clusters">';
   if (melds && melds.length > 0) {
     melds.forEach(m => {
@@ -3840,13 +3846,6 @@ function renderMeldClustersHTML(melds, tetayCard) {
         </div>
       `;
     });
-  }
-  if (tetayCard) {
-    html += `
-      <div class="hand-meld-cluster tetay-cluster">
-        ${createCardHTML(tetayCard, false, false)}
-      </div>
-    `;
   }
   html += '</div>';
   return html;

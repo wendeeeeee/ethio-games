@@ -178,12 +178,12 @@ body.in-game .app-header {
   display: none !important;
 }
 
-/* Finished Meld Clusters in Hand and Opponent Positions (Option 2: No Labels, Pure Spaced Cards) */
+/* Finished Meld Clusters in Hand and Opponent Positions (Option 2: No Labels, Pure Spaced Cards, Normal Card Size) */
 .hand-meld-clusters {
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
-  gap: 18px !important;
+  gap: 22px !important;
   width: 100% !important;
   position: relative !important;
   transform: none !important;
@@ -202,12 +202,12 @@ body.in-game .app-header {
   transform: none !important;
   left: auto !important;
   bottom: auto !important;
-  width: 58px !important;
-  height: 84px !important;
-  border-radius: 8px !important;
-  padding: 4px 5px !important;
-  margin-left: -18px !important;
-  box-shadow: -2px 2px 8px rgba(0, 0, 0, 0.45) !important;
+  width: 76px !important;
+  height: 110px !important;
+  border-radius: 9px !important;
+  padding: 6px 7px !important;
+  margin-left: -22px !important;
+  box-shadow: -3px 3px 10px rgba(0, 0, 0, 0.45) !important;
   cursor: default !important;
   border: 1px solid rgba(0, 0, 0, 0.22) !important;
   background: #ffffff !important;
@@ -229,18 +229,18 @@ body.in-game .app-header {
 }
 
 .hand-meld-cluster .card .corner-rank {
-  font-size: 15px !important;
+  font-size: 18px !important;
   font-weight: 900 !important;
   line-height: 1 !important;
 }
 
 .hand-meld-cluster .card .corner-suit {
-  font-size: 13px !important;
+  font-size: 15px !important;
   line-height: 1 !important;
 }
 
 .hand-meld-cluster .card .card-center-suit {
-  font-size: 22px !important;
+  font-size: 26px !important;
   opacity: 1 !important;
   display: flex !important;
   align-items: center !important;
@@ -2875,30 +2875,30 @@ select:focus {
   }
 
   .hand-meld-clusters {
-    gap: 10px !important;
+    gap: 12px !important;
   }
 
   .hand-meld-cluster .card {
-    width: 44px !important;
-    height: 64px !important;
-    padding: 2px 3px !important;
-    margin-left: -14px !important;
-    border-radius: 6px !important;
+    width: 52px !important;
+    height: 76px !important;
+    padding: 3px 4px !important;
+    margin-left: -16px !important;
+    border-radius: 7px !important;
   }
 
   .hand-meld-cluster .card .corner-rank {
-    font-size: 12px !important;
+    font-size: 14px !important;
     font-weight: 900 !important;
     line-height: 1 !important;
   }
 
   .hand-meld-cluster .card .corner-suit {
-    font-size: 10px !important;
+    font-size: 12px !important;
     line-height: 1 !important;
   }
 
   .hand-meld-cluster .card .card-center-suit {
-    font-size: 17px !important;
+    font-size: 20px !important;
   }
 }
 
