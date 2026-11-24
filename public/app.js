@@ -3846,10 +3846,14 @@ function getResponsiveFanGeometry(totalCards) {
     // Tablets / Large Phones (481px - 768px)
     maxAngle = 28;
     spacing = Math.min(28, Math.max(19, Math.floor(340 / count)));
+  } else if (w <= 1400) {
+    // Standard Desktop / Laptops (769px - 1400px)
+    maxAngle = 28;
+    spacing = Math.min(42, Math.max(28, Math.floor(520 / count)));
   } else {
-    // Desktop screens
-    maxAngle = 32;
-    spacing = Math.min(38, Math.max(26, Math.floor(480 / count)));
+    // Large Desktop Screens (1401px+)
+    maxAngle = 28;
+    spacing = Math.min(46, Math.max(30, Math.floor(580 / count)));
   }
 
   return { maxAngle, spacing };

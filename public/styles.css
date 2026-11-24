@@ -1713,12 +1713,86 @@ select:focus {
 
 /* --- Large Desktop Screens (1025px+) --- */
 @media (min-width: 1025px) {
+  .fan-container {
+    height: 210px !important;
+    margin: 0 0 25px 0 !important;
+  }
+
+  .fan {
+    bottom: 80px !important;
+  }
+
   .fan .card {
-    width: 74px !important;
-    height: 106px !important;
-    left: -37px !important;
+    width: 86px !important;
+    height: 124px !important;
+    left: -43px !important;
     border-radius: 9px !important;
-    padding: 5px 6px !important;
+    padding: 6px 8px !important;
+  }
+
+  .fan .card .corner-rank {
+    font-size: 19px !important;
+    font-weight: 900 !important;
+  }
+
+  .fan .card .corner-suit {
+    font-size: 17px !important;
+  }
+
+  .fan .card .card-corner {
+    width: 22px !important;
+  }
+
+  .fan .card .card-center-suit {
+    font-size: 24px !important;
+    opacity: 0.5 !important;
+  }
+
+  .card {
+    width: 86px;
+    height: 124px;
+  }
+
+  .card .corner-rank {
+    font-size: 19px;
+    font-weight: 900;
+  }
+
+  .card .corner-suit {
+    font-size: 17px;
+  }
+
+  .card .card-corner {
+    width: 22px;
+  }
+
+  .card-center-suit {
+    font-size: 36px;
+  }
+
+  #groundCardContainer .card {
+    width: 86px !important;
+    height: 124px !important;
+  }
+
+  .stock-deck-top {
+    width: 86px !important;
+    height: 124px !important;
+  }
+
+  .base-joker-underneath .card {
+    width: 86px !important;
+    height: 124px !important;
+  }
+
+  .deck-stack-wrapper {
+    width: 115px;
+    height: 130px;
+  }
+
+  .card-back {
+    width: 58px;
+    height: 82px;
   }
 }
 
@@ -1728,12 +1802,86 @@ select:focus {
     max-width: 1200px !important;
   }
 
+  .fan-container {
+    height: 220px !important;
+    margin: 0 0 30px 0 !important;
+  }
+
+  .fan {
+    bottom: 85px !important;
+  }
+
   .fan .card {
-    width: 78px !important;
-    height: 112px !important;
-    left: -39px !important;
-    border-radius: 9px !important;
-    padding: 6px 8px !important;
+    width: 92px !important;
+    height: 132px !important;
+    left: -46px !important;
+    border-radius: 10px !important;
+    padding: 7px 9px !important;
+  }
+
+  .fan .card .corner-rank {
+    font-size: 20px !important;
+    font-weight: 900 !important;
+  }
+
+  .fan .card .corner-suit {
+    font-size: 18px !important;
+  }
+
+  .fan .card .card-corner {
+    width: 24px !important;
+  }
+
+  .fan .card .card-center-suit {
+    font-size: 26px !important;
+    opacity: 0.5 !important;
+  }
+
+  .card {
+    width: 92px;
+    height: 132px;
+  }
+
+  .card .corner-rank {
+    font-size: 20px;
+    font-weight: 900;
+  }
+
+  .card .corner-suit {
+    font-size: 18px;
+  }
+
+  .card .card-corner {
+    width: 24px;
+  }
+
+  .card-center-suit {
+    font-size: 38px;
+  }
+
+  #groundCardContainer .card {
+    width: 92px !important;
+    height: 132px !important;
+  }
+
+  .stock-deck-top {
+    width: 92px !important;
+    height: 132px !important;
+  }
+
+  .base-joker-underneath .card {
+    width: 92px !important;
+    height: 132px !important;
+  }
+
+  .deck-stack-wrapper {
+    width: 120px;
+    height: 138px;
+  }
+
+  .card-back {
+    width: 62px;
+    height: 88px;
   }
 }
 
