@@ -3802,13 +3802,7 @@ function renderGame(state) {
     }
 
     const playerHandFanContainer = document.getElementById('playerHandFanContainer');
-    if (playerHandFanContainer) {
-      playerHandFanContainer.style.display = 'flex';
-      playerHandFanContainer.classList.add('finished-melds-container');
-    }
-    if (playerCardsContainer) {
-      playerCardsContainer.classList.add('finished-melds');
-    }
+    if (playerHandFanContainer) playerHandFanContainer.style.display = 'block';
 
     // Ensure the tetay discarded card is displayed ONLY on the ground discard pile (never duplicated in hand)
     if (winDiscard && groundCardContainer) {
@@ -3817,31 +3811,31 @@ function renderGame(state) {
     }
 
     if (iWon) {
-      // When I win: render winning 10-card melds directly in my hand space (Option 2)
-      if (winMelds && winMelds.length > 0) {
-        playerCardsContainer.innerHTML = renderMeldClustersHTML(winMelds);
-        playerCardsContainer.style.display = 'flex';
-      }
-    } else {
-      // When opponent wins: flip opponent's 10-card melds face up in opponent's space (Option 2)
-      if (winMelds && winMelds.length > 0 && opponentCardsContainer) {
-        opponentCardsContainer.innerHTML = renderMeldClustersHTML(winMelds);
-        opponentCardsContainer.style.display = 'flex';
-      }
-      // Render player's own hand at bottom cleanly arranged
+      // When I win: render my hand arranged into melds (Quatris ➔ Tris 1 ➔ Tris 2) spread out in full view
       if (state.myHand && state.myHand.length > 0) {
         const opt = arrangeSekaHandOptimal(state.myHand);
-        if (opt && opt.arrangedCards && opt.arrangedCards.length >= 10) {
-          const myMelds = [
-            { type: 'QUATRIS', cards: opt.arrangedCards.slice(0, 4) },
-            { type: 'TRIS', cards: opt.arrangedCards.slice(4, 7) },
-            { type: 'TRIS', cards: opt.arrangedCards.slice(7, 10) }
-          ];
-          playerCardsContainer.innerHTML = renderMeldClustersHTML(myMelds);
-          playerCardsContainer.style.display = 'flex';
-        } else {
-          renderPlayerHand(state.myHand);
+        const arranged = (opt && opt.arrangedCards && opt.arrangedCards.length > 0) ? opt.arrangedCards : state.myHand;
+        renderPlayerHand(arranged);
+      }
+    } else {
+      // When opponent wins: flip opponent's winning cards face up in opponent's space
+      if (opponentCardsContainer) {
+        let oppCards = (state.opponentHand && state.opponentHand.length > 0) ? state.opponentHand : [];
+        if (oppCards.length === 0 && winMelds && winMelds.length > 0) {
+          oppCards = winMelds.flatMap(m => Array.isArray(m) ? m : (m.cards || []));
         }
+        if (oppCards.length > 0) {
+          const optOpp = arrangeSekaHandOptimal(oppCards);
+          const arrangedOpp = (optOpp && optOpp.arrangedCards && optOpp.arrangedCards.length > 0) ? optOpp.arrangedCards : oppCards;
+          opponentCardsContainer.innerHTML = arrangedOpp.map(c => createCardHTML(c, false, false)).join('');
+          opponentCardsContainer.style.display = 'flex';
+        }
+      }
+      // Render player's own hand spread out in full clarity so the player sees all their cards clearly!
+      if (state.myHand && state.myHand.length > 0) {
+        const opt = arrangeSekaHandOptimal(state.myHand);
+        const arranged = (opt && opt.arrangedCards && opt.arrangedCards.length > 0) ? opt.arrangedCards : state.myHand;
+        renderPlayerHand(arranged);
       }
     }
 
