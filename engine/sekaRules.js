@@ -302,7 +302,9 @@ function arrangeSekaHandOptimal(hand) {
   const sameSuitGroups = [];
   const singleCards = [];
   const usedIds = new Set();
+  const suitCardsMap = {};
 
+  // Phase 1: Check natural runs & melds in each suit
   for (const s of suits) {
     const suitNatural = bySuit[s];
     if (suitNatural.length === 0) continue;
@@ -322,6 +324,7 @@ function arrangeSekaHandOptimal(hand) {
       const numCards = suitCards.filter(c => !['Q', 'K', 'A'].includes(c.rank)).sort((a, b) => (RANK_ORDER[a.rank] - RANK_ORDER[b.rank]));
       suitCards = [...qkCards, ...aCards, ...numCards];
     }
+    suitCardsMap[s] = suitCards;
 
     // 0a. Check 6-card natural run FIRST: produces TWO TRIS! (e.g. 1-2-3-4-5-6 or 3-4-5-6-7-8)
     for (let i = 0; i <= suitCards.length - 6; i++) {
@@ -383,9 +386,13 @@ function arrangeSekaHandOptimal(hand) {
         }
       }
     }
+  }
 
-    // 2. Check 3-card gap with Joker forming Quatris
-    if (availableJokers.length > 0) {
+  // Phase 2: Check 3-card gap with Joker forming Quatris across ALL suits FIRST!
+  // (Takes absolute priority over using Joker for 2-card Tris in any suit, e.g. 1♦, 3♦, 4♦ + JK)
+  if (availableJokers.length > 0) {
+    for (const s of suits) {
+      const suitCards = suitCardsMap[s] || [];
       const remForQuatrisJk = suitCards.filter(c => !usedIds.has(c.id));
       for (let i = 0; i < remForQuatrisJk.length - 2; i++) {
         for (let j = i + 1; j < remForQuatrisJk.length - 1; j++) {
@@ -403,9 +410,12 @@ function arrangeSekaHandOptimal(hand) {
         }
       }
     }
+  }
 
-    // 3. Check 2-card gap pairs with Joker for Tris
-    if (availableJokers.length > 0) {
+  // Phase 3: Check 2-card gap pairs with Joker for Tris across ALL suits
+  if (availableJokers.length > 0) {
+    for (const s of suits) {
+      const suitCards = suitCardsMap[s] || [];
       const remSuitCards = suitCards.filter(c => !usedIds.has(c.id));
       for (let i = 0; i < remSuitCards.length; i++) {
         for (let j = i + 1; j < remSuitCards.length; j++) {
@@ -424,10 +434,13 @@ function arrangeSekaHandOptimal(hand) {
         }
       }
     }
+  }
+
+  // Phase 4 & 5: Attach neighbors & cluster remaining cards per suit
+  for (const s of suits) {
+    const suitCards = suitCardsMap[s] || [];
 
     // 4. Attach unmelded neighbors/extensions of this suit directly to melds in this suit!
-    // (e.g. 9♠ when [5♠, Joker, 7♠] is formed! 9 is dist 2 from 7; or 8-9 extending J-Q-K)
-    // Run iteratively so transitive neighbors (8 connected to 9 which connects to J) all attach!
     const suitMelds = [...trisGroups].filter(m => m.some(c => c.suit === s && !isSekaJoker(c)));
     let attachedAny = true;
     while (attachedAny) {

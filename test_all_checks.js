@@ -536,6 +536,21 @@ test('Quatris 8-9-10-J stays intact, K-A-2 separate (never J-K-A-2-8-9-10)', () 
     `Expected K♦,A♦,2♦ in remaining cards, got: ${rest}`);
 });
 
+test('Global Quatris with Joker priority: 1♦, 3♦, 4♦ + Joker forms Quatris first (never stolen by 8♠, 9♠ Tris)', () => {
+  const hand = [
+    { id: '1', rank: 'A', suit: '♦', isJoker: false },
+    { id: '2', rank: '3', suit: '♦', isJoker: false },
+    { id: '3', rank: '4', suit: '♦', isJoker: false },
+    { id: '4', rank: '8', suit: '♠', isJoker: false },
+    { id: '5', rank: '9', suit: '♠', isJoker: false },
+    { id: 'jk', rank: 'JK', suit: '★', isJoker: true }
+  ];
+  const res = arrangeSekaHandOptimal(hand);
+  const ranks = res.arrangedCards.map(c => c.rank + c.suit);
+  const first4 = ranks.slice(0, 4).join(',');
+  assert(first4 === 'A♦,JK★,3♦,4♦', `Expected Quatris A♦,JK★,3♦,4♦ first, got: ${ranks.join(', ')}`);
+});
+
 // ==============================================================
 console.log('\n📊 SUMMARY');
 // ==============================================================
