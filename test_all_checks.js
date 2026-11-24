@@ -565,6 +565,18 @@ test('Ace-bridge with J & K: J♥, K♥, A♥, 3♥ stay together in sequence (n
   assert(heartsPart === 'J♥,K♥,A♥,3♥', `Expected J♥,K♥,A♥,3♥ in sequence, got: ${ranks.join(', ')}`);
 });
 
+test('Spades Ace-bridge sequence: J♠, Q♠, 1♠, 4♠ stay in exact order J♠, Q♠, A♠, 4♠', () => {
+  const hand = [
+    { id: '1', rank: 'Q', suit: '♠', isJoker: false },
+    { id: '2', rank: 'A', suit: '♠', isJoker: false },
+    { id: '3', rank: '4', suit: '♠', isJoker: false },
+    { id: '4', rank: 'J', suit: '♠', isJoker: false }
+  ];
+  const res = arrangeSekaHandOptimal(hand);
+  const ranks = res.arrangedCards.map(c => c.rank + c.suit).join(',');
+  assert(ranks === 'J♠,Q♠,A♠,4♠', `Expected J♠,Q♠,A♠,4♠, got: ${ranks}`);
+});
+
 // ==============================================================
 console.log('\n📊 SUMMARY');
 // ==============================================================

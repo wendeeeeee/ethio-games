@@ -3699,6 +3699,11 @@ function renderGame(state) {
     }
   }
 
+  const statusLobbyBtn = document.getElementById('statusLobbyBtn');
+  if (statusLobbyBtn && state.status !== 'FINISHED') {
+    statusLobbyBtn.style.display = 'none';
+  }
+
   // Manage return banner
   if (state.status === 'FINISHED') {
     hideActiveGameReturnBanner();
@@ -3730,6 +3735,13 @@ function renderGame(state) {
       }
     }
     showSortToast(iWon ? `🏆 አሸንፈሃል! ደራሽ: ${state.pot || 0} ETB` : `❌ ተሸንፈሃል!`);
+
+    // Show Back to Lobby button on status bar when game is finished
+    const statusLobbyBtn = document.getElementById('statusLobbyBtn');
+    if (statusLobbyBtn) {
+      statusLobbyBtn.style.display = 'inline-block';
+      statusLobbyBtn.onclick = () => switchToLobbyView();
+    }
 
     // Render winning meld cards directly on table (Quatris ➔ Tris 1 ➔ Tris 2 ➔ Tetay)
     const sekaTableWinArea = document.getElementById('sekaTableWinArea');
