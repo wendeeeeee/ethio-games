@@ -577,6 +577,19 @@ test('Spades Ace-bridge sequence: J♠, Q♠, 1♠, 4♠ stay in exact order J�
   assert(ranks === 'J♠,Q♠,A♠,4♠', `Expected J♠,Q♠,A♠,4♠, got: ${ranks}`);
 });
 
+test('Diamonds non-Ace-bridge: J♦, 1♦, 4♦, 9♦ never arranges as J,1,4,9 (9 and J pair, 1 and 4 separate)', () => {
+  const hand = [
+    { id: '1', rank: 'J', suit: '♦', isJoker: false },
+    { id: '2', rank: 'A', suit: '♦', isJoker: false },
+    { id: '3', rank: '4', suit: '♦', isJoker: false },
+    { id: '4', rank: '9', suit: '♦', isJoker: false }
+  ];
+  const res = arrangeSekaHandOptimal(hand);
+  const ranks = res.arrangedCards.map(c => c.rank + c.suit).join(',');
+  assert(ranks !== 'J♦,A♦,4♦,9♦', `Cards must NOT arrange as J,A,4,9! Got: ${ranks}`);
+  assert(ranks === '9♦,J♦,A♦,4♦' || ranks === 'A♦,4♦,9♦,J♦', `Expected natural/connected order, got: ${ranks}`);
+});
+
 // ==============================================================
 console.log('\n📊 SUMMARY');
 // ==============================================================

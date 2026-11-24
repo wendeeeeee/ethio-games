@@ -374,16 +374,17 @@ function arrangeSekaHandOptimal(hand) {
       }
     }
 
-    // Now re-sort remaining unmelded cards with Ace-bridge if A + High + Low exist
+    // Now re-sort remaining unmelded cards with Ace-bridge ONLY if A + High (must have Q or K) + Low (2, 3, or 4) exist
     const remAfterNatural = suitCards.filter(c => !usedIds.has(c.id));
     const hasA = remAfterNatural.some(c => c.rank === 'A');
-    const hasHigh = remAfterNatural.some(c => ['10', 'J', 'Q', 'K'].includes(c.rank));
-    const hasLow = remAfterNatural.some(c => ['2', '3', '4', '5'].includes(c.rank));
-    if (hasA && hasHigh && hasLow) {
+    const hasHighToAce = remAfterNatural.some(c => ['Q', 'K'].includes(c.rank));
+    const hasLowFromAce = remAfterNatural.some(c => ['2', '3', '4'].includes(c.rank));
+    if (hasA && hasHighToAce && hasLowFromAce) {
       const highCards = remAfterNatural.filter(c => ['10', 'J', 'Q', 'K'].includes(c.rank)).sort((a, b) => (RANK_ORDER[a.rank] - RANK_ORDER[b.rank]));
       const aCards = remAfterNatural.filter(c => c.rank === 'A');
-      const lowCards = remAfterNatural.filter(c => !['10', 'J', 'Q', 'K', 'A'].includes(c.rank)).sort((a, b) => (RANK_ORDER[a.rank] - RANK_ORDER[b.rank]));
-      suitCardsMap[s] = [...highCards, ...aCards, ...lowCards];
+      const lowCards = remAfterNatural.filter(c => ['2', '3', '4'].includes(c.rank)).sort((a, b) => (RANK_ORDER[a.rank] - RANK_ORDER[b.rank]));
+      const otherMidCards = remAfterNatural.filter(c => !['10', 'J', 'Q', 'K', 'A', '2', '3', '4'].includes(c.rank)).sort((a, b) => (RANK_ORDER[a.rank] - RANK_ORDER[b.rank]));
+      suitCardsMap[s] = [...highCards, ...aCards, ...lowCards, ...otherMidCards];
     } else {
       suitCardsMap[s] = remAfterNatural;
     }
