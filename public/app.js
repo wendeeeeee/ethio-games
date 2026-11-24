@@ -3703,6 +3703,10 @@ function renderGame(state) {
   if (statusLobbyBtn && state.status !== 'FINISHED') {
     statusLobbyBtn.style.display = 'none';
   }
+  const myHandLabelFinished = document.getElementById('myHandLabelFinished');
+  if (myHandLabelFinished && state.status !== 'FINISHED') {
+    myHandLabelFinished.style.display = 'none';
+  }
 
   // Manage return banner
   if (state.status === 'FINISHED') {
@@ -3770,6 +3774,19 @@ function renderGame(state) {
 
       if (sekaTableWinArea) sekaTableWinArea.style.display = 'block';
       if (sekaWinCardsSection) sekaWinCardsSection.style.display = 'block';
+
+      const sekaWinSectionTitle = document.getElementById('sekaWinSectionTitle');
+      if (sekaWinSectionTitle) {
+        if (iWon) {
+          sekaWinSectionTitle.textContent = '👑 ያሸነፍክበት ካርታህ (የአንተ ሜልዶች)፦';
+        } else {
+          const winnerName = state.winner ? (state.winner.name || state.winner) : 'ተጋጣሚ';
+          sekaWinSectionTitle.textContent = `🎴 ${winnerName} ያሸነፈበት ካርታ፦`;
+        }
+      }
+
+      const myHandLabelFinished = document.getElementById('myHandLabelFinished');
+      if (myHandLabelFinished) myHandLabelFinished.style.display = 'inline';
 
       let meldsHtml = '';
       let trisCount = 0;
