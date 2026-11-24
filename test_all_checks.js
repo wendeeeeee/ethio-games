@@ -424,6 +424,36 @@ test('Leave game timeout: player leaves and fails to return in 1 min, forfeits; 
   assert(room.winReason === 'ABANDON_FORFEIT', 'Win reason should be ABANDON_FORFEIT');
 });
 
+test('Auto-reconnect on refresh: recovers active room and player cards while preserving game status', () => {
+  const room = new SekaGameRoom('seka_reconnect_test', { id: 'p1', name: 'A', socketId: 's1_old' }, 100, 2);
+  room.players.push({ id: 'p2', name: 'B', socketId: 's2' });
+  room.hands['p2'] = [];
+  room.joiner = room.players[1];
+  room.startGame();
+
+  const originalP1Cards = [...room.hands['p1']];
+  assert(originalP1Cards.length > 0, 'P1 must have dealt cards');
+
+  // Player refreshes browser: socket disconnect triggers playerLeaveTemp
+  room.playerLeaveTemp('p1');
+  assert(room.temporarilyLeft['p1'], 'P1 marked temporarily left on refresh disconnect');
+
+  // Player re-establishes connection with new socket ID
+  const newSocketId = 's1_refreshed';
+  room.playerReturn('p1');
+  const p1 = room.players.find(p => p.id === 'p1');
+  p1.socketId = newSocketId;
+
+  // Retrieve public state for p1 after reconnection
+  const restoredState = room.getPublicState('p1');
+  assert(restoredState.status === 'PLAYING', 'Room status remains PLAYING');
+  assert(restoredState.roomId === 'seka_reconnect_test', 'RoomId matches');
+  assert(restoredState.myHand.length === originalP1Cards.length, 'Player hand length matches');
+  assert(JSON.stringify(restoredState.myHand) === JSON.stringify(originalP1Cards), 'Player hand restored exactly as dealt');
+  assert(!restoredState.temporarilyLeft['p1'], 'temporarilyLeft flag cleared on reconnect');
+  room.clearAllTimers();
+});
+
 // ==============================================================
 console.log('\n✨ 8. SMART SORT SEKA RULES (User Defined Cases)');
 // ==============================================================

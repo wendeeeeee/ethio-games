@@ -881,9 +881,12 @@ io.on('connection', (socket) => {
         sRoom.playerReturn(userId);
         const p = sRoom.players.find(p => p.id === userId);
         if (p) p.socketId = socket.id;
-        socketPlayerMap.set(socket.id, { userId, roomId });
+        if (sRoom.creator && sRoom.creator.id === userId) sRoom.creator.socketId = socket.id;
+        if (sRoom.joiner && sRoom.joiner.id === userId) sRoom.joiner.socketId = socket.id;
+        socketPlayerMap.set(socket.id, { userId, name: p ? p.name : '', roomId, gameType: 'SEKA' });
         socket.join(roomId);
-        socket.emit('seka_reconnect_success', { roomId });
+        socket.emit('seka_reconnect_success', { roomId, status: sRoom.status });
+        socket.emit('seka_game_state', sRoom.getPublicState(userId));
         broadcastSekaRoomUpdate(sRoom);
         return;
       }
@@ -892,9 +895,14 @@ io.on('connection', (socket) => {
     if (cRoom) {
       const isPlayer = cRoom.players && cRoom.players.some(p => p.id === userId);
       if (isPlayer && (cRoom.status === 'PLAYING' || cRoom.status === 'WAITING')) {
-        socketPlayerMap.set(socket.id, { userId, roomId });
+        const p = cRoom.players.find(p => p.id === userId);
+        if (p) p.socketId = socket.id;
+        if (cRoom.creator && cRoom.creator.id === userId) cRoom.creator.socketId = socket.id;
+        if (cRoom.joiner && cRoom.joiner.id === userId) cRoom.joiner.socketId = socket.id;
+        socketPlayerMap.set(socket.id, { userId, name: p ? p.name : '', roomId, gameType: 'CONQUER' });
         socket.join(roomId);
-        socket.emit('conquer_reconnect_success', { roomId });
+        socket.emit('conquer_reconnect_success', { roomId, status: cRoom.status });
+        socket.emit('game_state', cRoom.getClientState(userId));
         broadcastRoomUpdate(cRoom);
         return;
       }

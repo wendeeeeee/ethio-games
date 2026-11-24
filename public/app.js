@@ -917,24 +917,30 @@ socket.on('connect', () => {
   socket.emit('register_user', { userId, name: playerName, phone: userPhone });
   refreshRoomsList();
   const savedActiveRoom = localStorage.getItem('conquer_active_room_id');
-  if (savedActiveRoom) {
+  if (savedActiveRoom && userId) {
     socket.emit('reconnect_active_game', { roomId: savedActiveRoom, userId });
   }
 });
 
 // Auto-reconnect response listeners on page refresh
-socket.on('seka_reconnect_success', ({ roomId }) => {
+socket.on('seka_reconnect_success', ({ roomId, status }) => {
   currentRoomId = roomId;
   localStorage.setItem('conquer_active_room_id', roomId);
+  isTemporarilyOut = false;
+  activeGameReturnRoomId = null;
+  hideActiveGameReturnBanner();
   if (homeGameSelectView) homeGameSelectView.style.display = 'none';
   if (sekaLobbySection) sekaLobbySection.style.display = 'none';
   if (lobbyView) lobbyView.style.display = 'none';
   switchToGameView();
 });
 
-socket.on('conquer_reconnect_success', ({ roomId }) => {
+socket.on('conquer_reconnect_success', ({ roomId, status }) => {
   currentRoomId = roomId;
   localStorage.setItem('conquer_active_room_id', roomId);
+  isTemporarilyOut = false;
+  activeGameReturnRoomId = null;
+  hideActiveGameReturnBanner();
   if (homeGameSelectView) homeGameSelectView.style.display = 'none';
   if (lobbyView) lobbyView.style.display = 'none';
   switchToGameView();
@@ -943,6 +949,9 @@ socket.on('conquer_reconnect_success', ({ roomId }) => {
 socket.on('active_room_expired', () => {
   localStorage.removeItem('conquer_active_room_id');
   currentRoomId = null;
+  if (homeGameSelectView && (!currentGameState || currentGameState.status !== 'PLAYING')) {
+    homeGameSelectView.style.display = 'flex';
+  }
 });
 
 socket.on('wallet_update', (wallet) => {
@@ -997,6 +1006,7 @@ socket.on('player_abandoned', ({ winnerName, loserName, message }) => {
 
 socket.on('room_created', ({ roomId }) => {
   currentRoomId = roomId;
+  localStorage.setItem('conquer_active_room_id', roomId);
   switchToGameView();
 });
 
@@ -1005,6 +1015,11 @@ socket.on('game_state', (state) => {
   if (state.roomId !== currentRoomId) {
     playerOrderedCardIds = [];
     currentRoomId = state.roomId;
+  }
+  if (state.status === 'PLAYING' || state.status === 'WAITING') {
+    localStorage.setItem('conquer_active_room_id', state.roomId);
+  } else if (state.status === 'FINISHED' || state.status === 'EXPIRED') {
+    localStorage.removeItem('conquer_active_room_id');
   }
   if (state.status === 'PLAYING' && state.myHand) {
     state.myHand = syncHandPreservingOrder(state.myHand);
@@ -1021,6 +1036,7 @@ let currentWaitingRoomId = null;
 
 function showWaitingForOpponentModal(roomId, expiresAt, stakeAmount) {
   currentWaitingRoomId = roomId;
+  localStorage.setItem('conquer_active_room_id', roomId);
   const modal = document.getElementById('waitingForOpponentModal');
   const tableIdEl = document.getElementById('waitingTableId');
   const stakeEl = document.getElementById('waitingTableStake');
@@ -1041,6 +1057,7 @@ function showWaitingForOpponentModal(roomId, expiresAt, stakeAmount) {
       waitingCountdownTimer = null;
       const expiredRoomId = currentWaitingRoomId;
       closeWaitingForOpponentModal();
+      localStorage.removeItem('conquer_active_room_id');
       showSortToast('⏳ በ 60 ሰከንድ ውስጥ ተጋጣሚ ስላልገባ የሴካ ጨዋታው ተሰርዟል! አሁን አዲስ ጨዋታ መፍጠር ይችላሉ።');
       if (expiredRoomId) {
         socket.emit('leave_seka_room', { roomId: expiredRoomId, userId });
@@ -1070,6 +1087,7 @@ if (cancelWaitingRoomBtn) {
       socket.emit('leave_room', { roomId: currentWaitingRoomId, userId });
     }
     closeWaitingForOpponentModal();
+    localStorage.removeItem('conquer_active_room_id');
     currentWaitingRoomId = null;
     currentRoomId = null;
     playCardSound();
@@ -1082,6 +1100,7 @@ if (cancelWaitingRoomBtn) {
 // Real-Time Game State Sync (Seka)
 socket.on('seka_room_created', ({ roomId, expiresAt, isBot, stakeAmount }) => {
   currentRoomId = roomId;
+  localStorage.setItem('conquer_active_room_id', roomId);
   if (isBot) {
     switchToGameView();
   } else {
@@ -1097,11 +1116,14 @@ socket.on('seka_game_state', (state) => {
     playerOrderedCardIds = [];
     currentRoomId = state.roomId;
   }
+  if (state.status === 'PLAYING' || state.status === 'WAITING') {
+    localStorage.setItem('conquer_active_room_id', state.roomId);
+  } else if (state.status === 'FINISHED' || state.status === 'EXPIRED') {
+    localStorage.removeItem('conquer_active_room_id');
+  }
 
-  // Check if player intentionally left the table temporarily
-  const userIsTemporarilyAway = isTemporarilyOut ||
-    (activeGameReturnRoomId === state.roomId) ||
-    (state.temporarilyLeft && state.temporarilyLeft[userId]);
+  // Check if player intentionally left the table temporarily via leave button
+  const userIsTemporarilyAway = isTemporarilyOut || (activeGameReturnRoomId === state.roomId);
 
   // The game ONLY starts when status becomes PLAYING!
   if (state.status === 'PLAYING') {
@@ -1113,6 +1135,9 @@ socket.on('seka_game_state', (state) => {
       showActiveGameReturnBanner(state.roomId, deadline);
     } else {
       hideActiveGameReturnBanner();
+      if (homeGameSelectView) homeGameSelectView.style.display = 'none';
+      if (sekaLobbySection) sekaLobbySection.style.display = 'none';
+      if (lobbyView) lobbyView.style.display = 'none';
       if (gameView.style.display === 'none') {
         switchToGameView();
       }
@@ -1142,6 +1167,13 @@ const playSekaBotBtn = document.getElementById('playSekaBotBtn');
 const conquerComingSoonModal = document.getElementById('conquerComingSoonModal');
 const goToSekaFromModalBtn = document.getElementById('goToSekaFromModalBtn');
 const closeConquerModalBtn = document.getElementById('closeConquerModalBtn');
+
+// If there's an active room saved in localStorage, suppress home view to prevent flicker while reconnecting
+if (localStorage.getItem('conquer_active_room_id')) {
+  if (homeGameSelectView) homeGameSelectView.style.display = 'none';
+  if (sekaLobbySection) sekaLobbySection.style.display = 'none';
+  if (lobbyView) lobbyView.style.display = 'none';
+}
 
 if (homeSekaBtn) {
   homeSekaBtn.addEventListener('click', () => {
@@ -1608,6 +1640,7 @@ async function refreshSekaRoomsList() {
 window.cancelCreatedRoom = function (roomId) {
   socket.emit('leave_seka_room', { roomId, userId });
   socket.emit('leave_room', { roomId, userId });
+  localStorage.removeItem('conquer_active_room_id');
   currentWaitingRoomId = null;
   currentRoomId = null;
   playCardSound();
@@ -1630,6 +1663,8 @@ window.joinRoom = function (roomId) {
   if (!requireAuth('⚠️ ጨዋታውን ለመቀላቀል እባክዎ መጀመሪያ ይግቡ ወይም ይመዝገቡ!')) {
     return;
   }
+  currentRoomId = roomId;
+  localStorage.setItem('conquer_active_room_id', roomId);
   socket.emit('join_room', { roomId, userId, name: playerName });
   switchToGameView();
 };
@@ -1640,6 +1675,7 @@ window.joinSekaRoom = function (roomId) {
   }
   const sName = playerName || 'ተጫዋች';
   currentRoomId = roomId;
+  localStorage.setItem('conquer_active_room_id', roomId);
   playCardSound();
   socket.emit('join_seka_room', { roomId, userId, name: sName });
 };
@@ -1673,6 +1709,10 @@ function switchToGameView() {
 }
 
 function switchToLobbyView() {
+  if (!isTemporarilyOut && (!currentGameState || currentGameState.status !== 'PLAYING')) {
+    localStorage.removeItem('conquer_active_room_id');
+    currentRoomId = null;
+  }
   document.documentElement.classList.remove('in-game');
   document.body.classList.remove('in-game');
   hasPlayedDealingAnim = false;
