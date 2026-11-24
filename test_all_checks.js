@@ -498,6 +498,22 @@ test('Transitive neighbor extension: 8♠ and 9♠ stay adjacent in sequence to 
   assert(seq5 === '8♠,9♠,J♠,Q♠,K♠', `Expected 8♠,9♠,J♠,Q♠,K♠ together in sequence, got: ${seq5}`);
 });
 
+test('Ace-bridge extension: K♦, A♦, 2♦, 3♦ stay together in sequence (never 2,3,K,A)', () => {
+  const hand = [
+    { id: '1', rank: '2', suit: '♦' },
+    { id: '2', rank: '3', suit: '♦' },
+    { id: '3', rank: 'K', suit: '♦' },
+    { id: '4', rank: 'A', suit: '♦' },
+    { id: '5', rank: '5', suit: '♥' },
+    { id: '6', rank: '6', suit: '♥' },
+    { id: '7', rank: '7', suit: '♥' }
+  ];
+  const res = arrangeSekaHandOptimal(hand);
+  const ranks = res.arrangedCards.map(c => c.rank + c.suit);
+  const diaSeq = ranks.filter(c => c.endsWith('♦')).join(',');
+  assert(diaSeq === 'K♦,A♦,2♦,3♦', `Expected K♦,A♦,2♦,3♦ in continuous sequence, got: ${diaSeq}`);
+});
+
 // ==============================================================
 console.log('\n📊 SUMMARY');
 // ==============================================================

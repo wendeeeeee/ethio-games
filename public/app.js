@@ -2658,18 +2658,53 @@ function arrangeSekaMeld(cards) {
   const natural = cards.filter(c => !isSekaWildJoker(c));
   const rankOrderMap = { 'A': 1, '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9, '10': 10, 'J': 11, 'Q': 12, 'K': 13 };
 
+  const hasA = natural.some(c => c.rank === 'A');
+  const hasHigh = natural.some(c => ['K', 'Q', 'J'].includes(c.rank));
+  const hasLow = natural.some(c => ['2', '3', '4', '5'].includes(c.rank));
+
   if (jokers.length === 0) {
-    const hasA = natural.some(c => c.rank === 'A');
-    const hasKOrQ = natural.some(c => c.rank === 'K' || c.rank === 'Q');
-    const isAceHigh = hasA && hasKOrQ;
+    // Ace-bridge: both high (Q/K) and low (2/3) exist with Ace -> natural run [Q, K, A, 2, 3]
+    if (hasA && hasHigh && hasLow) {
+      const highCards = natural.filter(c => ['Q', 'K', 'J'].includes(c.rank)).sort((a, b) => (rankOrderMap[a.rank] || 0) - (rankOrderMap[b.rank] || 0));
+      const aCards = natural.filter(c => c.rank === 'A');
+      const lowCards = natural.filter(c => !['Q', 'K', 'J', 'A'].includes(c.rank)).sort((a, b) => (rankOrderMap[a.rank] || 0) - (rankOrderMap[b.rank] || 0));
+      return [...highCards, ...aCards, ...lowCards];
+    }
+
+    const isAceHigh = hasA && hasHigh && !hasLow;
     const rankFn = (c) => (isAceHigh && c.rank === 'A' ? 14 : (rankOrderMap[c.rank] || 0));
     return [...natural].sort((a, b) => rankFn(a) - rankFn(b));
   }
 
   const joker = jokers[0];
-  const hasA = natural.some(c => c.rank === 'A');
-  const hasKOrQ = natural.some(c => c.rank === 'K' || c.rank === 'Q');
-  const isAceHigh = hasA && hasKOrQ;
+  if (hasA && hasHigh && hasLow) {
+    const highCards = natural.filter(c => ['Q', 'K', 'J'].includes(c.rank)).sort((a, b) => (rankOrderMap[a.rank] || 0) - (rankOrderMap[b.rank] || 0));
+    const aCards = natural.filter(c => c.rank === 'A');
+    const lowCards = natural.filter(c => !['Q', 'K', 'J', 'A'].includes(c.rank)).sort((a, b) => (rankOrderMap[a.rank] || 0) - (rankOrderMap[b.rank] || 0));
+    const baseSeq = [...highCards, ...aCards, ...lowCards];
+    const getDist = (r1, r2) => {
+      const n1 = rankOrderMap[r1] || 0;
+      const n2 = rankOrderMap[r2] || 0;
+      const direct = Math.abs(n1 - n2);
+      const c1 = Math.abs((n1 === 1 ? 14 : n1) - (n2 === 1 ? 14 : n2));
+      return Math.min(direct, c1);
+    };
+    let gapIdx = -1;
+    for (let i = 0; i < baseSeq.length - 1; i++) {
+      if (getDist(baseSeq[i].rank, baseSeq[i + 1].rank) === 2) {
+        gapIdx = i;
+        break;
+      }
+    }
+    if (gapIdx !== -1) {
+      const res = [...baseSeq];
+      res.splice(gapIdx + 1, 0, joker);
+      return res;
+    }
+    return [...baseSeq, joker];
+  }
+
+  const isAceHigh = hasA && hasHigh && !hasLow;
   const rankFn = (c) => (isAceHigh && c.rank === 'A' ? 14 : (rankOrderMap[c.rank] || 0));
   const sortedNatural = [...natural].sort((a, b) => rankFn(a) - rankFn(b));
 

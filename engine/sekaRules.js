@@ -181,18 +181,46 @@ function arrangeSekaMeld(cards) {
   const jokers = cards.filter(isSekaJoker);
   const natural = cards.filter(c => !isSekaJoker(c));
 
+  const hasA = natural.some(c => c.rank === 'A');
+  const hasHigh = natural.some(c => ['K', 'Q', 'J'].includes(c.rank));
+  const hasLow = natural.some(c => ['2', '3', '4', '5'].includes(c.rank));
+
   if (jokers.length === 0) {
-    const hasA = natural.some(c => c.rank === 'A');
-    const hasKOrQ = natural.some(c => c.rank === 'K' || c.rank === 'Q');
-    const isAceHigh = hasA && hasKOrQ;
+    // Ace-bridge: both high (Q/K) and low (2/3) exist with Ace -> natural run [Q, K, A, 2, 3]
+    if (hasA && hasHigh && hasLow) {
+      const highCards = natural.filter(c => ['Q', 'K', 'J'].includes(c.rank)).sort((a, b) => RANK_ORDER[a.rank] - RANK_ORDER[b.rank]);
+      const aCards = natural.filter(c => c.rank === 'A');
+      const lowCards = natural.filter(c => !['Q', 'K', 'J', 'A'].includes(c.rank)).sort((a, b) => RANK_ORDER[a.rank] - RANK_ORDER[b.rank]);
+      return [...highCards, ...aCards, ...lowCards];
+    }
+
+    const isAceHigh = hasA && hasHigh && !hasLow;
     const rankFn = (c) => (isAceHigh && c.rank === 'A' ? 14 : RANK_ORDER[c.rank]);
     return [...natural].sort((a, b) => rankFn(a) - rankFn(b));
   }
 
   const joker = jokers[0];
-  const hasA = natural.some(c => c.rank === 'A');
-  const hasKOrQ = natural.some(c => c.rank === 'K' || c.rank === 'Q');
-  const isAceHigh = hasA && hasKOrQ;
+  if (hasA && hasHigh && hasLow) {
+    const highCards = natural.filter(c => ['Q', 'K', 'J'].includes(c.rank)).sort((a, b) => RANK_ORDER[a.rank] - RANK_ORDER[b.rank]);
+    const aCards = natural.filter(c => c.rank === 'A');
+    const lowCards = natural.filter(c => !['Q', 'K', 'J', 'A'].includes(c.rank)).sort((a, b) => RANK_ORDER[a.rank] - RANK_ORDER[b.rank]);
+    const baseSeq = [...highCards, ...aCards, ...lowCards];
+    let gapIdx = -1;
+    for (let i = 0; i < baseSeq.length - 1; i++) {
+      if (getSekaRankDist(baseSeq[i].rank, baseSeq[i + 1].rank) === 2) {
+        gapIdx = i;
+        break;
+      }
+    }
+    if (gapIdx !== -1) {
+      const res = [...baseSeq];
+      res.splice(gapIdx + 1, 0, joker);
+      return res;
+    }
+    return [...baseSeq, joker];
+  }
+
+  const isAceHigh = hasA && hasHigh && !hasLow;
   const rankFn = (c) => (isAceHigh && c.rank === 'A' ? 14 : RANK_ORDER[c.rank]);
   const sortedNatural = [...natural].sort((a, b) => rankFn(a) - rankFn(b));
 
