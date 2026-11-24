@@ -2973,20 +2973,31 @@ function arrangeSekaHandOptimal(hand) {
     }
 
     // 4. Attach unmelded neighbors/extensions of this suit directly to melds in this suit!
-    // (e.g. 9♠ when [5♠, Joker, 7♠] is formed! 9 is dist 2 from 7; or 5-6 extending a Tris)
+    // (e.g. 9♠ when [5♠, Joker, 7♠] is formed! 9 is dist 2 from 7; or 8-9 extending J-Q-K)
+    // Run iteratively so transitive neighbors (8 connected to 9 which connects to J) all attach!
     const suitMelds = [...quatrisGroups, ...trisGroups].filter(m => m.some(c => c.suit === s && !isSekaWildJoker(c)));
-    const remForNeighbors = suitCards.filter(c => !usedIds.has(c.id));
-    for (const remCard of remForNeighbors) {
-      for (const meld of suitMelds) {
-        if (usedIds.has(remCard.id)) break;
-        const meldNats = meld.filter(c => !isSekaWildJoker(c));
-        const canAttach = meldNats.some(c => getSekaRankDistLocal(c.rank, remCard.rank) <= 2);
-        if (canAttach) {
-          meld.push(remCard);
-          usedIds.add(remCard.id);
-          break;
+    let attachedAny = true;
+    while (attachedAny) {
+      attachedAny = false;
+      const remForNeighbors = suitCards.filter(c => !usedIds.has(c.id));
+      for (const remCard of remForNeighbors) {
+        for (const meld of suitMelds) {
+          if (usedIds.has(remCard.id)) break;
+          const meldNats = meld.filter(c => !isSekaWildJoker(c));
+          const canAttach = meldNats.some(c => getSekaRankDistLocal(c.rank, remCard.rank) <= 2);
+          if (canAttach) {
+            meld.push(remCard);
+            usedIds.add(remCard.id);
+            attachedAny = true;
+            break;
+          }
         }
       }
+    }
+    // Re-sort melds with attached cards into natural sequence order
+    for (const meld of suitMelds) {
+      const sorted = arrangeSekaMeld(meld);
+      meld.splice(0, meld.length, ...sorted);
     }
 
     // 5. Cluster remaining cards of this suit using circular proximity (dist <= 2)

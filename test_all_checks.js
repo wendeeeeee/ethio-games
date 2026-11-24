@@ -482,6 +482,22 @@ test('Neighbor extension: 9♠ stays adjacent to [5♠, Joker, 7♠] because 8�
   assert(Math.abs(nineIdx - sevenIdx) <= 2, '9♠ should stay adjacent to [5♠, Joker, 7♠]');
 });
 
+test('Transitive neighbor extension: 8♠ and 9♠ stay adjacent in sequence to J♠ Q♠ K♠', () => {
+  const hand = [
+    { id: '1', rank: 'J', suit: '♠' },
+    { id: '2', rank: 'Q', suit: '♠' },
+    { id: '3', rank: 'K', suit: '♠' },
+    { id: '4', rank: '9', suit: '♠' },
+    { id: '5', rank: '8', suit: '♠' },
+    { id: '6', rank: '4', suit: '♥' },
+    { id: '7', rank: '7', suit: '♦' }
+  ];
+  const res = arrangeSekaHandOptimal(hand);
+  const ranks = res.arrangedCards.map(c => c.rank + c.suit);
+  const seq5 = ranks.slice(0, 5).join(',');
+  assert(seq5 === '8♠,9♠,J♠,Q♠,K♠', `Expected 8♠,9♠,J♠,Q♠,K♠ together in sequence, got: ${seq5}`);
+});
+
 // ==============================================================
 console.log('\n📊 SUMMARY');
 // ==============================================================
