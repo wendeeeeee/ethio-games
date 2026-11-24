@@ -924,7 +924,7 @@ select:focus {
   height: 110px;
   background: #ffffff;
   border-radius: 9px;
-  box-shadow: var(--card-shadow);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -933,15 +933,15 @@ select:focus {
   cursor: pointer;
   transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.2s;
   color: #000;
-  border: 1px solid #cbd5e1;
+  border: 1px solid rgba(0, 0, 0, 0.18);
 }
 
 .card.red {
-  color: #dc2626;
+  color: #d00000;
 }
 
 .card.black {
-  color: #0f172a;
+  color: #000000;
 }
 
 /* Card Corners: Rank stacked on top of Suit (Identical to reference photo) */
@@ -982,7 +982,7 @@ select:focus {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  opacity: 0.85;
+  opacity: 1;
   font-family: 'Segoe UI Symbol', 'Apple Color Emoji', 'Segoe UI', sans-serif;
   pointer-events: none;
 }
@@ -1097,14 +1097,14 @@ select:focus {
   left: -31px !important;
   bottom: 0 !important;
   margin-left: 0 !important;
-  background: white;
-  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.2);
   border-radius: 7px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   padding: 4px 5px;
-  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45);
   transform-origin: center 170px !important;
   transform: translateX(var(--offset, 0px)) rotate(var(--angle, 0deg)) !important;
   transition: transform 0.3s ease, box-shadow 0.3s ease !important;
@@ -1112,11 +1112,11 @@ select:focus {
 }
 
 .fan .card.red {
-  color: #dc2626 !important;
+  color: #d00000 !important;
 }
 
 .fan .card.black {
-  color: #0f172a !important;
+  color: #000000 !important;
 }
 
 .fan .card:hover {
@@ -1745,7 +1745,7 @@ select:focus {
 
   .fan .card .card-center-suit {
     font-size: 24px !important;
-    opacity: 0.5 !important;
+    opacity: 1 !important;
   }
 
   .card {
@@ -1834,7 +1834,7 @@ select:focus {
 
   .fan .card .card-center-suit {
     font-size: 26px !important;
-    opacity: 0.5 !important;
+    opacity: 1 !important;
   }
 
   .card {
