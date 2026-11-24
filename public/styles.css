@@ -1473,6 +1473,32 @@ select:focus {
   border-radius: 4px;
 }
 
+/* Authentic Ethiopian Joker Card */
+.card.card-joker-authentic {
+  padding: 0 !important;
+  overflow: hidden !important;
+  background: #ffffff !important;
+}
+
+.card.card-joker-authentic .joker-full-art {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  display: block !important;
+  border-radius: 8px !important;
+  pointer-events: none !important;
+  user-select: none !important;
+}
+
+.card.card-joker-authentic .card-joker-star {
+  position: absolute !important;
+  top: 3px !important;
+  right: 3px !important;
+  font-size: 13px !important;
+  z-index: 5 !important;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.6)) !important;
+}
+
 /* GEBI Slot */
 .gebi-slot {
   width: 90px;

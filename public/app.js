@@ -4367,32 +4367,37 @@ function createCardHTML(card, isSelected = false, isBaseJoker = false, zIndex = 
   const groupStartClass = card.isGroupStart ? 'group-start' : '';
   const delayStyle = animDelay ? `animation-delay: ${animDelay};` : '';
 
+  const baseBadge = isBaseJoker ? `<div class="card-base-badge">BASE ⭐</div>` : '';
+  const tetayBadge = card.isTetay ? `<div class="card-tetay-badge">ተጣይ 🔻</div>` : '';
+
+  if (isPrintedWildJoker || isFalse) {
+    const starHTML = `<div class="card-joker-star">⭐</div>`;
+    const falseHTML = isFalse ? `<div class="card-false-badge ${isRed ? 'red' : 'black'}">FALSE</div>` : '';
+    const jokerImgSrc = isRed ? '/images/joker_red.png' : '/images/joker_black.png';
+
+    return `
+      <div class="card card-joker-authentic ${colorClass} ${selectedClass} ${groupStartClass} ${animClass}" data-id="${card.id}" style="z-index: ${zIndex}; ${delayStyle} ${extraStyle}">
+        <img src="${jokerImgSrc}" class="joker-full-art" alt="Joker" />
+        ${starHTML}
+        ${falseHTML}
+        ${tetayBadge}
+        ${baseBadge}
+      </div>
+    `;
+  }
+
   let displayRank = card.rank;
   let cornerSuit = card.suit;
   let centerHTML = `<div class="card-center-suit">${card.suit}</div>`;
   let starHTML = '';
 
-  if (isFalse) {
-    displayRank = 'FALSE';
-    cornerSuit = '';
-    centerHTML = `<div class="card-center-suit" style="font-size: 22px;">🃏</div>`;
-    starHTML = `<div class="card-false-badge ${isRed ? 'red' : 'black'}">FALSE</div>`;
-  } else if (isPrintedWildJoker) {
-    // Seka 54-card deck printed Wild Joker
-    displayRank = 'JK';
-    cornerSuit = '★';
-    centerHTML = `<div class="card-center-suit" style="font-size: 22px;">🃏</div><div class="card-wild-label">WILD</div>`;
-    starHTML = `<div class="card-joker-star">⭐</div>`;
-  } else if (isDesignatedJoker) {
+  if (isDesignatedJoker) {
     // Conquer natural card designated as wild Joker (e.g. 7♠ or 7♣)
     displayRank = card.rank;
     cornerSuit = card.suit;
     centerHTML = `<div class="card-center-suit">${card.suit}</div>`;
     starHTML = `<div class="card-joker-star">⭐</div>`;
   }
-
-  const baseBadge = isBaseJoker ? `<div class="card-base-badge">BASE ⭐</div>` : '';
-  const tetayBadge = card.isTetay ? `<div class="card-tetay-badge">ተጣይ 🔻</div>` : '';
 
   return `
     <div class="card ${colorClass} ${selectedClass} ${groupStartClass} ${animClass}" data-id="${card.id}" style="z-index: ${zIndex}; ${delayStyle} ${extraStyle}">
@@ -4531,6 +4536,15 @@ function createMiniCardHTML(card) {
     return `
       <div class="mini-card ${colorClass}" style="background: rgba(15, 23, 42, 0.95); border-color: ${borderColor}; min-width: 34px; text-align: center;">
         <span style="font-size: 8px; font-weight: 900; color: ${textColor}; letter-spacing: 0.5px;">FALSE</span>
+      </div>
+    `;
+  }
+
+  const isPrintedJoker = (card.rank === 'JOKER' || card.suit === '🃏' || card.suitName === 'joker') && !isFalse;
+  if (isPrintedJoker) {
+    return `
+      <div class="mini-card ${colorClass}" style="padding: 1px; overflow: hidden; background: #ffffff; min-width: 32px; height: 44px; border: 1px solid rgba(0,0,0,0.2);">
+        <img src="/images/${isRed ? 'joker_red.png' : 'joker_black.png'}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 3px;" alt="Joker" />
       </div>
     `;
   }
