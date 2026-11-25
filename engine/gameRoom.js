@@ -13,10 +13,13 @@ const {
 const walletManager = require('./walletManager');
 
 class GameRoom {
-  constructor(roomId, creator, stakeAmount = 100) {
+  constructor(roomId, creator, stakeAmount = 100, maxPlayers = 2) {
     this.roomId = roomId;
     this.creator = creator; // { id, name, socketId }
-    this.joiner = null;     // { id, name, socketId }
+    this.joiner = null;     // { id, name, socketId } (2nd player, calls Joker)
+    this.maxPlayers = Math.min(4, Math.max(2, Number(maxPlayers) || 2));
+    this.players = [creator];
+    this.eliminatedPlayers = new Set();
     this.stakeAmount = stakeAmount;
     this.pot = 0;
     this.status = 'WAITING'; // WAITING, CUTTING_JOKER, PLAYING, FINISHED
@@ -26,13 +29,15 @@ class GameRoom {
     this.jokerCard = null;
     this.jokerRank = null;
 
-    this.creatorHand = [];
+    this.hands = {
+      [creator.id]: []
+    };
+    this.creatorHand = this.hands[creator.id];
     this.joinerHand = [];
 
-    // Table melds laid down by players: { creator: [groups], joiner: [groups] }
+    // Table melds laid down by players
     this.tableMelds = {
-      [creator.id]: [],
-      joiner: []
+      [creator.id]: []
     };
 
     this.currentTurnPlayerId = null;
@@ -102,24 +107,15 @@ class GameRoom {
     const cb = onTimeout || this.onLeaveTimeoutCallback;
     this.leaveTimeouts[userId] = setTimeout(() => {
       if (this.status === 'PLAYING' && this.temporarilyLeft[userId]) {
-        const opponent = this.getOpponent(userId);
-        if (!opponent) return;
-
-        this.status = 'FINISHED';
-        this.winner = opponent.id;
-        this.winReason = 'ABANDON_FORFEIT';
-        this.forfeitedPlayer = leftPlayer;
-
-        walletManager.payoutWinner(this.roomId, opponent.id);
-        this.log(`🏆 ❌ ${leftPlayer.name} በ1 ደቂቃ ውስጥ ስላልተመለሰ ተሸንፏል! ${opponent.name} አሸናፊ ሆኗል!`);
-
         delete this.temporarilyLeft[userId];
         delete this.leaveTimeouts[userId];
 
-        this.resetPoke();
-        this.clearAllTimers();
-
-        if (cb) cb(this, opponent, leftPlayer);
+        const elimRes = this.eliminateOrFinish(
+          userId,
+          'ABANDON_FORFEIT',
+          `❌ ${leftPlayer.name} በ1 ደቂቃ ውስጥ ስላልተመለሰ ተሸንፏል!`
+        );
+        if (cb) cb(this, elimRes.winner || null, leftPlayer, elimRes.gameFinished);
       }
     }, 60 * 1000);
   }
@@ -156,21 +152,74 @@ class GameRoom {
     if (this.status !== 'PLAYING') return;
     const timedOutId = this.currentTurnPlayerId;
     const timedOutName = this.getPlayerName(timedOutId);
-    const opponent = this.getOpponent(timedOutId);
-    if (!opponent) return;
-
-    this.status = 'FINISHED';
-    this.winner = opponent.id;
-    this.winReason = 'TIMEOUT_FORFEIT';
-    this.log(`🏆 ⏰ ${timedOutName} በ1 ደቂቃ ውስጥ ካርታ ስላልጣለ ተሸንፏል! ${opponent.name} አሸናፊ ሆኗል!`);
-
-    walletManager.payoutWinner(this.roomId, opponent.id);
-    this.resetPoke();
-    this.clearTurnTimer();
-
+    const elimRes = this.eliminateOrFinish(
+      timedOutId,
+      'TIMEOUT_FORFEIT',
+      `⏰ ${timedOutName} በ1 ደቂቃ ውስጥ ካርታ ስላልጣለ ተሸንፏል!`
+    );
     if (onTimeout) {
-      onTimeout(this, opponent, { id: timedOutId, name: timedOutName });
+      onTimeout(this, elimRes.winner || null, { id: timedOutId, name: timedOutName }, elimRes.gameFinished);
     }
+  }
+
+  getActivePlayers() {
+    return this.players.filter(p => !this.eliminatedPlayers.has(p.id));
+  }
+
+  getNextActivePlayer(currentPlayerId) {
+    const idx = this.players.findIndex(p => p.id === currentPlayerId);
+    if (idx === -1) return this.getActivePlayers()[0] || null;
+    for (let offset = 1; offset <= this.players.length; offset++) {
+      const candidate = this.players[(idx + offset) % this.players.length];
+      if (candidate && !this.eliminatedPlayers.has(candidate.id)) {
+        return candidate;
+      }
+    }
+    return null;
+  }
+
+  eliminateOrFinish(playerId, winReasonCode, logMsg) {
+    if (this.status !== 'PLAYING') return { gameFinished: false };
+    this.eliminatedPlayers.add(playerId);
+
+    // Return eliminated player's hand cards back into the shuffled deck
+    const hand = this.hands[playerId] || [];
+    if (hand.length > 0) {
+      this.deck.push(...hand);
+      this.hands[playerId] = [];
+      this.deck = shuffleDeck(this.deck);
+    }
+    if (this.mustMeld41PlayerId === playerId) {
+      this.mustMeld41PlayerId = null;
+    }
+
+    const active = this.getActivePlayers();
+    if (active.length <= 1) {
+      const winner = active[0] || this.creator;
+      this.status = 'FINISHED';
+      this.winner = winner.id;
+      this.winReason = winReasonCode;
+      this.forfeitedPlayer = { id: playerId, name: this.getPlayerName(playerId) };
+
+      const payout = walletManager.payoutWinner(this.roomId, winner.id);
+      this.log(`🏆 ${logMsg} ${winner.name} አሸናፊ ሆኗል!`);
+      this.resetPoke();
+      this.clearAllTimers();
+      return { gameFinished: true, winner, payout };
+    }
+
+    // 2+ active players remain: eliminate only this player and continue the game!
+    this.log(`${logMsg} (ቀሪ ${active.length} ተጫዋቾች ይቀጥላሉ!)`);
+    if (this.currentTurnPlayerId === playerId) {
+      const nextP = this.getNextActivePlayer(playerId);
+      if (nextP) {
+        this.currentTurnPlayerId = nextP.id;
+        this.turnState = 'AWAITING_DRAW';
+      }
+      this.resetPoke();
+      this.resetTurnTimer();
+    }
+    return { gameFinished: false, eliminatedId: playerId };
   }
 
   log(message) {
@@ -180,29 +229,47 @@ class GameRoom {
   }
 
   join(player) {
-    if (this.joiner) return { success: false, message: 'Room already full' };
-    this.joiner = player;
-    this.tableMelds[player.id] = [];
+    if (this.players.length >= this.maxPlayers) return { success: false, message: 'Room already full' };
+    if (this.players.some(p => p.id === player.id)) return { success: false, message: 'Already in room' };
 
-    // Lock bets into Escrow
-    const escrowResult = walletManager.lockEscrow(this.roomId, this.creator.id, this.joiner.id, this.stakeAmount);
+    this.players.push(player);
+    this.hands[player.id] = [];
+    this.tableMelds[player.id] = [];
+    if (!this.joiner) {
+      this.joiner = player;
+      this.joinerHand = this.hands[player.id];
+    }
+
+    this.log(`${player.name} joined the table (${this.players.length}/${this.maxPlayers}).`);
+
+    if (this.players.length < this.maxPlayers) {
+      return { success: true, waitingForMore: true };
+    }
+
+    // Lock bets into Escrow for all players once table is full
+    const escrowResult = walletManager.lockEscrow(this.roomId, this.players.map(p => p.id), this.stakeAmount);
     if (!escrowResult.success) {
-      this.joiner = null;
+      this.players.pop();
+      delete this.hands[player.id];
+      delete this.tableMelds[player.id];
+      if (this.joiner && this.joiner.id === player.id) this.joiner = null;
       return { success: false, message: escrowResult.message };
     }
     this.pot = escrowResult.pot;
 
-    // 54-Card 2-Deck Setup (cards will be dealt after Joiner calls Joker!)
+    // 108-Card 2-Deck Setup (cards will be dealt after Joiner calls Joker!)
     this.deck = shuffleDeck(createConquerDeck(2));
-    this.creatorHand = [];
-    this.joinerHand = [];
+    for (const p of this.players) {
+      this.hands[p.id] = [];
+    }
+    this.creatorHand = this.hands[this.creator.id];
+    this.joinerHand = this.joiner ? this.hands[this.joiner.id] : [];
     this.baseCard = null;
     this.jokerCard = null;
 
     // Transition to CUTTING_JOKER (Joiner chooses blindly BEFORE cards are dealt!)
     this.status = 'CUTTING_JOKER';
-    this.log(`${player.name} joined the table. Pot is ${this.pot} ETB.`);
-    this.log(`🎲 ${player.name} ካርታ ከመታደሉ በፊት በጭፍን ጆከር ይሰይማል (ከፍ፣ ዝቅ፣ አንድ ላይ፣ ወይም ጎን)።`);
+    this.log(`Pot is ${this.pot} ETB. 🎲 ${this.joiner.name} ካርታ ከመታደሉ በፊት በጭፍን ጆከር ይሰይማል (ከፍ፣ ዝቅ፣ አንድ ላይ፣ ወይም ጎን)።`);
 
     return { success: true };
   }
@@ -212,20 +279,23 @@ class GameRoom {
     if (this.status !== 'CUTTING_JOKER') {
       return { success: false, message: 'Not in cutting phase' };
     }
-    if (this.joiner.id !== playerId) {
+    if (!this.joiner || this.joiner.id !== playerId) {
       return { success: false, message: 'Only the Joiner can call the Joker!' };
     }
 
-    // 1. Deal 27 cards (14 to Creator, 13 to Joiner)
-    this.creatorHand = [];
-    this.joinerHand = [];
-
+    // 1. Deal 13 cards to each player, and 14th card to Creator
+    for (const p of this.players) {
+      this.hands[p.id] = [];
+    }
     for (let i = 0; i < 13; i++) {
-      this.creatorHand.push(this.deck.pop());
-      this.joinerHand.push(this.deck.pop());
+      for (const p of this.players) {
+        this.hands[p.id].push(this.deck.pop());
+      }
     }
     // Creator gets 14th card
-    this.creatorHand.push(this.deck.pop());
+    this.hands[this.creator.id].push(this.deck.pop());
+    this.creatorHand = this.hands[this.creator.id];
+    this.joinerHand = this.joiner ? this.hands[this.joiner.id] : [];
 
     // 2. Reveal the 28th card as the Base Card!
     this.baseCard = this.deck.pop();
@@ -316,18 +386,19 @@ class GameRoom {
         card.effectiveRank = this.jokerRank;
       }
     };
-    this.creatorHand.forEach(mark);
-    this.joinerHand.forEach(mark);
+    for (const p of this.players) {
+      (this.hands[p.id] || []).forEach(mark);
+    }
     this.deck.forEach(mark);
     this.discardPile.forEach(mark);
   }
 
   getHand(playerId) {
-    return playerId === this.creator.id ? this.creatorHand : this.joinerHand;
+    return this.hands[playerId] || [];
   }
 
   getOpponent(playerId) {
-    return playerId === this.creator.id ? this.joiner : this.creator;
+    return this.getNextActivePlayer(playerId) || this.players.find(p => p.id !== playerId) || null;
   }
 
   // Draw card: source = 'deck' | 'ground'
@@ -567,15 +638,6 @@ class GameRoom {
       }
     }
 
-    // If player picked from ground without having opened, they MUST close (leave <= 1 card to discard & win)!
-    if (this.mustMeld41PlayerId === playerId) {
-      const meldedCount = meldsToLayDown.reduce((sum, g) => sum + g.length, 0);
-      if (hand.length - meldedCount > 1) {
-        const forfeitRes = this.forfeitFromFailedGround(playerId);
-        return { success: true, isForfeit: true, ...forfeitRes };
-      }
-    }
-
     // Remove from hand and add to player's table melds
     for (const group of meldsToLayDown) {
       for (const card of group) {
@@ -595,19 +657,18 @@ class GameRoom {
     return { success: true, meldPoints, melds: meldsToLayDown };
   }
 
-  // Penalty: Player touched ground but cannot reach 41 -> IMMEDIATE FORFEIT!
+  // Penalty: Player picked from ground/base and failed to close -> ELIMINATE (or finish if 1 left)!
   forfeitFromFailedGround(playerId) {
     if (this.status !== 'PLAYING') return;
-    const opponent = this.getOpponent(playerId);
-    this.status = 'FINISHED';
-    this.winner = opponent.id;
-    this.winReason = `❌ ${this.getPlayerName(playerId)} 41 ሳይሞላ ከመሬት ስላነሳ ተሸንፏል! ${opponent.name} አሸናፊ ሆኗል!`;
-    this.log(`🏆 ${this.winReason}`);
-
-    const payout = walletManager.payoutWinner(this.roomId, opponent.id);
-    this.resetPoke();
-    this.clearTurnTimer();
-    return { winner: opponent.id, winReason: this.winReason, payout };
+    const elimRes = this.eliminateOrFinish(
+      playerId,
+      'GROUND_FORFEIT',
+      `❌ ${this.getPlayerName(playerId)} ከመሬት/ጆከር ስቦ ሳይዘጋ ስላጠፋ ተሸንፏል!`
+    );
+    if (elimRes.gameFinished && this.onTurnTimeoutCallback) {
+      // Wallet payout already happened inside eliminateOrFinish
+    }
+    return elimRes;
   }
 
   // Rule 7: Reshuffle when deck empties (No Draw/Tie)
@@ -718,6 +779,8 @@ class GameRoom {
   }
 
   getPlayerName(playerId) {
+    const found = this.players.find(p => p.id === playerId);
+    if (found) return found.name;
     if (this.creator && this.creator.id === playerId) return this.creator.name;
     if (this.joiner && this.joiner.id === playerId) return this.joiner.name;
     return 'Player';
@@ -725,10 +788,10 @@ class GameRoom {
 
   // Returns safe sanitized state for a specific player (anti-cheat: hide opponent's hand and deck)
   getClientState(playerId) {
-    const isCreator = this.creator && this.creator.id === playerId;
-    const myHand = isCreator ? this.creatorHand : this.joinerHand;
-    const opponent = isCreator ? this.joiner : this.creator;
-    const opponentHandCount = (isCreator ? this.joinerHand : this.creatorHand).length;
+    const myHand = this.getHand(playerId);
+    const otherPlayers = this.players.filter(p => p.id !== playerId);
+    const primaryOpp = this.getOpponent(playerId) || otherPlayers[0] || null;
+    const opponentHandCount = primaryOpp ? this.getHand(primaryOpp.id).length : 0;
 
     const pointsInfo = calculateHandPoints(myHand);
     const trisList = findHandTris(myHand, this.jokerRank);
@@ -742,6 +805,20 @@ class GameRoom {
     return {
       roomId: this.roomId,
       status: this.status,
+      maxPlayers: this.maxPlayers,
+      players: this.players.map(p => ({
+        id: p.id,
+        name: p.name,
+        handCount: (this.hands[p.id] || []).length,
+        eliminated: this.eliminatedPlayers.has(p.id)
+      })),
+      opponents: otherPlayers.map(p => ({
+        id: p.id,
+        name: p.name,
+        handCount: (this.hands[p.id] || []).length,
+        eliminated: this.eliminatedPlayers.has(p.id)
+      })),
+      eliminatedPlayers: Array.from(this.eliminatedPlayers),
       stakeAmount: this.stakeAmount,
       pot: this.pot,
       creator: { id: this.creator.id, name: this.creator.name },
@@ -762,8 +839,8 @@ class GameRoom {
       turnSecondsLeft: this.turnDeadline ? Math.max(0, Math.round((this.turnDeadline - Date.now()) / 1000)) : 60,
       myHand: myHand,
       opponentHandCount: opponentHandCount,
-      opponentHand: (this.status === 'FINISHED' && opponent) ? (isCreator ? this.joinerHand : this.creatorHand) : undefined,
-      opponent: opponent ? { id: opponent.id, name: opponent.name } : null,
+      opponentHand: (this.status === 'FINISHED' && primaryOpp) ? this.getHand(primaryOpp.id) : undefined,
+      opponent: primaryOpp ? { id: primaryOpp.id, name: primaryOpp.name } : null,
       tableMelds: this.tableMelds,
       points: pointsInfo.total,
       hasSpecial41: pointsInfo.hasSpecial41,

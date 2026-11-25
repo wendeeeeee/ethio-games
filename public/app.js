@@ -1050,6 +1050,15 @@ socket.on('player_abandoned', ({ winnerName, loserName, message }) => {
   }
 });
 
+socket.on('player_eliminated', ({ loserName, message }) => {
+  if (loserName && playerName && loserName === playerName) {
+    hideActiveGameReturnBanner();
+    showSortToast('❌ ከጨዋታው ተሸንፈህ ወጥተሃል! ቀሪዎቹ ተጫዋቾች ይቀጥላሉ!');
+  } else {
+    showSortToast(message || `❌ ${loserName || 'ተጫዋች'} ተሸንፎ ወጥቷል! ቀሪዎቹ ተጫዋቾች ይቀጥላሉ!`);
+  }
+});
+
 socket.on('room_created', ({ roomId }) => {
   currentRoomId = roomId;
   localStorage.setItem('conquer_active_room_id', roomId);
@@ -1663,8 +1672,10 @@ if (createRoomBtn) {
     }
     lastLobbyGameType = 'CONQUER';
     localStorage.setItem('conquer_last_game_type', 'CONQUER');
+    const conquerPlayersEl = document.getElementById('conquerPlayersSelect');
+    const maxPlayers = conquerPlayersEl ? Number(conquerPlayersEl.value) || 2 : 2;
     playCardSound();
-    socket.emit('create_room', { userId, name: playerName || 'ተጫዋች', stakeAmount });
+    socket.emit('create_room', { userId, name: playerName || 'ተጫዋች', stakeAmount, maxPlayers });
   });
 }
 
@@ -1707,7 +1718,7 @@ async function refreshRoomsList() {
       <div class="room-list-item">
         <div>
           <strong style="color: #0f172a;">${r.creatorName}</strong>
-          <div style="font-size: 12px; color: #64748b;">Stake: ${r.stakeAmount} ETB ${r.expiresIn ? `| <span style="color: #059669; font-weight: 700;">⏳ ${r.expiresIn}s ይቀራል</span>` : ''}</div>
+          <div style="font-size: 12px; color: #64748b;">Stake: ${r.stakeAmount} ETB | ${r.playersCount || 1}/${r.maxPlayers || 2} ተጫዋቾች ${r.expiresIn ? `| <span style="color: #059669; font-weight: 700;">⏳ ${r.expiresIn}s ይቀራል</span>` : ''}</div>
         </div>
         <button class="btn-primary" style="width: auto; padding: 6px 14px; font-size: 12px;" onclick="joinRoom('${r.roomId}')">Join Table</button>
       </div>
@@ -3939,10 +3950,18 @@ function renderGame(state) {
     }
   }
 
-  // Opponent display
-  const oppName = state.opponentName || (state.creator && state.creator.id !== userId ? state.creator.name : (state.joiner && state.joiner.id !== userId ? state.joiner.name : 'Opponent'));
-  opponentNameDisplay.textContent = oppName;
-  const oppCount = state.opponentCardCount !== undefined ? state.opponentCardCount : (state.opponentHandCount || 10);
+  // Opponent display (supports 2, 3, or 4 players)
+  let oppCount = state.opponentCardCount !== undefined ? state.opponentCardCount : (state.opponentHandCount || 10);
+  if (state.opponents && state.opponents.length > 1) {
+    opponentNameDisplay.innerHTML = state.opponents.map(o =>
+      `<span style="margin-right: 8px; ${o.eliminated ? 'text-decoration: line-through; color: #f87171;' : ''}">${o.name} (${o.eliminated ? '❌ ተሸንፏል' : o.handCount + ' ካርታ'})</span>`
+    ).join(' • ');
+    const activeOpp = state.opponents.find(o => !o.eliminated) || state.opponents[0];
+    oppCount = activeOpp ? activeOpp.handCount : 0;
+  } else {
+    const oppName = state.opponentName || (state.creator && state.creator.id !== userId ? state.creator.name : (state.joiner && state.joiner.id !== userId ? state.joiner.name : 'Opponent'));
+    opponentNameDisplay.textContent = oppName;
+  }
   opponentCardCount.textContent = oppCount;
   const isInitialDeal = !hasPlayedDealingAnim && state.status === 'PLAYING';
   const isFinished = state.status === 'FINISHED';
@@ -4880,12 +4899,21 @@ function renderTableMelds(state) {
   const myId = userId;
   const oppId = state.opponent ? state.opponent.id : null;
   const myMelds = state.tableMelds[myId] || [];
-  const oppMelds = oppId ? (state.tableMelds[oppId] || []) : [];
+  const oppEntries = [];
+  if (state.opponents && state.opponents.length > 0) {
+    for (const o of state.opponents) {
+      const list = state.tableMelds[o.id] || [];
+      list.forEach((group, mIdx) => oppEntries.push({ ownerId: o.id, meldIdx: mIdx, group }));
+    }
+  } else if (oppId) {
+    const list = state.tableMelds[oppId] || [];
+    list.forEach((group, mIdx) => oppEntries.push({ ownerId: oppId, meldIdx: mIdx, group }));
+  }
 
   const myMeldsBox = document.getElementById('myMeldsBox');
   const opponentMeldsBox = document.getElementById('opponentMeldsBox');
 
-  if (myMelds.length === 0 && oppMelds.length === 0) {
+  if (myMelds.length === 0 && oppEntries.length === 0) {
     tableMeldsArea.style.display = 'none';
     return;
   }
@@ -4907,11 +4935,11 @@ function renderTableMelds(state) {
   }
 
   if (opponentMeldsBox) {
-    if (oppMelds.length > 0) {
+    if (oppEntries.length > 0) {
       opponentMeldsBox.style.display = 'block';
-      opponentMeldsLabel.textContent = `${state.opponent ? state.opponent.name : 'ተቃራኒ'} የወረዱ (${oppMelds.length} ግሩፕ)`;
-      opponentMeldsContainer.innerHTML = oppMelds.map((group, mIdx) => `
-        <div class="table-meld-group" data-owner="${oppId}" data-meld-idx="${mIdx}" title="ካርታ ምረጥና እዚህ ላይ ገቢ አድርግ">
+      opponentMeldsLabel.textContent = `${state.opponent ? state.opponent.name : 'ተቃራኒ'} የወረዱ (${oppEntries.length} ግሩፕ)`;
+      opponentMeldsContainer.innerHTML = oppEntries.map(({ ownerId, meldIdx, group }) => `
+        <div class="table-meld-group" data-owner="${ownerId}" data-meld-idx="${meldIdx}" title="ካርታ ምረጥና እዚህ ላይ ገቢ አድርግ">
           ${group.map(c => createCardHTML(c, false, false)).join('')}
         </div>
       `).join('');

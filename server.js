@@ -425,6 +425,8 @@ app.get('/api/rooms', (req, res) => {
         roomId: room.roomId,
         creatorName: room.creator.name,
         stakeAmount: room.stakeAmount,
+        maxPlayers: room.maxPlayers || 2,
+        playersCount: room.players ? room.players.length : 1,
         expiresIn
       });
     }
@@ -478,8 +480,9 @@ io.on('connection', (socket) => {
   });
 
   // Create Table
-  socket.on('create_room', ({ userId, name, stakeAmount }) => {
+  socket.on('create_room', ({ userId, name, stakeAmount, maxPlayers }) => {
     const stake = Math.floor(Number(stakeAmount) || 0);
+    const numPlayers = Math.min(4, Math.max(2, Number(maxPlayers) || 2));
     if (stake < 5) {
       return socket.emit('error_msg', '⚠️ ዝቅተኛው የውርርድ መጠን 5 ብር ነው!');
     }
@@ -506,7 +509,7 @@ io.on('connection', (socket) => {
     });
 
     const roomId = `room_${Math.floor(1000 + Math.random() * 9000)}`;
-    const room = new GameRoom(roomId, { id: userId, name, socketId: socket.id }, Number(stakeAmount) || 100);
+    const room = new GameRoom(roomId, { id: userId, name, socketId: socket.id }, stake, numPlayers);
     attachConquerRoomCallbacks(room);
     room.createdAt = Date.now();
     room.expiresAt = Date.now() + 60 * 1000; // 1-minute expiration if no opponent joins
@@ -557,21 +560,25 @@ io.on('connection', (socket) => {
     const room = rooms.get(roomId);
     if (!room || room.status === 'EXPIRED') return socket.emit('error_msg', 'Room expired or not found');
 
-    if (room.expireTimeout) {
+    const result = room.join({ id: userId, name, socketId: socket.id });
+    if (!result.success) return socket.emit('error_msg', result.message);
+
+    if (room.players.length >= room.maxPlayers && room.expireTimeout) {
       clearTimeout(room.expireTimeout);
       room.expireTimeout = null;
     }
 
-    const result = room.join({ id: userId, name, socketId: socket.id });
-    if (!result.success) return socket.emit('error_msg', result.message);
-
     socketPlayerMap.set(socket.id, { userId, name, roomId });
     socket.join(roomId);
 
-    // Update wallet states
-    broadcastWallet(room.creator.id);
-    broadcastWallet(room.joiner.id);
+    // Update wallet states for all players once table is full & escrow locked
+    if (!result.waitingForMore) {
+      for (const p of room.players) {
+        if (p && p.id) broadcastWallet(p.id);
+      }
+    }
 
+    io.emit('rooms_updated');
     broadcastRoomUpdate(room);
   });
 
@@ -949,12 +956,14 @@ io.on('connection', (socket) => {
     }
     const cRoom = rooms.get(roomId);
     if (cRoom) {
-      const isPlayer = (cRoom.creator && cRoom.creator.id === userId) || (cRoom.joiner && cRoom.joiner.id === userId);
+      const pObj = cRoom.players ? cRoom.players.find(p => p.id === userId) : null;
+      const isPlayer = !!pObj || (cRoom.creator && cRoom.creator.id === userId) || (cRoom.joiner && cRoom.joiner.id === userId);
       if (isPlayer && (cRoom.status === 'PLAYING' || cRoom.status === 'WAITING' || cRoom.status === 'CUTTING_JOKER')) {
         cRoom.playerReturn(userId);
+        if (pObj) pObj.socketId = socket.id;
         if (cRoom.creator && cRoom.creator.id === userId) cRoom.creator.socketId = socket.id;
         if (cRoom.joiner && cRoom.joiner.id === userId) cRoom.joiner.socketId = socket.id;
-        const pName = (cRoom.creator && cRoom.creator.id === userId) ? cRoom.creator.name : (cRoom.joiner ? cRoom.joiner.name : '');
+        const pName = pObj ? pObj.name : ((cRoom.creator && cRoom.creator.id === userId) ? cRoom.creator.name : (cRoom.joiner ? cRoom.joiner.name : ''));
         socketPlayerMap.set(socket.id, { userId, name: pName, roomId, gameType: 'CONQUER' });
         socket.join(roomId);
         socket.emit('conquer_reconnect_success', { roomId, status: cRoom.status });
@@ -1010,39 +1019,56 @@ function attachSekaRoomCallbacks(room) {
 }
 
 function attachConquerRoomCallbacks(room) {
-  room.onTurnTimeoutCallback = (r, winner, loser) => {
-    if (r.creator) broadcastWallet(r.creator.id);
-    if (r.joiner) broadcastWallet(r.joiner.id);
+  room.onTurnTimeoutCallback = (r, winner, loser, gameFinished = true) => {
+    for (const p of (r.players || [])) {
+      if (p && p.id) broadcastWallet(p.id);
+    }
     broadcastRoomUpdate(r);
-    io.to(r.roomId).emit('player_timed_out', {
-      winnerName: winner ? winner.name : 'Opponent',
-      loserName: loser ? loser.name : 'Player',
-      message: `⏰ ${loser ? loser.name : 'ተጫዋች'} በ1 ደቂቃ ውስጥ ካርታ ስላልጣለ ተሸንፏል! ${winner ? winner.name : 'ተጋጣሚ'} አሸነፈ!`
-    });
+    if (gameFinished) {
+      io.to(r.roomId).emit('player_timed_out', {
+        winnerName: winner ? winner.name : 'Opponent',
+        loserName: loser ? loser.name : 'Player',
+        message: `⏰ ${loser ? loser.name : 'ተጫዋች'} በ1 ደቂቃ ውስጥ ካርታ ስላልጣለ ተሸንፏል! ${winner ? winner.name : 'ተጋጣሚ'} አሸነፈ!`
+      });
+    } else {
+      io.to(r.roomId).emit('player_eliminated', {
+        loserName: loser ? loser.name : 'Player',
+        message: `⏰ ${loser ? loser.name : 'ተጫዋች'} በ1 ደቂቃ ውስጥ ካርታ ስላልጣለ ተሸንፎ ወጥቷል! ቀሪዎቹ ተጫዋቾች ይቀጥላሉ!`
+      });
+    }
   };
-  room.onLeaveTimeoutCallback = (r, winner, loser) => {
-    if (r.creator) broadcastWallet(r.creator.id);
-    if (r.joiner) broadcastWallet(r.joiner.id);
+  room.onLeaveTimeoutCallback = (r, winner, loser, gameFinished = true) => {
+    for (const p of (r.players || [])) {
+      if (p && p.id) broadcastWallet(p.id);
+    }
     broadcastRoomUpdate(r);
-    io.to(r.roomId).emit('player_abandoned', {
-      winnerName: winner ? winner.name : 'Opponent',
-      loserName: loser ? loser.name : 'Player',
-      message: `❌ ${loser ? loser.name : 'ተጫዋች'} በ1 ደቂቃ ውስጥ ስላልተመለሰ ተሸንፏል! ${winner ? winner.name : 'ተጋጣሚ'} አሸነፈ!`
-    });
+    if (gameFinished) {
+      io.to(r.roomId).emit('player_abandoned', {
+        winnerName: winner ? winner.name : 'Opponent',
+        loserName: loser ? loser.name : 'Player',
+        message: `❌ ${loser ? loser.name : 'ተጫዋች'} በ1 ደቂቃ ውስጥ ስላልተመለሰ ተሸንፏል! ${winner ? winner.name : 'ተጋጣሚ'} አሸነፈ!`
+      });
+    } else {
+      io.to(r.roomId).emit('player_eliminated', {
+        loserName: loser ? loser.name : 'Player',
+        message: `❌ ${loser ? loser.name : 'ተጫዋች'} በ1 ደቂቃ ውስጥ ስላልተመለሰ ተሸንፎ ወጥቷል! ቀሪዎቹ ተጫዋቾች ይቀጥላሉ!`
+      });
+    }
   };
 }
 
 // Broadcast room state individually to players (hiding opponent's cards)
 function broadcastRoomUpdate(room) {
-  if (room.creator && room.creator.socketId) {
-    io.to(room.creator.socketId).emit('game_state', room.getClientState(room.creator.id));
-  }
-  if (room.joiner && room.joiner.socketId) {
-    io.to(room.joiner.socketId).emit('game_state', room.getClientState(room.joiner.id));
+  const players = room.players || [room.creator, room.joiner].filter(Boolean);
+  for (const p of players) {
+    if (p && p.socketId) {
+      io.to(p.socketId).emit('game_state', room.getClientState(p.id));
+    }
   }
   if (room.status === 'FINISHED') {
-    if (room.creator) broadcastWallet(room.creator.id);
-    if (room.joiner) broadcastWallet(room.joiner.id);
+    for (const p of players) {
+      if (p && p.id) broadcastWallet(p.id);
+    }
   }
 }
 
