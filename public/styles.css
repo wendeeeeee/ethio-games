@@ -1761,7 +1761,7 @@ select:focus {
   justify-content: center;
   align-items: center;
   width: 100%;
-  background: linear-gradient(to top, rgba(20, 83, 45, 0.96) 75%, transparent);
+  background: transparent;
 }
 
 .ctrl-btn {

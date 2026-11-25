@@ -4413,18 +4413,18 @@ function getResponsiveFanGeometry(totalCards) {
   } else if (w <= 1400) {
     // Standard Desktop / Laptops (769px - 1400px)
     maxAngle = 28;
-    spacing = Math.min(36, Math.max(26, Math.floor(460 / count)));
+    spacing = Math.min(42, Math.max(28, Math.floor(520 / count)));
   } else {
     // Large Desktop Screens (1401px+)
     maxAngle = 28;
-    spacing = Math.min(38, Math.max(28, Math.floor(500 / count)));
+    spacing = Math.min(46, Math.max(30, Math.floor(580 / count)));
   }
 
-  // Scale fan angle down when few cards remain so cards stay together without gaps
+  // Gently scale fan angle when very few cards remain
   if (totalCards <= 1) {
     maxAngle = 0;
   } else {
-    maxAngle = Math.max(4, Math.round(maxAngle * Math.min(1, count / 10)));
+    maxAngle = Math.max(6, Math.round(maxAngle * Math.min(1, count / 6)));
   }
 
   return { maxAngle, spacing };
