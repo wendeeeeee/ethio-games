@@ -1948,8 +1948,10 @@ function handleDrawAction(source) {
     return;
   }
   if (currentGameState.turnState !== 'AWAITING_DRAW') {
-    if (currentGameState.myHand && currentGameState.myHand.length >= 11) {
+    if (currentGameState.gameType === 'SEKA' && currentGameState.myHand && currentGameState.myHand.length >= 11) {
       showSortToast('⚠️ 11 ካርታ ስላለህ መጀመሪያ 1 ካርታ መሬት ላይ ጣል!');
+    } else if (currentGameState.gameType !== 'SEKA' && currentGameState.myHand && currentGameState.myHand.length >= 14) {
+      showSortToast('⚠️ 14 ካርታ ስላለህ መጀመሪያ 1 ካርታ መሬት ላይ ጣል!');
     } else {
       showSortToast('⚠️ አስቀድመህ ካርታ ስበሃል፤ አሁን 1 ካርታ መሬት ላይ ጣል!');
     }
