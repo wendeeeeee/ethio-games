@@ -9,7 +9,8 @@ const {
   isValidQuatris,
   isCardGebiToTable,
   isCardGebiToMeld,
-  getJokerReplacementOptions
+  getJokerReplacementOptions,
+  sortMeldCards
 } = require('./conquerRules');
 const walletManager = require('./walletManager');
 
@@ -658,7 +659,7 @@ class GameRoom {
         }
       }
       if (!this.tableMelds[playerId]) this.tableMelds[playerId] = [];
-      this.tableMelds[playerId].push(laidGroup);
+      this.tableMelds[playerId].push(sortMeldCards(laidGroup, this.jokerRank, this.jokerSuits));
     }
 
     // Clear ground-draw lock once total table melds reach 41 points OR all 13 cards are laid down (1 left to discard & win)
@@ -781,6 +782,7 @@ class GameRoom {
     // Swap
     delete stolenJoker.assignedCard;
     targetMeld[jokerIndex] = naturalCard;
+    melds[meldIndex] = sortMeldCards(targetMeld, this.jokerRank, this.jokerSuits);
     playerHand.splice(naturalCardIndex, 1);
     playerHand.push(stolenJoker);
 
@@ -811,8 +813,9 @@ class GameRoom {
       return { success: false, message: 'ይህ ካርታ ወደዚህ ሜልድ ገቢ (GEBI) መሆን አይችልም!' };
     }
 
-    // Attach card to target meld
+    // Attach card to target meld and sort into proper sequence order (e.g. 2 + 3-4-5 -> 2-3-4-5)
     targetMeld.push(card);
+    melds[meldIndex] = sortMeldCards(targetMeld, this.jokerRank, this.jokerSuits);
     playerHand.splice(cardIndex, 1);
 
     this.log(`📥 ${this.getPlayerName(playerId)} attached ${card.rank}${card.suit} to table meld (ገቢ አደረገ)!`);

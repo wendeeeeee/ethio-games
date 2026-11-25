@@ -436,6 +436,39 @@ function getJokerReplacementOptions(meld, jokerRank, jokerSuits) {
   return options;
 }
 
+function sortMeldCards(meld, jokerRank, jokerSuits) {
+  if (!meld || meld.length <= 1) return meld;
+  const isJk = (c) => isWildJoker(c, jokerRank, jokerSuits);
+  const naturals = meld.filter(c => !isJk(c));
+  if (naturals.length === 0) return meld;
+
+  const getRank = (c) => (c.isFalseJoker ? jokerRank : c.rank);
+  const firstRank = getRank(naturals[0]);
+  if (firstRank && naturals.every(c => getRank(c) === firstRank)) {
+    // Same-rank set: keep naturals first, sorted by suit, then any joker
+    const suitOrder = { '♠': 1, '♥': 2, '♦': 3, '♣': 4 };
+    const sortedNat = [...naturals].sort((a, b) => (suitOrder[a.suit] || 9) - (suitOrder[b.suit] || 9));
+    const jokers = meld.filter(isJk);
+    return [...sortedNat, ...jokers];
+  }
+
+  // Sequence: determine whether Ace is high (14) or low (1)
+  const hasHighFace = naturals.some(c => ['J', 'Q', 'K'].includes(getRank(c)));
+  const getOrder = (rank) => (rank === 'A' && hasHighFace ? 14 : (RANK_ORDER[rank] || 0));
+
+  const getCardSortVal = (c) => {
+    if (isJk(c)) {
+      if (c.assignedCard && c.assignedCard.rank) {
+        return getOrder(c.assignedCard.rank);
+      }
+      return 99;
+    }
+    return getOrder(getRank(c));
+  };
+
+  return [...meld].sort((a, b) => getCardSortVal(a) - getCardSortVal(b));
+}
+
 module.exports = {
   isWildJoker,
   isNaturalMeld,
@@ -448,6 +481,7 @@ module.exports = {
   validateConquerHand,
   isCardGebiToMeld,
   isCardGebiToTable,
-  getJokerReplacementOptions
+  getJokerReplacementOptions,
+  sortMeldCards
 };
 
