@@ -461,6 +461,60 @@ test('Auto-reconnect on refresh: recovers active room and player cards while pre
   room.clearAllTimers();
 });
 
+test('Conquer win: meld 13 cards via ወረድ + ገቢ and discard final 14th card to win', () => {
+  const GameRoom = require('./engine/gameRoom');
+  const room = new GameRoom('conquer_win_test', { id: 'p1', name: 'A', socketId: 's1' }, 100);
+  room.join({ id: 'p2', name: 'B', socketId: 's2' });
+  room.setJokerHighLow('p2', 'high');
+  room.status = 'PLAYING';
+  room.currentTurnPlayerId = 'p1';
+  room.turnState = 'AWAITING_DISCARD';
+
+  // Give P1 14 cards: 3 melds (3+3+6=12) + 1 gebi card (7♥) + 1 final discard (K♣)
+  const meld1 = [
+    { id: 'c1', rank: '4', suit: '♥', pointValue: 4 },
+    { id: 'c2', rank: '5', suit: '♥', pointValue: 5 },
+    { id: 'c3', rank: '6', suit: '♥', pointValue: 6 }
+  ];
+  const meld2 = [
+    { id: 'c4', rank: '10', suit: '♠', pointValue: 10 },
+    { id: 'c5', rank: 'J', suit: '♠', pointValue: 10 },
+    { id: 'c6', rank: 'Q', suit: '♠', pointValue: 10 }
+  ];
+  const meld3 = [
+    { id: 'c7', rank: '9', suit: '♦', pointValue: 9 },
+    { id: 'c8', rank: '9', suit: '♣', pointValue: 9 },
+    { id: 'c9', rank: '9', suit: '♥', pointValue: 9 }
+  ];
+  const meld4 = [
+    { id: 'c10', rank: '2', suit: '♣', pointValue: 2 },
+    { id: 'c11', rank: '3', suit: '♣', pointValue: 3 },
+    { id: 'c12', rank: '4', suit: '♣', pointValue: 4 }
+  ];
+  const gebiCard = { id: 'c13', rank: '7', suit: '♥', pointValue: 7 };
+  const finalDiscard = { id: 'c14', rank: 'K', suit: '♣', pointValue: 10 };
+
+  room.creatorHand = [...meld1, ...meld2, ...meld3, ...meld4, gebiCard, finalDiscard];
+  room.jokerRank = 'A';
+  room.jokerSuits = ['♠', '♥'];
+
+  // 1. Lay down 12 cards via ወረድ
+  const meldRes = room.layDownMelds('p1', [meld1, meld2, meld3, meld4]);
+  assert(meldRes.success, 'Laying down 4 valid melds should succeed');
+  assert(room.creatorHand.length === 2, '2 cards left (1 gebi + 1 final discard)');
+
+  // 2. Attach 13th card (7♥) via ገቢ onto meld1
+  const gebiRes = room.attachGebiCard('p1', 'p1', 0, 'c13');
+  assert(gebiRes.success, 'Attaching 7♥ via ገቢ should succeed');
+  assert(room.creatorHand.length === 1, 'Only 1 final card left in hand');
+
+  // 3. Discard the final 14th card -> immediate CONQUER WIN!
+  const discardRes = room.discardCard('p1', 'c14');
+  assert(discardRes.success && discardRes.isWin, 'Discarding final 14th card after melding 13 must win Conquer!');
+  assert(room.status === 'FINISHED', 'Conquer room should be FINISHED');
+  assert(room.winner === 'p1', 'P1 should be declared Conquer winner');
+});
+
 // ==============================================================
 console.log('\n✨ 8. SMART SORT SEKA RULES (User Defined Cases)');
 // ==============================================================

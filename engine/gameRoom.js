@@ -275,6 +275,19 @@ class GameRoom {
 
     const [discardedCard] = hand.splice(cardIndex, 1);
 
+    // Conquer Win Condition: All 13 cards melded onto table (via ወረድ + ገቢ) and final 14th card discarded -> WIN!
+    if (hand.length === 0) {
+      this.discardPile.push(discardedCard);
+      this.status = 'FINISHED';
+      this.winner = playerId;
+      this.winReason = `👑 ኮንከር! ${this.getPlayerName(playerId)} 13ቱንም ካርታ አውርዶ መጨረሻ ላይ ${discardedCard.rank}${discardedCard.suit} በመጣል አሸነፈ!`;
+      this.log(`🏆 ${this.winReason}`);
+
+      const payout = walletManager.payoutWinner(this.roomId, playerId);
+      this.resetPoke();
+      return { success: true, isWin: true, winner: playerId, payout };
+    }
+
     // Rule: GEBI (ገቢ) Restriction on Discarding
     // A player CANNOT discard a card to ground if it can be GEBI into any open table meld!
     if (!toGebi && isCardGebiToTable(discardedCard, this.tableMelds, this.jokerRank, this.jokerSuits)) {
@@ -580,6 +593,7 @@ class GameRoom {
       topGroundCard: groundCard,
       groundCardCount: this.discardPile.length,
       deckCardCount: this.deck.length,
+      remainingDeckCards: (this.status === 'FINISHED') ? [...this.deck] : undefined,
       isFirstDiscard: this.isFirstDiscard,
       currentTurnPlayerId: this.currentTurnPlayerId,
       turnState: this.turnState,

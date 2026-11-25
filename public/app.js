@@ -2239,10 +2239,10 @@ discardBtn.addEventListener('click', () => {
 
   const cardToDiscard = selectedCardId || Array.from(selectedCardsSet)[0];
   const cardObj = currentGameState.myHand?.find(c => c.id === cardToDiscard);
+  const isLastCardWin = currentGameState.myHand && currentGameState.myHand.length === 1;
 
-  // Rule: GEBI (ገቢ) Restriction on Discarding
-  // A player CANNOT discard a card to ground if it can be GEBI into any open table meld!
-  if (cardObj && isCardGebiToTable(cardObj, currentGameState.tableMelds, currentGameState.jokerRank, currentGameState.jokerSuits)) {
+  // Rule: GEBI (ገቢ) Restriction on Discarding (exempt final winning 14th discard!)
+  if (!isLastCardWin && cardObj && isCardGebiToTable(cardObj, currentGameState.tableMelds, currentGameState.jokerRank, currentGameState.jokerSuits)) {
     showSortToast(`⚠️ [ ${cardObj.rank}${cardObj.suit} ] ወደ ጠረጴዛው ሜልድ ገቢ (GEBI) ስለሚሆን ወደ መሬት መጣል አትችልም! ጠረጴዛው ላይ ገቢ አድርግ ወይም ሌላ ካርታ ጣል!`);
     return;
   }
