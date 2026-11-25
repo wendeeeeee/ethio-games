@@ -415,7 +415,8 @@ function updateTurnDisplay(state) {
   }
 
   const elapsed = Math.floor((Date.now() - s._clientReceivedAt) / 1000);
-  let sec = Math.max(0, (s._serverSecondsLeft || 60) - elapsed);
+  const baseLeft = typeof s._serverSecondsLeft === 'number' ? s._serverSecondsLeft : 60;
+  let sec = Math.max(0, baseLeft - elapsed);
   sec = Math.min(60, Math.max(0, sec));
 
   if (isMyTurn) {

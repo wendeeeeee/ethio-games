@@ -138,7 +138,7 @@ class GameRoom {
     if (this.status !== 'PLAYING') return;
 
     this.turnDeadline = Date.now() + this.turnDuration;
-    if (!this.currentTurnPlayerId || String(this.currentTurnPlayerId).startsWith('bot_')) {
+    if (!this.currentTurnPlayerId) {
       return;
     }
 
