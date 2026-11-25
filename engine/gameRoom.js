@@ -384,15 +384,6 @@ class GameRoom {
     if (this.currentTurnPlayerId !== playerId) return { success: false, message: 'Not your turn' };
     if (this.turnState !== 'AWAITING_DISCARD') return { success: false, message: 'You must draw first' };
 
-    // Player picked from ground and must meld 41 before discarding
-    if (this.mustMeld41PlayerId === playerId) {
-      return {
-        success: false,
-        mustMeld41: true,
-        message: 'ከመሬት ስላነሳህ ቢያንስ 41 ነጥብ ሳታወርድ ካርታ ወደ መሬት መጣል አትችልም!'
-      };
-    }
-
     const hand = this.getHand(playerId);
     const cardIndex = hand.findIndex(c => c.id === cardId);
     if (cardIndex === -1) return { success: false, message: 'Card not in your hand' };
@@ -401,6 +392,7 @@ class GameRoom {
 
     // Conquer Win Condition: All 13 cards melded onto table (via ወረድ + ገቢ) and final 14th card discarded -> WIN!
     if (hand.length === 0) {
+      this.mustMeld41PlayerId = null;
       this.discardPile.push(discardedCard);
       this.status = 'FINISHED';
       this.winner = playerId;
@@ -413,27 +405,19 @@ class GameRoom {
       return { success: true, isWin: true, winner: playerId, payout };
     }
 
-    // Rule: GEBI (ገቢ) Restriction on Discarding
-    // A player CANNOT discard a card to ground if it can be GEBI into any open table meld!
-    if (!toGebi && isCardGebiToTable(discardedCard, this.tableMelds, this.jokerRank, this.jokerSuits)) {
-      hand.splice(cardIndex, 0, discardedCard); // restore card
-      return {
-        success: false,
-        isGebi: true,
-        message: `⚠️ [ ${discardedCard.rank}${discardedCard.suit} ] ወደ ጠረጴዛው ሜልድ ገቢ (GEBI) ስለሚሆን ወደ መሬት መጣል አትችልም! ሌላ ካርታ ምረጥ።`
-      };
-    }
-
-    // Finishing Conquer (Rule 5 & 12)
+    // Finishing Conquer directly from hand (Rule 5 & 12) — allowed even without 41 on table!
     if (toGebi) {
-      const winValidation = validateConquerHand(melds, discardedCard, this.jokerRank, this.jokerCard);
+      const winValidation = validateConquerHand(melds, discardedCard, this.jokerRank, this.jokerCard, this.jokerSuits);
       if (!winValidation.valid) {
-        // Return card to hand if invalid
-        hand.push(discardedCard);
+        hand.splice(cardIndex, 0, discardedCard);
+        if (this.mustMeld41PlayerId === playerId) {
+          const forfeitRes = this.forfeitFromFailedGround(playerId);
+          return { success: true, isForfeit: true, ...forfeitRes };
+        }
         return { success: false, message: `Cannot Conquer: ${winValidation.message}` };
       }
 
-      // Valid Conquer!
+      this.mustMeld41PlayerId = null;
       this.status = 'FINISHED';
       this.winner = playerId;
       this.winReason = `CONQUER! ${this.getPlayerName(playerId)} discarded ${discardedCard.rank}${discardedCard.suit} and won!`;
@@ -443,6 +427,24 @@ class GameRoom {
       this.resetPoke();
       this.clearTurnTimer();
       return { success: true, isWin: true, winner: playerId, payout };
+    }
+
+    // Player picked from ground without having opened: MUST close & win! Otherwise immediate forfeit!
+    if (this.mustMeld41PlayerId === playerId) {
+      hand.splice(cardIndex, 0, discardedCard);
+      const forfeitRes = this.forfeitFromFailedGround(playerId);
+      return { success: true, isForfeit: true, ...forfeitRes };
+    }
+
+    // Rule: GEBI (ገቢ) Restriction on Discarding
+    // A player CANNOT discard a card to ground if it can be GEBI into any open table meld!
+    if (isCardGebiToTable(discardedCard, this.tableMelds, this.jokerRank, this.jokerSuits)) {
+      hand.splice(cardIndex, 0, discardedCard); // restore card
+      return {
+        success: false,
+        isGebi: true,
+        message: `⚠️ [ ${discardedCard.rank}${discardedCard.suit} ] ወደ ጠረጴዛው ሜልድ ገቢ (GEBI) ስለሚሆን ወደ መሬት መጣል አትችልም! ሌላ ካርታ ምረጥ።`
+      };
     }
 
     // Normal discard to Ground
@@ -527,6 +529,10 @@ class GameRoom {
     let meldPoints = 0;
     for (const group of meldsToLayDown) {
       if (!isValidTris(group, this.jokerRank, this.jokerSuits) && !isValidQuatris(group, this.jokerRank, this.jokerSuits)) {
+        if (this.mustMeld41PlayerId === playerId) {
+          const forfeitRes = this.forfeitFromFailedGround(playerId);
+          return { success: true, isForfeit: true, ...forfeitRes };
+        }
         return { success: false, message: 'ያልተሟላ ወይም የተሳሳተ ትሪስ/ሜልድ ነው!' };
       }
       for (const c of group) {
@@ -542,6 +548,15 @@ class GameRoom {
       }
     }
 
+    // If player picked from ground without having opened, they MUST close (leave <= 1 card to discard & win)!
+    if (this.mustMeld41PlayerId === playerId) {
+      const meldedCount = meldsToLayDown.reduce((sum, g) => sum + g.length, 0);
+      if (hand.length - meldedCount > 1) {
+        const forfeitRes = this.forfeitFromFailedGround(playerId);
+        return { success: true, isForfeit: true, ...forfeitRes };
+      }
+    }
+
     // Remove from hand and add to player's table melds
     for (const group of meldsToLayDown) {
       for (const card of group) {
@@ -552,11 +567,8 @@ class GameRoom {
       this.tableMelds[playerId].push(group);
     }
 
-    // Clear ground-draw 41 requirement once total melds reach 41 points
-    const totalTablePoints = (this.tableMelds[playerId] || []).reduce(
-      (sum, m) => sum + m.reduce((mSum, c) => mSum + (c.pointValue || 0), 0), 0
-    );
-    if (this.mustMeld41PlayerId === playerId && totalTablePoints >= 41) {
+    // Clear ground-draw lock once player has laid down all 13 cards (1 card left to discard & win)
+    if (this.mustMeld41PlayerId === playerId && hand.length <= 1) {
       this.mustMeld41PlayerId = null;
     }
 

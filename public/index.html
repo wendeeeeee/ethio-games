@@ -285,21 +285,21 @@
             <!-- Face-up Remaining Deck Container on Game Finished -->
             <div id="remainingDeckDisplay" class="remaining-deck-cards" style="display: none;"></div>
           </div>
-          <div class="slot-label" id="stockDeckSlotLabel">ዴክ (Deck)</div>
+          <div class="slot-label" id="stockDeckSlotLabel" style="display: none;">ዴክ (Deck)</div>
           <!-- Chosen Joker Display Badge (ሳብ በሚለው ቦታ ላይ) -->
           <div id="deckJokerCallBadge" class="deck-joker-call-badge" style="display: none;"></div>
-          <button class="draw-action-btn" id="drawDeckBtn">ሳብ</button>
+          <button class="draw-action-btn" id="drawDeckBtn" style="display: none;">ሳብ</button>
         </div>
 
         <!-- Discard Pile (Meret / Ground) -->
-        <div class="deck-slot" id="groundDiscardSlot">
+        <div class="deck-slot" id="groundDiscardSlot" style="cursor: pointer;">
           <div id="groundCardContainer">
             <div class="card"
               style="border: 2px dashed #94a3b8; display: flex; align-items: center; justify-content: center; color: #94a3b8; font-size: 12px;">
               ባዶ</div>
           </div>
-          <div class="slot-label">መሬት</div>
-          <button class="draw-action-btn ground-btn" id="takeGroundBtn">ከመሬት አንሳ</button>
+          <div class="slot-label" style="display: none;">መሬት</div>
+          <button class="draw-action-btn ground-btn" id="takeGroundBtn" style="display: none;">ከመሬት አንሳ</button>
         </div>
 
       </div>
@@ -308,11 +308,11 @@
       <div class="table-melds-area" id="tableMeldsArea" style="display: none;">
         <div class="table-melds-row">
           <div class="table-melds-player" id="opponentMeldsBox" style="display: none;">
-            <div class="melds-player-name" id="opponentMeldsLabel">የተቃራኒ የወረዱ ካርታዎች</div>
+            <div class="melds-player-name" id="opponentMeldsLabel" style="display: none;"></div>
             <div class="melds-cards-row" id="opponentMeldsContainer"></div>
           </div>
           <div class="table-melds-player" id="myMeldsBox" style="display: none;">
-            <div class="melds-player-name" id="myMeldsLabel">የወረዱ ካርታዎችህ</div>
+            <div class="melds-player-name" id="myMeldsLabel" style="display: none;"></div>
             <div class="melds-cards-row" id="myMeldsContainer"></div>
           </div>
         </div>

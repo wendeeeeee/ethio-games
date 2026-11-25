@@ -2021,6 +2021,12 @@ function handleWeredAction() {
       currentGameState.jokerSuits
     );
     if (!validPartition) {
+      if (currentGameState.mustMeld41) {
+        socket.emit('forfeit_ground_fail', { roomId: currentRoomId, userId });
+        selectedCardsSet.clear();
+        selectedCardId = null;
+        return;
+      }
       const cardNames = selectedCards.map(c => `${c.rank}${c.suit}`).join(' ');
       return alert(`የመረጥካቸው ካርታዎች [ ${cardNames} ] ትክክለኛ ትሪስ (Meld) አልሰሩም!\nተመሳሳይ ቁጥር (ለምሳሌ 7♥ 7♦ 7♠) ወይም ተከታታይ ካርታዎች (ለምሳሌ 5♥ 6♥ 7♥) መሆን አለባቸው።`);
     }
@@ -2291,24 +2297,36 @@ discardBtn.addEventListener('click', () => {
     return;
   }
 
-  // If user drew from ground, they MUST meld 41 before discarding!
-  if (currentGameState.mustMeld41) {
-    if (confirm('⚠️ ከመሬት ስላነሳህ 41 ሳታወርድ ወደ መሬት መጣል አትችልም!\n\n41 ማውረድ ካልቻልክ ጨዋታውን ትሸነፋለህ! እጅ መስጠት (መሸነፍ) ትፈልጋለህ?')) {
-      socket.emit('forfeit_ground_fail', { roomId: currentRoomId, userId });
-    }
-    return;
-  }
-
   const cardToDiscard = selectedCardId || Array.from(selectedCardsSet)[0];
   if (selectedCardsSet.size > 1) {
     showSortToast('⚠️ መሬት ለመጣል 1 ካርታ ብቻ ይምረጡ!');
     return;
   }
   const cardObj = currentGameState.myHand?.find(c => c.id === cardToDiscard);
-  const isLastCardWin = currentGameState.myHand && currentGameState.myHand.length === 1;
+  const remainingAfterDiscard = (currentGameState.myHand || []).filter(c => c.id !== cardToDiscard);
+  const isLastCardWin = remainingAfterDiscard.length === 0;
 
-  // Rule: GEBI (ገቢ) Restriction on Discarding (exempt final winning 14th discard!)
-  if (!isLastCardWin && cardObj && isCardGebiToTable(cardObj, currentGameState.tableMelds, currentGameState.jokerRank, currentGameState.jokerSuits)) {
+  let winningMelds = (currentGameState._winningMelds && currentGameState._winningMelds.length >= 3)
+    ? currentGameState._winningMelds
+    : null;
+  if (!winningMelds && remainingAfterDiscard.length === 13) {
+    const autoMelds = partitionIntoValidMelds(remainingAfterDiscard, currentGameState.jokerRank, currentGameState.jokerSuits);
+    if (autoMelds && autoMelds.length >= 3) {
+      winningMelds = autoMelds;
+    }
+  }
+  const isWinningHand = !!winningMelds || isLastCardWin;
+
+  // If user drew from ground without having opened, they MUST close & win! Otherwise forfeit!
+  if (currentGameState.mustMeld41 && !isWinningHand) {
+    if (confirm('⚠️ ከመሬት ስላነሳህ ጨዋታውን ሳትዘጋ (ሳታሸንፍ) ካርታ መጣል አትችልም! ብትጥል ትሸነፋለህ — እርግጠኛ ነህ?')) {
+      socket.emit('forfeit_ground_fail', { roomId: currentRoomId, userId });
+    }
+    return;
+  }
+
+  // Rule: GEBI (ገቢ) Restriction on Discarding (exempt final winning discard!)
+  if (!isWinningHand && cardObj && isCardGebiToTable(cardObj, currentGameState.tableMelds, currentGameState.jokerRank, currentGameState.jokerSuits)) {
     showSortToast(`⚠️ [ ${cardObj.rank}${cardObj.suit} ] ወደ ጠረጴዛው ሜልድ ገቢ (GEBI) ስለሚሆን ወደ መሬት መጣል አትችልም! ጠረጴዛው ላይ ገቢ አድርግ ወይም ሌላ ካርታ ጣል!`);
     return;
   }
@@ -2324,14 +2342,12 @@ discardBtn.addEventListener('click', () => {
     }
   }
 
-  // If hand has 13 cards fully melded (Conquer), discarding the 14th card claims the win!
-  const isWinningHand = currentGameState._winningMelds && currentGameState._winningMelds.length >= 3;
   socket.emit('discard_card', {
     roomId: currentRoomId,
     userId,
     cardId: cardToDiscard,
-    toGebi: isWinningHand,
-    melds: isWinningHand ? currentGameState._winningMelds : null
+    toGebi: !!winningMelds,
+    melds: winningMelds
   });
   selectedCardsSet.clear();
   selectedCardId = null;

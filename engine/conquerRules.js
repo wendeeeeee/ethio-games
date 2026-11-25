@@ -275,18 +275,18 @@ function canDrawFromGround(hand, groundCard, isFirstDiscard, jokerRank) {
  * Complete 13 cards partitioned into valid melds:
  * e.g., 4 + 3 + 3 + 3 = 13 cards (or 4 + 4 + 3) + 1 card to GEBI.
  */
-function validateConquerHand(melds, gebiCard, jokerRank, baseCard) {
+function validateConquerHand(melds, gebiCard, jokerRank, baseCard, jokerSuits = null) {
   if (!gebiCard) return { valid: false, message: 'You must select a final card to discard!' };
   if (!melds || melds.length < 3) return { valid: false, message: 'Must have at least 3 valid melds (Tris/Quatris)!' };
 
   let totalCardsCount = 0;
   for (const group of melds) {
     if (group.length === 3) {
-      if (!isValidTris(group, jokerRank)) {
+      if (!isValidTris(group, jokerRank, jokerSuits)) {
         return { valid: false, message: 'One of your 3-card groups is not a valid Tris!' };
       }
     } else if (group.length === 4) {
-      if (!isValidQuatris(group, jokerRank)) {
+      if (!isValidQuatris(group, jokerRank, jokerSuits)) {
         return { valid: false, message: 'One of your 4-card groups is not a valid Quatris!' };
       }
     } else {
