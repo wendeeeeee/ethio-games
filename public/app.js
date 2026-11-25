@@ -1034,12 +1034,20 @@ socket.on('rooms_updated', () => {
 
 socket.on('player_timed_out', ({ winnerName, loserName, message }) => {
   hideActiveGameReturnBanner();
-  showSortToast(message || '⏰ ተጫዋች በ 1 ደቂቃ ውስጥ ካርታ ስላልጣለ ተሸንፏል!');
+  if (loserName && playerName && loserName === playerName) {
+    showSortToast(`❌ በ 60 ሰከንድ ውስጥ ካርታ ስላልጣልክ ተሸንፈሃል! (${winnerName || 'ተጋጣሚ'} አሸነፈ)`);
+  } else {
+    showSortToast(message || '⏰ ተጫዋች በ 1 ደቂቃ ውስጥ ካርታ ስላልጣለ ተሸንፏል!');
+  }
 });
 
 socket.on('player_abandoned', ({ winnerName, loserName, message }) => {
   hideActiveGameReturnBanner();
-  showSortToast(message || '❌ ተጫዋች በ 1 ደቂቃ ውስጥ ስላልተመለሰ ተሸንፏል!');
+  if (loserName && playerName && loserName === playerName) {
+    showSortToast(`❌ በ 60 ሰከንድ ውስጥ ስላልተመለስክ ተሸንፈሃል! (${winnerName || 'ተጋጣሚ'} አሸነፈ)`);
+  } else {
+    showSortToast(message || '❌ ተጫዋች በ 1 ደቂቃ ውስጥ ስላልተመለሰ ተሸንፏል!');
+  }
 });
 
 socket.on('room_created', ({ roomId }) => {
@@ -2231,7 +2239,7 @@ confirmGroundMeldBtn.addEventListener('click', () => {
 // Forfeit Ground Draw (kelelw gin yeshenefal)
 forfeitGroundBtn.addEventListener('click', () => {
   if (!currentRoomId) return;
-  if (confirm('41 ማውረድ ካልቻልክ ጨዋታውን ትሸነፋለህ! እጅ መስጠት ትፈልጋለህ?')) {
+  if (confirm('⚠️ 41 አልሞላም! እጅ መስጠት ትፈልጋለህ?')) {
     socket.emit('forfeit_ground_fail', { roomId: currentRoomId, userId });
     groundMeldBar.style.display = 'none';
     selectedCardsSet.clear();
@@ -2317,11 +2325,9 @@ discardBtn.addEventListener('click', () => {
   }
   const isWinningHand = !!winningMelds || isLastCardWin;
 
-  // If user drew from ground without having opened, they MUST close & win! Otherwise forfeit!
+  // If user drew from ground without having opened, they must close & win (or reach 41)
   if (currentGameState.mustMeld41 && !isWinningHand) {
-    if (confirm('⚠️ ከመሬት ስላነሳህ ጨዋታውን ሳትዘጋ (ሳታሸንፍ) ካርታ መጣል አትችልም! ብትጥል ትሸነፋለህ — እርግጠኛ ነህ?')) {
-      socket.emit('forfeit_ground_fail', { roomId: currentRoomId, userId });
-    }
+    showSortToast('⚠️ 41 አልሞላም!');
     return;
   }
 
@@ -4088,16 +4094,27 @@ function renderGame(state) {
 
     // Show result clearly in status bar without blocking the table
     if (turnIndicator) {
-      const winnerName = state.winner ? (state.winner.name || state.winner) : (iWon ? (playerName || 'ተጫዋች') : 'ተጋጣሚ');
+      let winnerName = iWon ? (playerName || 'ተጫዋች') : 'ተጋጣሚ';
+      if (state.winner && typeof state.winner === 'object' && state.winner.name) {
+        winnerName = state.winner.name;
+      } else if (typeof state.winner === 'string') {
+        if (state.creator && state.creator.id === state.winner) winnerName = state.creator.name;
+        else if (state.joiner && state.joiner.id === state.winner) winnerName = state.joiner.name;
+        else if (state.opponent && state.opponent.id === state.winner) winnerName = state.opponent.name;
+      }
       if (state.winReason === 'TIMEOUT_FORFEIT') {
-        turnIndicator.textContent = iWon ? '🏆 ተጋጣሚ በ 1 ደቂቃ ውስጥ ካርታ ስላልጣለ አሸነፍክ!' : `⏰ የጊዜ ገደብ አለቀ (አሸናፊ፦ ${winnerName})`;
-        turnIndicator.style.color = iWon ? '#4ade80' : '#fbbf24';
+        turnIndicator.textContent = iWon
+          ? '🏆 ተጋጣሚ በ 60 ሰከንድ ውስጥ ካርታ ስላልጣለ አሸነፍክ!'
+          : `❌ በ 60 ሰከንድ ውስጥ ካርታ ስላልጣልክ ተሸንፈሃል! (አሸናፊ፦ ${winnerName})`;
+        turnIndicator.style.color = iWon ? '#4ade80' : '#ef4444';
       } else if (state.winReason === 'ABANDON_FORFEIT') {
-        turnIndicator.textContent = iWon ? '🚪 ተጋጣሚ ከጠረጴዛው ወጥቶ ስላልተመለሰ አሸነፍክ!' : `🚪 ተጫዋች ከጠረጴዛው ወጥቷል (አሸናፊ፦ ${winnerName})`;
-        turnIndicator.style.color = iWon ? '#4ade80' : '#fbbf24';
+        turnIndicator.textContent = iWon
+          ? '🚪 ተጋጣሚ ከጠረጴዛው ወጥቶ ስላልተመለሰ አሸነፍክ!'
+          : `❌ በ 60 ሰከንድ ውስጥ ስላልተመለስክ ተሸንፈሃል! (አሸናፊ፦ ${winnerName})`;
+        turnIndicator.style.color = iWon ? '#4ade80' : '#ef4444';
       } else {
-        turnIndicator.textContent = iWon ? `🏆 አሸንፈሃል! (ደራሽ: ${state.pot || 0} ETB)` : `🏆 አሸናፊ፦ ${winnerName} (ደራሽ: ${state.pot || 0} ETB)`;
-        turnIndicator.style.color = iWon ? '#4ade80' : '#fbbf24';
+        turnIndicator.textContent = iWon ? `🏆 አሸንፈሃል! (ደራሽ: ${state.pot || 0} ETB)` : `❌ ተሸንፈሃል! አሸናፊ፦ ${winnerName} (ደራሽ: ${state.pot || 0} ETB)`;
+        turnIndicator.style.color = iWon ? '#4ade80' : '#ef4444';
       }
     }
 

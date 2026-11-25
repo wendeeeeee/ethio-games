@@ -107,11 +107,11 @@ class GameRoom {
 
         this.status = 'FINISHED';
         this.winner = opponent.id;
-        this.winReason = `❌ ${leftPlayer.name} በ1 ደቂቃ ውስጥ ስላልተመለሰ ተሸንፏል! ${opponent.name} አሸናፊ ሆኗል!`;
+        this.winReason = 'ABANDON_FORFEIT';
         this.forfeitedPlayer = leftPlayer;
 
         walletManager.payoutWinner(this.roomId, opponent.id);
-        this.log(`🏆 ${this.winReason}`);
+        this.log(`🏆 ❌ ${leftPlayer.name} በ1 ደቂቃ ውስጥ ስላልተመለሰ ተሸንፏል! ${opponent.name} አሸናፊ ሆኗል!`);
 
         delete this.temporarilyLeft[userId];
         delete this.leaveTimeouts[userId];
@@ -161,8 +161,8 @@ class GameRoom {
 
     this.status = 'FINISHED';
     this.winner = opponent.id;
-    this.winReason = `⏰ ${timedOutName} በ1 ደቂቃ ውስጥ ካርታ ስላልጣለ ተሸንፏል! ${opponent.name} አሸናፊ ሆኗል!`;
-    this.log(`🏆 ${this.winReason}`);
+    this.winReason = 'TIMEOUT_FORFEIT';
+    this.log(`🏆 ⏰ ${timedOutName} በ1 ደቂቃ ውስጥ ካርታ ስላልጣለ ተሸንፏል! ${opponent.name} አሸናፊ ሆኗል!`);
 
     walletManager.payoutWinner(this.roomId, opponent.id);
     this.resetPoke();
