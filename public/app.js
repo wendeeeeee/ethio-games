@@ -29,6 +29,31 @@ let draggedCardId = null;
 let dragJustEndedTime = 0;
 
 // -------------------------------------------------------------
+// TELEGRAM WEB APP (TMA) INTEGRATION (Zero breaking changes to Auth/System)
+// -------------------------------------------------------------
+const tgApp = (typeof window !== 'undefined' && window.Telegram && window.Telegram.WebApp) ? window.Telegram.WebApp : null;
+if (tgApp) {
+  try {
+    tgApp.ready();
+    tgApp.expand();
+    if (typeof tgApp.enableClosingConfirmation === 'function') {
+      tgApp.enableClosingConfirmation();
+    }
+  } catch (e) { }
+}
+
+function triggerTgHaptic(type = 'light') {
+  if (tgApp && tgApp.HapticFeedback) {
+    try {
+      if (type === 'light') tgApp.HapticFeedback.impactOccurred('light');
+      else if (type === 'medium') tgApp.HapticFeedback.impactOccurred('medium');
+      else if (type === 'heavy') tgApp.HapticFeedback.impactOccurred('heavy');
+      else if (type === 'success') tgApp.HapticFeedback.notificationOccurred('success');
+    } catch (e) { }
+  }
+}
+
+// -------------------------------------------------------------
 // AUDIO ENGINE (Web Audio API - Realistic Card & Casino Sound Design)
 // -------------------------------------------------------------
 let soundEnabled = localStorage.getItem('conquer_sound_enabled') !== 'false';
@@ -66,6 +91,7 @@ function toggleSound() {
 
 // 1. Realistic Tactile Card Snap / Placement on Felt Table
 function playCardSound() {
+  triggerTgHaptic('light');
   if (!soundEnabled) return;
   try {
     const ctx = getAudioContext();
@@ -145,6 +171,7 @@ function playDrawSound() {
 
 // 3. Gentle Wooden Bell / Marimba Tap for Poke & Turn alert
 function playPokeSound() {
+  triggerTgHaptic('medium');
   if (!soundEnabled) return;
   try {
     const ctx = getAudioContext();
@@ -171,6 +198,7 @@ function playPokeSound() {
 
 // 4. Celebratory Triumphant Winner Chime (Warm C-Major chord cascade)
 function playWinSound() {
+  triggerTgHaptic('success');
   if (!soundEnabled) return;
   try {
     const ctx = getAudioContext();
@@ -585,7 +613,8 @@ function openLoginModal() {
 function openRegistrationModal() {
   if (!registerModal) return;
   setAuthMode('register');
-  if (regNameInput) regNameInput.value = '';
+  const tgUser = (tgApp && tgApp.initDataUnsafe && tgApp.initDataUnsafe.user) ? tgApp.initDataUnsafe.user : null;
+  if (regNameInput) regNameInput.value = tgUser ? (tgUser.first_name || '') : '';
   if (regPhoneInput) regPhoneInput.value = userPhone || '';
   if (regPassInput) regPassInput.value = '';
   if (regConfirmPassInput) regConfirmPassInput.value = '';
