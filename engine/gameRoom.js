@@ -8,7 +8,8 @@ const {
   isValidTris,
   isValidQuatris,
   isCardGebiToTable,
-  isCardGebiToMeld
+  isCardGebiToMeld,
+  getJokerReplacementOptions
 } = require('./conquerRules');
 const walletManager = require('./walletManager');
 
@@ -637,14 +638,27 @@ class GameRoom {
       }
     }
 
-    // Remove from hand and add to player's table melds
+    // Remove from hand and add to player's table melds (preserving/auto-setting Joker designation)
     for (const group of meldsToLayDown) {
+      const laidGroup = [];
+      const jokerOpts = getJokerReplacementOptions(group, this.jokerRank, this.jokerSuits);
       for (const card of group) {
         const idx = hand.findIndex(c => String(c.id) === String(card.id));
-        if (idx !== -1) hand.splice(idx, 1);
+        if (idx !== -1) {
+          const [handCard] = hand.splice(idx, 1);
+          const isJk = handCard.isJoker || handCard.rank === this.jokerRank;
+          if (isJk) {
+            if (card.assignedCard && jokerOpts.some(o => o.rank === card.assignedCard.rank && o.suit === card.assignedCard.suit)) {
+              handCard.assignedCard = { rank: card.assignedCard.rank, suit: card.assignedCard.suit };
+            } else if (jokerOpts.length >= 1) {
+              handCard.assignedCard = { rank: jokerOpts[0].rank, suit: jokerOpts[0].suit };
+            }
+          }
+          laidGroup.push(handCard);
+        }
       }
       if (!this.tableMelds[playerId]) this.tableMelds[playerId] = [];
-      this.tableMelds[playerId].push(group);
+      this.tableMelds[playerId].push(laidGroup);
     }
 
     // Clear ground-draw lock once total table melds reach 41 points OR all 13 cards are laid down (1 left to discard & win)
@@ -727,15 +741,19 @@ class GameRoom {
     this.pokeState.intervalId = null;
   }
 
-  // Rule 9 & 13: Joker Swap / Steal from a table meld
+  // Rule 9 & 13: Joker Swap / Steal from a table meld (ጆከር ተካ)
   swapJoker(playerId, targetPlayerMeldOwnerId, meldIndex, naturalCardId) {
     if (this.status !== 'PLAYING') return { success: false, message: 'Game not active' };
     if (this.currentTurnPlayerId !== playerId) return { success: false, message: 'Can only swap on your turn' };
 
     const playerHand = this.getHand(playerId);
-    const naturalCardIndex = playerHand.findIndex(c => c.id === naturalCardId);
+    const naturalCardIndex = playerHand.findIndex(c => String(c.id) === String(naturalCardId));
     if (naturalCardIndex === -1) return { success: false, message: 'Natural card not in hand' };
     const naturalCard = playerHand[naturalCardIndex];
+
+    if (naturalCard.isJoker || naturalCard.rank === this.jokerRank) {
+      return { success: false, message: 'ጆከርን በጆከር መተካት አይቻልም!' };
+    }
 
     const melds = this.tableMelds[targetPlayerMeldOwnerId];
     if (!melds || !melds[meldIndex]) return { success: false, message: 'Meld not found' };
@@ -744,13 +762,29 @@ class GameRoom {
     const jokerIndex = targetMeld.findIndex(c => c.isJoker || c.rank === this.jokerRank);
     if (jokerIndex === -1) return { success: false, message: 'No Joker in this meld' };
 
-    // Swap
     const stolenJoker = targetMeld[jokerIndex];
+    const expected = stolenJoker.assignedCard;
+    if (expected) {
+      if (naturalCard.rank !== expected.rank || naturalCard.suit !== expected.suit) {
+        return {
+          success: false,
+          message: `⚠️ ይህ ጆከር የተሰየመው ለ [ ${expected.rank}${expected.suit} ] ነው! [ ${naturalCard.rank}${naturalCard.suit} ] አይተካውም!`
+        };
+      }
+    } else {
+      const opts = getJokerReplacementOptions(targetMeld, this.jokerRank, this.jokerSuits);
+      if (!opts.some(o => o.rank === naturalCard.rank && o.suit === naturalCard.suit)) {
+        return { success: false, message: '⚠️ ይህ ካርታ ጆከሩን መተካት አይችልም!' };
+      }
+    }
+
+    // Swap
+    delete stolenJoker.assignedCard;
     targetMeld[jokerIndex] = naturalCard;
     playerHand.splice(naturalCardIndex, 1);
     playerHand.push(stolenJoker);
 
-    this.log(`🔄 ${this.getPlayerName(playerId)} swapped a Joker from table meld with ${naturalCard.rank}${naturalCard.suit}!`);
+    this.log(`🔄 ${this.getPlayerName(playerId)} swapped a Joker from table meld with ${naturalCard.rank}${naturalCard.suit} (ጆከር ተካ)!`);
     return { success: true, stolenJoker };
   }
 
@@ -759,8 +793,13 @@ class GameRoom {
     if (this.status !== 'PLAYING') return { success: false, message: 'Game not active' };
     if (this.currentTurnPlayerId !== playerId) return { success: false, message: 'Can only attach cards on your turn' };
 
+    const hasAlreadyOpened = this.tableMelds[playerId] && this.tableMelds[playerId].length > 0;
+    if (!hasAlreadyOpened) {
+      return { success: false, message: '⚠️ ገቢ (GEBI) ለማድረግ መጀመሪያ መውረድ አለብህ! ሳትወርድ ገቢ ማድረግ አትችልም!' };
+    }
+
     const playerHand = this.getHand(playerId);
-    const cardIndex = playerHand.findIndex(c => c.id === cardId);
+    const cardIndex = playerHand.findIndex(c => String(c.id) === String(cardId));
     if (cardIndex === -1) return { success: false, message: 'Card not in hand' };
     const card = playerHand[cardIndex];
 

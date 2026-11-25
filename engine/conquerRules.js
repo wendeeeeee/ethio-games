@@ -371,6 +371,71 @@ function isCardGebiToTable(card, tableMelds, jokerRank, jokerSuits) {
   return false;
 }
 
+function getJokerReplacementOptions(meld, jokerRank, jokerSuits) {
+  if (!meld || meld.length < 3) return [];
+  const isJk = (c) => isWildJoker(c, jokerRank, jokerSuits);
+  const jokers = meld.filter(isJk);
+  if (jokers.length !== 1) return [];
+
+  const naturals = meld.filter(c => !isJk(c));
+  if (naturals.length < 2) return [];
+  const getRank = (c) => (c.isFalseJoker ? jokerRank : c.rank);
+
+  // Case 1: Same-rank set (e.g. 7♥ 7♦ + Joker)
+  const firstRank = getRank(naturals[0]);
+  if (firstRank && naturals.every(c => getRank(c) === firstRank)) {
+    const usedSuits = new Set(naturals.map(c => c.suit));
+    const allSuits = ['♠', '♥', '♦', '♣'];
+    return allSuits.filter(s => !usedSuits.has(s)).map(suit => ({ rank: firstRank, suit }));
+  }
+
+  // Case 2: Same-suit sequence (e.g. 3♥ 4♥ + Joker -> 2♥ or 5♥)
+  const suit = naturals[0].suit;
+  if (!naturals.every(c => c.suit === suit)) return [];
+
+  const numToRank = (n) => {
+    if (n === 1 || n === 14) return 'A';
+    if (n === 11) return 'J';
+    if (n === 12) return 'Q';
+    if (n === 13) return 'K';
+    return String(n);
+  };
+
+  const options = [];
+  const seen = new Set();
+  const addOpt = (rank) => {
+    const key = `${rank}${suit}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      options.push({ rank, suit });
+    }
+  };
+
+  const checkOrder = (orderFn) => {
+    const nums = naturals.map(c => orderFn(getRank(c))).sort((a, b) => a - b);
+    for (let i = 0; i < nums.length - 1; i++) {
+      if (nums[i] === nums[i + 1]) return;
+    }
+    const min = nums[0];
+    const max = nums[nums.length - 1];
+    const span = max - min + 1;
+    const missing = [];
+    for (let n = min; n <= max; n++) {
+      if (!nums.includes(n)) missing.push(n);
+    }
+    if (missing.length === 1 && span === meld.length) {
+      addOpt(numToRank(missing[0]));
+    } else if (missing.length === 0 && span === meld.length - 1) {
+      if (min - 1 >= 1) addOpt(numToRank(min - 1));
+      if (max + 1 <= 14) addOpt(numToRank(max + 1));
+    }
+  };
+
+  checkOrder(r => RANK_ORDER[r]);
+  checkOrder(r => (r === 'A' ? 14 : RANK_ORDER[r]));
+  return options;
+}
+
 module.exports = {
   isWildJoker,
   isNaturalMeld,
@@ -382,6 +447,7 @@ module.exports = {
   canDrawFromGround,
   validateConquerHand,
   isCardGebiToMeld,
-  isCardGebiToTable
+  isCardGebiToTable,
+  getJokerReplacementOptions
 };
 
