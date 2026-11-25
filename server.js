@@ -895,21 +895,36 @@ io.on('connection', (socket) => {
     }
   });
 
-  // Player temporarily leaves playing Seka table (1-minute return window)
+  // Player temporarily leaves playing table (1-minute return window)
   socket.on('leave_seka_table_temp', ({ roomId, userId }) => {
-    const room = sekaRooms.get(roomId);
-    if (!room || room.status !== 'PLAYING') return;
-    room.playerLeaveTemp(userId, room.onLeaveTimeoutCallback);
-    broadcastSekaRoomUpdate(room);
+    const sRoom = sekaRooms.get(roomId);
+    if (sRoom && sRoom.status === 'PLAYING') {
+      sRoom.playerLeaveTemp(userId, sRoom.onLeaveTimeoutCallback);
+      broadcastSekaRoomUpdate(sRoom);
+      return;
+    }
+    const cRoom = rooms.get(roomId);
+    if (cRoom && cRoom.status === 'PLAYING') {
+      cRoom.playerLeaveTemp(userId, cRoom.onLeaveTimeoutCallback);
+      broadcastRoomUpdate(cRoom);
+    }
   });
 
-  // Player returns to Seka table within 1-minute window
+  // Player returns to table within 1-minute window
   socket.on('return_to_seka_table', ({ roomId, userId }) => {
-    const room = sekaRooms.get(roomId);
-    if (!room) return;
-    room.playerReturn(userId);
-    socket.join(roomId);
-    broadcastSekaRoomUpdate(room);
+    const sRoom = sekaRooms.get(roomId);
+    if (sRoom) {
+      sRoom.playerReturn(userId);
+      socket.join(roomId);
+      broadcastSekaRoomUpdate(sRoom);
+      return;
+    }
+    const cRoom = rooms.get(roomId);
+    if (cRoom) {
+      cRoom.playerReturn(userId);
+      socket.join(roomId);
+      broadcastRoomUpdate(cRoom);
+    }
   });
 
   // Handle automatic reconnection on page refresh (F5 / reload)
@@ -936,6 +951,7 @@ io.on('connection', (socket) => {
     if (cRoom) {
       const isPlayer = (cRoom.creator && cRoom.creator.id === userId) || (cRoom.joiner && cRoom.joiner.id === userId);
       if (isPlayer && (cRoom.status === 'PLAYING' || cRoom.status === 'WAITING' || cRoom.status === 'CUTTING_JOKER')) {
+        cRoom.playerReturn(userId);
         if (cRoom.creator && cRoom.creator.id === userId) cRoom.creator.socketId = socket.id;
         if (cRoom.joiner && cRoom.joiner.id === userId) cRoom.joiner.socketId = socket.id;
         const pName = (cRoom.creator && cRoom.creator.id === userId) ? cRoom.creator.name : (cRoom.joiner ? cRoom.joiner.name : '');
@@ -957,6 +973,11 @@ io.on('connection', (socket) => {
       if (sRoom && sRoom.status === 'PLAYING') {
         sRoom.playerLeaveTemp(playerInfo.userId, sRoom.onLeaveTimeoutCallback);
         broadcastSekaRoomUpdate(sRoom);
+      }
+      const cRoom = rooms.get(playerInfo.roomId);
+      if (cRoom && cRoom.status === 'PLAYING') {
+        cRoom.playerLeaveTemp(playerInfo.userId, cRoom.onLeaveTimeoutCallback);
+        broadcastRoomUpdate(cRoom);
       }
     }
     socketPlayerMap.delete(socket.id);
@@ -997,6 +1018,16 @@ function attachConquerRoomCallbacks(room) {
       winnerName: winner ? winner.name : 'Opponent',
       loserName: loser ? loser.name : 'Player',
       message: `⏰ ${loser ? loser.name : 'ተጫዋች'} በ1 ደቂቃ ውስጥ ካርታ ስላልጣለ ተሸንፏል! ${winner ? winner.name : 'ተጋጣሚ'} አሸነፈ!`
+    });
+  };
+  room.onLeaveTimeoutCallback = (r, winner, loser) => {
+    if (r.creator) broadcastWallet(r.creator.id);
+    if (r.joiner) broadcastWallet(r.joiner.id);
+    broadcastRoomUpdate(r);
+    io.to(r.roomId).emit('player_abandoned', {
+      winnerName: winner ? winner.name : 'Opponent',
+      loserName: loser ? loser.name : 'Player',
+      message: `❌ ${loser ? loser.name : 'ተጫዋች'} በ1 ደቂቃ ውስጥ ስላልተመለሰ ተሸንፏል! ${winner ? winner.name : 'ተጋጣሚ'} አሸነፈ!`
     });
   };
 }

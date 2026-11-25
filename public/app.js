@@ -324,10 +324,15 @@ let activeGameReturnRoomId = null;
 let returnBannerTimer = null;
 let isTemporarilyOut = false;
 
-function showActiveGameReturnBanner(roomId, deadline) {
+function showActiveGameReturnBanner(roomId, deadline, gameType) {
   activeGameReturnRoomId = roomId;
   if (!activeGameReturnBanner) return;
-  if (returnBannerTableId) returnBannerTableId.textContent = '#' + roomId.replace(/^seka_/, '');
+  const returnBannerGameName = document.getElementById('returnBannerGameName');
+  const isSeka = gameType === 'SEKA' || (currentGameState && currentGameState.gameType === 'SEKA') || String(roomId || '').startsWith('seka_');
+  if (returnBannerGameName) {
+    returnBannerGameName.textContent = isSeka ? 'በሴካ ጨዋታ ላይ ነዎት!' : 'በኮንከር ጨዋታ ላይ ነዎት!';
+  }
+  if (returnBannerTableId) returnBannerTableId.textContent = '#' + String(roomId || '').replace(/^seka_/, '');
   activeGameReturnBanner.style.display = 'block';
 
   if (returnBannerTimer) clearInterval(returnBannerTimer);
@@ -2033,12 +2038,12 @@ function handleWeredAction() {
 
 function executeMeldDown(melds, totalPts) {
   playCardSound();
-  const meldedCardIds = new Set(melds.flat().map(c => c.id));
+  const meldedCardIds = new Set(melds.flat().map(c => String(c.id)));
 
   // Optimistically remove melded cards so hand does not scramble
-  playerOrderedCardIds = playerOrderedCardIds.filter(id => !meldedCardIds.has(id));
+  playerOrderedCardIds = playerOrderedCardIds.filter(id => !meldedCardIds.has(String(id)));
   if (currentGameState && currentGameState.myHand) {
-    currentGameState.myHand = currentGameState.myHand.filter(c => !meldedCardIds.has(c.id));
+    currentGameState.myHand = currentGameState.myHand.filter(c => !meldedCardIds.has(String(c.id)));
     renderPlayerHand(currentGameState.myHand);
   }
 
@@ -4408,11 +4413,18 @@ function getResponsiveFanGeometry(totalCards) {
   } else if (w <= 1400) {
     // Standard Desktop / Laptops (769px - 1400px)
     maxAngle = 28;
-    spacing = Math.min(42, Math.max(28, Math.floor(520 / count)));
+    spacing = Math.min(36, Math.max(26, Math.floor(460 / count)));
   } else {
     // Large Desktop Screens (1401px+)
     maxAngle = 28;
-    spacing = Math.min(46, Math.max(30, Math.floor(580 / count)));
+    spacing = Math.min(38, Math.max(28, Math.floor(500 / count)));
+  }
+
+  // Scale fan angle down when few cards remain so cards stay together without gaps
+  if (totalCards <= 1) {
+    maxAngle = 0;
+  } else {
+    maxAngle = Math.max(4, Math.round(maxAngle * Math.min(1, count / 10)));
   }
 
   return { maxAngle, spacing };

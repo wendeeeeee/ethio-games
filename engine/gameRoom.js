@@ -52,17 +52,86 @@ class GameRoom {
     this.winReason = null;
     this.logs = [];
 
-    // 60-Second Turn Timer
+    // 60-Second Turn & Leave Timers
     this.turnDuration = 60 * 1000;
     this.turnDeadline = null;
     this.turnTimer = null;
+    this.temporarilyLeft = {};
+    this.leaveTimeouts = {};
     this.onTurnTimeoutCallback = null;
+    this.onLeaveTimeoutCallback = null;
+    this.forfeitedPlayer = null;
+  }
+
+  clearAllTimers() {
+    this.clearTurnTimer();
+    if (this.leaveTimeouts) {
+      for (const uid in this.leaveTimeouts) {
+        clearTimeout(this.leaveTimeouts[uid]);
+      }
+      this.leaveTimeouts = {};
+    }
   }
 
   clearTurnTimer() {
     if (this.turnTimer) {
       clearTimeout(this.turnTimer);
       this.turnTimer = null;
+    }
+  }
+
+  playerLeaveTemp(userId, onTimeout) {
+    if (this.status !== 'PLAYING') return;
+    const isCreator = this.creator && this.creator.id === userId;
+    const isJoiner = this.joiner && this.joiner.id === userId;
+    if (!isCreator && !isJoiner) return;
+
+    const leftPlayer = isCreator ? this.creator : this.joiner;
+    const deadline = Date.now() + 60 * 1000;
+    this.temporarilyLeft[userId] = {
+      name: leftPlayer.name,
+      deadline
+    };
+
+    this.log(`🚪 ${leftPlayer.name} ለጊዜው ከጠረጴዛው ወጥቷል! በ1 ደቂቃ ውስጥ ካልተመለሰ ይሸነፋል!`);
+
+    if (this.leaveTimeouts[userId]) {
+      clearTimeout(this.leaveTimeouts[userId]);
+    }
+
+    const cb = onTimeout || this.onLeaveTimeoutCallback;
+    this.leaveTimeouts[userId] = setTimeout(() => {
+      if (this.status === 'PLAYING' && this.temporarilyLeft[userId]) {
+        const opponent = this.getOpponent(userId);
+        if (!opponent) return;
+
+        this.status = 'FINISHED';
+        this.winner = opponent.id;
+        this.winReason = `❌ ${leftPlayer.name} በ1 ደቂቃ ውስጥ ስላልተመለሰ ተሸንፏል! ${opponent.name} አሸናፊ ሆኗል!`;
+        this.forfeitedPlayer = leftPlayer;
+
+        walletManager.payoutWinner(this.roomId, opponent.id);
+        this.log(`🏆 ${this.winReason}`);
+
+        delete this.temporarilyLeft[userId];
+        delete this.leaveTimeouts[userId];
+
+        this.resetPoke();
+        this.clearAllTimers();
+
+        if (cb) cb(this, opponent, leftPlayer);
+      }
+    }, 60 * 1000);
+  }
+
+  playerReturn(userId) {
+    if (this.leaveTimeouts && this.leaveTimeouts[userId]) {
+      clearTimeout(this.leaveTimeouts[userId]);
+      delete this.leaveTimeouts[userId];
+    }
+    if (this.temporarilyLeft && this.temporarilyLeft[userId]) {
+      delete this.temporarilyLeft[userId];
+      this.log(`👋 ${this.getPlayerName(userId)} ወደ ጨዋታው ተመልሷል!`);
     }
   }
 

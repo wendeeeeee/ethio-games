@@ -1648,7 +1648,7 @@ select:focus {
   align-items: center;
   width: auto;
   min-width: 200px;
-  margin-bottom: 25px;
+  margin-bottom: 10px;
   background: rgba(0, 0, 0, 0.7);
   border: 1px solid rgba(245, 176, 65, 0.35);
   border-radius: 20px;
@@ -1748,16 +1748,20 @@ select:focus {
 
 /* Control buttons */
 .hand-controls {
-  margin-top: 8px;
-  margin-bottom: max(12px, env(safe-area-inset-bottom, 12px));
-  padding-bottom: max(6px, env(safe-area-inset-bottom, 6px));
+  margin-top: 6px;
+  margin-bottom: 0;
+  padding: 6px 10px max(10px, env(safe-area-inset-bottom, 10px));
   display: flex;
   gap: 8px;
-  position: relative;
+  position: sticky;
+  bottom: 0;
   z-index: 1100;
   flex-shrink: 0;
+  flex-wrap: wrap;
   justify-content: center;
   align-items: center;
+  width: 100%;
+  background: linear-gradient(to top, rgba(20, 83, 45, 0.96) 75%, transparent);
 }
 
 .ctrl-btn {
@@ -1878,6 +1882,8 @@ select:focus {
   background: transparent;
   border: none;
   border-radius: 0;
+  max-height: 155px;
+  overflow-y: auto;
   flex-shrink: 0;
 }
 
