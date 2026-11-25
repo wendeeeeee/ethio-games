@@ -960,6 +960,7 @@ socket.on('seka_reconnect_success', ({ roomId, status }) => {
   hideActiveGameReturnBanner();
   if (homeGameSelectView) homeGameSelectView.style.display = 'none';
   if (sekaLobbySection) sekaLobbySection.style.display = 'none';
+  if (conquerLobbySection) conquerLobbySection.style.display = 'none';
   if (lobbyView) lobbyView.style.display = 'none';
   switchToGameView();
 });
@@ -971,6 +972,8 @@ socket.on('conquer_reconnect_success', ({ roomId, status }) => {
   activeGameReturnRoomId = null;
   hideActiveGameReturnBanner();
   if (homeGameSelectView) homeGameSelectView.style.display = 'none';
+  if (sekaLobbySection) sekaLobbySection.style.display = 'none';
+  if (conquerLobbySection) conquerLobbySection.style.display = 'none';
   if (lobbyView) lobbyView.style.display = 'none';
   switchToGameView();
 });
@@ -1185,12 +1188,15 @@ socket.on('seka_game_state', (state) => {
   renderGame(state);
 });
 
-// Game Selector (Home Page: Conquer Coming Soon vs Seka Play Now)
+// Game Selector (Home Page: Conquer vs Seka)
+let lastLobbyGameType = localStorage.getItem('conquer_last_game_type') || 'SEKA';
 const homeGameSelectView = document.getElementById('homeGameSelectView');
 const homeConquerBtn = document.getElementById('homeConquerBtn');
 const homeSekaBtn = document.getElementById('homeSekaBtn');
 const backToHomeBtn = document.getElementById('backToHomeBtn');
+const backFromConquerBtn = document.getElementById('backFromConquerBtn');
 const sekaLobbySection = document.getElementById('sekaLobbySection');
+const conquerLobbySection = document.getElementById('conquerLobbySection');
 const createSekaRoomBtn = document.getElementById('createSekaRoomBtn');
 const playSekaBotBtn = document.getElementById('playSekaBotBtn');
 const conquerComingSoonModal = document.getElementById('conquerComingSoonModal');
@@ -1201,6 +1207,7 @@ const closeConquerModalBtn = document.getElementById('closeConquerModalBtn');
 if (localStorage.getItem('conquer_active_room_id')) {
   if (homeGameSelectView) homeGameSelectView.style.display = 'none';
   if (sekaLobbySection) sekaLobbySection.style.display = 'none';
+  if (conquerLobbySection) conquerLobbySection.style.display = 'none';
   if (lobbyView) lobbyView.style.display = 'none';
 }
 
@@ -1210,7 +1217,10 @@ if (homeSekaBtn) {
     if (!requireAuth('⚠️ ሴካ ለመጫወት እባክዎ መጀመሪያ ይግቡ ወይም ይመዝገቡ!')) {
       return;
     }
+    lastLobbyGameType = 'SEKA';
+    localStorage.setItem('conquer_last_game_type', 'SEKA');
     if (homeGameSelectView) homeGameSelectView.style.display = 'none';
+    if (conquerLobbySection) conquerLobbySection.style.display = 'none';
     if (sekaLobbySection) sekaLobbySection.style.display = 'block';
     refreshSekaRoomsList();
   });
@@ -1219,11 +1229,25 @@ if (homeSekaBtn) {
 if (homeConquerBtn) {
   homeConquerBtn.addEventListener('click', () => {
     playCardSound();
-    if (conquerComingSoonModal) {
-      conquerComingSoonModal.style.display = 'flex';
-    } else {
-      showSortToast('👑 የኮንከር (Conquer) ጨዋታ በቅርቡ ይጠብቁ! (Coming Soon)');
+    if (!requireAuth('⚠️ ኮንከር ለመጫወት እባክዎ መጀመሪያ ይግቡ ወይም ይመዝገቡ!')) {
+      return;
     }
+    lastLobbyGameType = 'CONQUER';
+    localStorage.setItem('conquer_last_game_type', 'CONQUER');
+    const cNameDisplay = document.getElementById('conquerPlayerNameDisplayVal');
+    if (cNameDisplay) cNameDisplay.textContent = playerName || 'ተጫዋች';
+    if (homeGameSelectView) homeGameSelectView.style.display = 'none';
+    if (sekaLobbySection) sekaLobbySection.style.display = 'none';
+    if (conquerLobbySection) conquerLobbySection.style.display = 'block';
+    refreshRoomsList();
+  });
+}
+
+if (backFromConquerBtn) {
+  backFromConquerBtn.addEventListener('click', () => {
+    playCardSound();
+    if (conquerLobbySection) conquerLobbySection.style.display = 'none';
+    if (homeGameSelectView) homeGameSelectView.style.display = 'flex';
   });
 }
 
@@ -1593,14 +1617,40 @@ if (confirmDepositBtn) {
   });
 }
 
+function getConquerStakeAmount() {
+  const inputEl = document.getElementById('stakeInput');
+  const selectEl = document.getElementById('stakeSelect');
+  let val = 10;
+  if (inputEl && inputEl.value !== '') {
+    val = Number(inputEl.value);
+  } else if (selectEl && selectEl.value !== '') {
+    val = Number(selectEl.value);
+  }
+  return isNaN(val) ? 0 : Math.floor(val);
+}
+
 // Create Room (Conquer)
 if (createRoomBtn) {
   createRoomBtn.addEventListener('click', () => {
     if (!requireAuth('⚠️ ጨዋታ ለመፍጠር እባክዎ መጀመሪያ ይግቡ ወይም ይመዝገቡ!')) {
       return;
     }
-    const stakeAmount = Number(stakeSelect?.value) || 100;
-    socket.emit('create_room', { userId, name: playerName, stakeAmount });
+    const stakeAmount = getConquerStakeAmount();
+    if (stakeAmount < 5) {
+      showSortToast('⚠️ ዝቅተኛው የውርርድ መጠን 5 ብር ነው!');
+      const inputEl = document.getElementById('stakeInput');
+      if (inputEl) inputEl.focus();
+      return;
+    }
+    if (currentUserBalance < stakeAmount) {
+      showSortToast(`⚠️ በቂ balance የለዎትም! ያለዎት ሂሳብ ${currentUserBalance.toLocaleString()} ETB ሲሆን የውርርድ መጠኑ ${stakeAmount.toLocaleString()} ETB ነው።`);
+      openDepositModal();
+      return;
+    }
+    lastLobbyGameType = 'CONQUER';
+    localStorage.setItem('conquer_last_game_type', 'CONQUER');
+    playCardSound();
+    socket.emit('create_room', { userId, name: playerName || 'ተጫዋች', stakeAmount });
   });
 }
 
@@ -1610,8 +1660,22 @@ if (playBotBtn) {
     if (!requireAuth('⚠️ ከቦት ጋር ለመጫወት እባክዎ መጀመሪያ ይግቡ ወይም ይመዝገቡ!')) {
       return;
     }
-    const stakeAmount = Number(stakeSelect?.value) || 100;
-    socket.emit('play_vs_bot', { userId, name: playerName, stakeAmount });
+    const stakeAmount = getConquerStakeAmount();
+    if (stakeAmount < 5) {
+      showSortToast('⚠️ ዝቅተኛው የውርርድ መጠን 5 ብር ነው!');
+      const inputEl = document.getElementById('stakeInput');
+      if (inputEl) inputEl.focus();
+      return;
+    }
+    if (currentUserBalance < stakeAmount) {
+      showSortToast(`⚠️ በቂ balance የለዎትም! ያለዎት ሂሳብ ${currentUserBalance.toLocaleString()} ETB ሲሆን የውርርድ መጠኑ ${stakeAmount.toLocaleString()} ETB ነው።`);
+      openDepositModal();
+      return;
+    }
+    lastLobbyGameType = 'CONQUER';
+    localStorage.setItem('conquer_last_game_type', 'CONQUER');
+    playCardSound();
+    socket.emit('play_vs_bot', { userId, name: playerName || 'ተጫዋች', stakeAmount });
     switchToGameView();
   });
 }
@@ -1797,7 +1861,13 @@ function switchToLobbyView() {
   lobbyView.style.display = 'block';
   gameView.style.display = 'none';
   if (homeGameSelectView) homeGameSelectView.style.display = 'none';
-  if (sekaLobbySection) sekaLobbySection.style.display = 'block';
+  if (lastLobbyGameType === 'CONQUER') {
+    if (sekaLobbySection) sekaLobbySection.style.display = 'none';
+    if (conquerLobbySection) conquerLobbySection.style.display = 'block';
+  } else {
+    if (conquerLobbySection) conquerLobbySection.style.display = 'none';
+    if (sekaLobbySection) sekaLobbySection.style.display = 'block';
+  }
   cutJokerModal.style.display = 'none';
   if (waitingJokerModal) waitingJokerModal.style.display = 'none';
   closeWaitingForOpponentModal();

@@ -74,13 +74,13 @@
       </div>
 
       <div class="home-two-boxes">
-        <!-- 1. CONQUER (COMING SOON) -->
-        <div class="home-game-card conquer-card" id="homeConquerBtn" role="button" tabindex="0">
-          <div class="coming-soon-badge">⏳ በቅርቡ (Coming Soon)</div>
+        <!-- 1. CONQUER (LIVE!) -->
+        <div class="home-game-card seka-card" id="homeConquerBtn" role="button" tabindex="0">
+          <div class="active-live-badge">🔥 አሁን ክፍት ነው (Live)</div>
           <div class="home-card-icon">👑</div>
           <div class="home-card-title">ኮንከር (Conquer)</div>
-          <div class="home-card-desc">ክላሲክ የኢትዮጵያ የካርታ ውርርድ</div>
-          <div class="home-card-btn disabled-btn">⏳ በቅርቡ ይጠብቁ (Coming Soon)</div>
+          <div class="home-card-desc">108 ካርታ • ጆከር መቁረጥ • 41 ነጥብ</div>
+          <div class="home-card-btn active-btn">👑 ኮንከር ተጫወት (Play Conquer) →</div>
         </div>
 
         <!-- 2. SEKA (CLICK AND GO!) -->
@@ -168,8 +168,69 @@
       </details>
     </div>
 
-    <!-- HIDDEN CONQUER SECTION (COMING SOON) -->
-    <div id="conquerLobbySection" style="display: none;"></div>
+    <!-- CONQUER SECTION (OPENS WHEN USER CLICKS CONQUER) -->
+    <div id="conquerLobbySection" style="display: none;">
+      <div style="margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between;">
+        <button id="backFromConquerBtn" class="back-home-btn">← ወደ ጨዋታ መምረጫ ተመለስ (Back)</button>
+      </div>
+
+      <div class="lobby-grid">
+        <!-- 1. Active Conquer Rooms List -->
+        <div class="lobby-card">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+            <div class="card-title" style="margin-bottom: 0;">🟢 Active Conquer Games (ንቁ ጨዋታዎች)</div>
+            <span
+              style="font-size: 11px; background: rgba(34, 197, 94, 0.15); color: #15803d; border: 1px solid #86efac; padding: 2px 8px; border-radius: 12px; font-weight: 800;">ክፍት
+              ጠረጴዛዎች</span>
+          </div>
+          <div id="roomsListContainer">
+            <p style="color: #64748b; font-size: 14px;">በአሁኑ ሰዓት ክፍት የኮንከር ጨዋታ የለም። አዲስ ጨዋታ ለመፍጠር "Create Game" የሚለውን ይጫኑ ወይም ከ AI Bot ጋር ይጫወቱ!</p>
+          </div>
+        </div>
+
+        <!-- 2. Create Conquer Room / Play Bot -->
+        <div class="lobby-card">
+          <div class="card-title">👑 Create Conquer Game (ጨዋታ ፍጠር)</div>
+          <div class="form-group">
+            <label>የተጫዋች ስም</label>
+            <div style="background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 10px; padding: 10px 14px; font-weight: 700; color: #0f172a; display: flex; align-items: center; gap: 8px;">
+              <span>👤</span>
+              <span id="conquerPlayerNameDisplayVal">ተጫዋች</span>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="stakeInput">የውርርድ መጠን (ETB) <span style="font-size: 11px; color: #10b981; font-weight: normal;">(ዝቅተኛው 5 ብር)</span></label>
+            <div style="position: relative;">
+              <input type="number" id="stakeInput" min="5" step="1" value="10" placeholder="የውርርድ መጠን ጻፍ (ቢያንስ 5)" style="width: 100%; padding: 10px 14px; font-size: 15px; font-weight: 700; border-radius: 8px; border: 1.5px solid #cbd5e1; background: #fff; color: #0f172a; box-sizing: border-box;">
+              <span style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); font-weight: 700; color: #64748b; font-size: 13px;">ETB</span>
+            </div>
+            <div style="display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap;">
+              <button type="button" class="stake-chip" onclick="document.getElementById('stakeInput').value=5;">5 ETB</button>
+              <button type="button" class="stake-chip" onclick="document.getElementById('stakeInput').value=10;">10 ETB</button>
+              <button type="button" class="stake-chip" onclick="document.getElementById('stakeInput').value=25;">25 ETB</button>
+              <button type="button" class="stake-chip" onclick="document.getElementById('stakeInput').value=50;">50 ETB</button>
+              <button type="button" class="stake-chip" onclick="document.getElementById('stakeInput').value=100;">100 ETB</button>
+            </div>
+          </div>
+          <button class="btn-primary" id="createRoomBtn">👑 Create Game</button>
+          <button class="btn-primary btn-bot" id="playBotBtn">🤖 ከኮንከር AI Bot ጋር ተጫወት</button>
+        </div>
+      </div>
+
+      <!-- Collapsible Conquer Rules -->
+      <details class="rules-accordion">
+        <summary class="rules-summary">📜 የኮንከር ህጎች (Conquer Rules)</summary>
+        <div class="rules-content">
+          <ol style="padding-left: 18px; line-height: 1.75; color: #334155; font-size: 13px;">
+            <li><strong>ካርታዎች:</strong> ሁለት ሙሉ የካርታ ደርብ (108 ካርታዎች ከጆከሮች ጋር)። 13–14 ካርታ ይታደላል።</li>
+            <li><strong>ጆከር መቁረጥ:</strong> ተቀላቃዩ ተጫዋች ከመጀመሩ በፊት የጆከር ቁጥር ይመርጣል (High/Low/Same/Gon)።</li>
+            <li><strong>41 ነጥብ (ወረድ):</strong> ቢያንስ 41 ነጥብ ሲሞላህ ትሪስ/ኳትሪስ መርጠህ "📥 ወረድ" በመንካት መሬት ማውረድ ትችላለህ።</li>
+            <li><strong>ገቢ (Laying Off):</strong> ከወረድክ በኋላ በጠረጴዛው ላይ ባሉ ሜልዶች ላይ ካርታ ማጣበቅ (ገቢ ማድረግ) ትችላለህ።</li>
+            <li><strong>ማሸነፍ:</strong> ሁሉንም ካርታዎችህን አውርደህ የመጨረሻዋን ተጣይ ካርታ መሬት ስትጥል ታሸንፋለህ!</li>
+          </ol>
+        </div>
+      </details>
+    </div>
 
   </div>
 

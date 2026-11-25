@@ -466,6 +466,16 @@ io.on('connection', (socket) => {
 
   // Create Table
   socket.on('create_room', ({ userId, name, stakeAmount }) => {
+    const stake = Math.floor(Number(stakeAmount) || 0);
+    if (stake < 5) {
+      return socket.emit('error_msg', '⚠️ ዝቅተኛው የውርርድ መጠን 5 ብር ነው!');
+    }
+    const userWallet = walletManager.getWallet(userId);
+    if (!userWallet || userWallet.balance < stake) {
+      const bal = userWallet ? userWallet.balance : 0;
+      return socket.emit('error_msg', `⚠️ በቂ balance የለዎትም! ያለዎት ሂሳብ ${bal.toLocaleString()} ETB ሲሆን የውርርድ መጠኑ ${stake.toLocaleString()} ETB ነው።`);
+    }
+
     // 1. Clean up any existing waiting room created by this user
     rooms.forEach((r, rId) => {
       if (r.status === 'WAITING' && r.creator && r.creator.id === userId) {
@@ -553,8 +563,18 @@ io.on('connection', (socket) => {
 
   // Play Against AI Bot (Single Player mode for instant testing)
   socket.on('play_vs_bot', ({ userId, name, stakeAmount }) => {
+    const stake = Math.floor(Number(stakeAmount) || 0);
+    if (stake < 5) {
+      return socket.emit('error_msg', '⚠️ ዝቅተኛው የውርርድ መጠን 5 ብር ነው!');
+    }
+    const userWallet = walletManager.getWallet(userId);
+    if (!userWallet || userWallet.balance < stake) {
+      const bal = userWallet ? userWallet.balance : 0;
+      return socket.emit('error_msg', `⚠️ በቂ balance የለዎትም! ያለዎት ሂሳብ ${bal.toLocaleString()} ETB ሲሆን የውርርድ መጠኑ ${stake.toLocaleString()} ETB ነው።`);
+    }
+
     const roomId = `bot_room_${Math.floor(1000 + Math.random() * 9000)}`;
-    const room = new GameRoom(roomId, { id: userId, name, socketId: socket.id }, Number(stakeAmount) || 100);
+    const room = new GameRoom(roomId, { id: userId, name, socketId: socket.id }, stake);
     rooms.set(roomId, room);
     socketPlayerMap.set(socket.id, { userId, name, roomId });
     socket.join(roomId);
@@ -897,15 +917,14 @@ io.on('connection', (socket) => {
         return;
       }
     }
-    const cRoom = gameRooms.get(roomId);
+    const cRoom = rooms.get(roomId);
     if (cRoom) {
-      const isPlayer = cRoom.players && cRoom.players.some(p => p.id === userId);
-      if (isPlayer && (cRoom.status === 'PLAYING' || cRoom.status === 'WAITING')) {
-        const p = cRoom.players.find(p => p.id === userId);
-        if (p) p.socketId = socket.id;
+      const isPlayer = (cRoom.creator && cRoom.creator.id === userId) || (cRoom.joiner && cRoom.joiner.id === userId);
+      if (isPlayer && (cRoom.status === 'PLAYING' || cRoom.status === 'WAITING' || cRoom.status === 'CUTTING_JOKER')) {
         if (cRoom.creator && cRoom.creator.id === userId) cRoom.creator.socketId = socket.id;
         if (cRoom.joiner && cRoom.joiner.id === userId) cRoom.joiner.socketId = socket.id;
-        socketPlayerMap.set(socket.id, { userId, name: p ? p.name : '', roomId, gameType: 'CONQUER' });
+        const pName = (cRoom.creator && cRoom.creator.id === userId) ? cRoom.creator.name : (cRoom.joiner ? cRoom.joiner.name : '');
+        socketPlayerMap.set(socket.id, { userId, name: pName, roomId, gameType: 'CONQUER' });
         socket.join(roomId);
         socket.emit('conquer_reconnect_success', { roomId, status: cRoom.status });
         socket.emit('game_state', cRoom.getClientState(userId));
