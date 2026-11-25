@@ -182,13 +182,6 @@ class GameRoom {
     if (this.status !== 'PLAYING') return { gameFinished: false };
     this.eliminatedPlayers.add(playerId);
 
-    // Return eliminated player's hand cards back into the shuffled deck
-    const hand = this.hands[playerId] || [];
-    if (hand.length > 0) {
-      this.deck.push(...hand);
-      this.hands[playerId] = [];
-      this.deck = shuffleDeck(this.deck);
-    }
     if (this.mustMeld41PlayerId === playerId) {
       this.mustMeld41PlayerId = null;
     }
@@ -208,7 +201,14 @@ class GameRoom {
       return { gameFinished: true, winner, payout };
     }
 
-    // 2+ active players remain: eliminate only this player and continue the game!
+    // 2+ active players remain: return eliminated player's cards to deck and continue!
+    const hand = this.hands[playerId] || [];
+    if (hand.length > 0) {
+      this.deck.push(...hand);
+      this.hands[playerId] = [];
+      this.deck = shuffleDeck(this.deck);
+    }
+
     this.log(`${logMsg} (ቀሪ ${active.length} ተጫዋቾች ይቀጥላሉ!)`);
     if (this.currentTurnPlayerId === playerId) {
       const nextP = this.getNextActivePlayer(playerId);
