@@ -515,6 +515,71 @@ test('Conquer win: meld 13 cards via ወረድ + ገቢ and discard final 14th c
   assert(room.winner === 'p1', 'P1 should be declared Conquer winner');
 });
 
+test('Conquer ground draw 41 rule: requires 41 first time, NO 41 required after already opened', () => {
+  const GameRoom = require('./engine/gameRoom');
+  const room = new GameRoom('conquer_41_test', { id: 'p1', name: 'A', socketId: 's1' }, 100);
+  room.join({ id: 'p2', name: 'B', socketId: 's2' });
+  room.setJokerHighLow('p2', 'high');
+  room.status = 'PLAYING';
+  room.jokerRank = 'A';
+  room.jokerSuits = ['♠', '♥'];
+  room.isFirstDiscard = false;
+
+  const meld41 = [
+    { id: 'm1', rank: 'K', suit: '♠', pointValue: 10 },
+    { id: 'm2', rank: 'K', suit: '♥', pointValue: 10 },
+    { id: 'm3', rank: 'K', suit: '♦', pointValue: 10 },
+    { id: 'm4', rank: 'K', suit: '♣', pointValue: 10 }
+  ];
+  const extra1 = { id: 'e1', rank: '5', suit: '♣', pointValue: 5 };
+  const extra2 = { id: 'e2', rank: '6', suit: '♦', pointValue: 6 };
+  const ground1 = { id: 'g1', rank: 'Q', suit: '♠', pointValue: 10 };
+  const ground2 = { id: 'g2', rank: '2', suit: '♥', pointValue: 2 };
+
+  room.creatorHand = [...meld41, extra1, extra2];
+  room.joinerHand = [{ id: 'j1', rank: '3', suit: '♠', pointValue: 3 }];
+  room.discardPile = [ground2, ground1];
+  room.currentTurnPlayerId = 'p1';
+  room.turnState = 'AWAITING_DRAW';
+
+  // 1. Before opening: drawing from ground sets mustMeld41PlayerId
+  const draw1 = room.drawCard('p1', 'ground');
+  assert(draw1.success, 'Ground draw should succeed');
+  assert(room.mustMeld41PlayerId === 'p1', 'mustMeld41PlayerId must be set before opening');
+
+  // Cannot discard without reaching 41
+  const blockedDiscard = room.discardCard('p1', 'e1');
+  assert(!blockedDiscard.success && blockedDiscard.mustMeld41, 'Discard blocked until 41 is melded');
+
+  // Open with 40 + 10 (wait: Q♠ is 10 or K*4=40, let's use K*4 + 2? No, 4*10=40, let's add 10+10+10+10=40 + 5? No, make meld41 5 cards? No, let's make meld41 include J-Q-K-A? Or simply 2 melds: 40 + 11)
+  // Actually let's give P1 a 4-card K set (40) + 2♥? No, let's check: 4 Kings = 40 pts, plus let's add 5,6,7♠ = 18 pts -> 58 pts!
+  const meldTris = [
+    { id: 't1', rank: '5', suit: '♠', pointValue: 5 },
+    { id: 't2', rank: '6', suit: '♠', pointValue: 6 },
+    { id: 't3', rank: '7', suit: '♠', pointValue: 7 }
+  ];
+  room.creatorHand.push(...meldTris);
+  const layRes = room.layDownMelds('p1', [meld41, meldTris]);
+  assert(layRes.success && room.mustMeld41PlayerId === null, '41+ melded -> mustMeld41PlayerId cleared');
+
+  // Discard e1 -> turn passes to p2
+  const okDiscard1 = room.discardCard('p1', 'e1');
+  assert(okDiscard1.success, 'Discard after melding 41+ should succeed');
+
+  // Simulate p2 turn back to p1
+  room.currentTurnPlayerId = 'p1';
+  room.turnState = 'AWAITING_DRAW';
+  room.isFirstDiscard = false;
+
+  // 2. After already opened: drawing from ground does NOT require 41 again!
+  const draw2 = room.drawCard('p1', 'ground');
+  assert(draw2.success, 'Second ground draw after opening should succeed');
+  assert(room.mustMeld41PlayerId === null, 'mustMeld41PlayerId must remain null after already opened');
+
+  const okDiscard2 = room.discardCard('p1', 'e2');
+  assert(okDiscard2.success, 'Discard after second ground draw without melding 41 must succeed');
+});
+
 // ==============================================================
 console.log('\n✨ 8. SMART SORT SEKA RULES (User Defined Cases)');
 // ==============================================================

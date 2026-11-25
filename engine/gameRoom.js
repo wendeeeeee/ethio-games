@@ -232,6 +232,7 @@ class GameRoom {
       if (this.isFirstDiscard) return { success: false, message: 'የመጀመሪያው ካርታ አይነሳም!' };
       if (this.discardPile.length === 0) return { success: false, message: 'Ground is empty' };
 
+      const hasAlreadyOpened = this.tableMelds[playerId] && this.tableMelds[playerId].length > 0;
       const topCard = this.discardPile[this.discardPile.length - 1];
       const isFreeJoker = topCard.isJoker || topCard.rank === this.jokerRank;
 
@@ -240,8 +241,8 @@ class GameRoom {
       this.turnState = 'AWAITING_DISCARD';
       this.resetPoke();
 
-      // If top ground card was not a dropped joker, player must meld 41 on this turn!
-      if (!isFreeJoker) {
+      // Player must meld 41 ONLY if they haven't already opened on table AND it wasn't a free Joker!
+      if (!hasAlreadyOpened && !isFreeJoker) {
         this.mustMeld41PlayerId = playerId;
       } else {
         this.mustMeld41PlayerId = null;

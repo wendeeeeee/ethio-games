@@ -1951,8 +1951,10 @@ function handleDrawAction(source) {
       return;
     }
 
+    const hasAlreadyOpened = currentGameState.tableMelds && currentGameState.tableMelds[userId] && currentGameState.tableMelds[userId].length > 0;
+    const isFreeJoker = currentGameState.topGroundCard && (currentGameState.topGroundCard.isJoker || currentGameState.topGroundCard.rank === currentGameState.jokerRank);
     playDrawSound();
-    currentGameState.mustMeld41 = true;
+    currentGameState.mustMeld41 = (!hasAlreadyOpened && !isFreeJoker);
     socket.emit('draw_card', { roomId: currentRoomId, userId, source: 'ground' });
     return;
   }
