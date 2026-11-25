@@ -4,7 +4,7 @@ const http = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
 const path = require('path');
-const { v4: uuidv4 } = require('uuid');
+const { randomUUID: uuidv4 } = require('crypto');
 
 const GameRoom = require('./engine/gameRoom');
 const { SekaGameRoom, SekaBotPlayer } = require('./engine/sekaGameRoom');
@@ -1084,7 +1084,7 @@ setInterval(() => {
 // Start server only when NOT running on Vercel (Vercel uses serverless)
 if (!process.env.VERCEL) {
   const PORT = process.env.PORT || 3000;
-  server.listen(PORT, () => {
+  server.listen(PORT, '0.0.0.0', () => {
     console.log(`====================================================`);
     console.log(` Ethiopian Conquer Card & Betting Server Running!`);
     console.log(` URL: http://localhost:${PORT}`);
