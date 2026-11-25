@@ -2053,12 +2053,6 @@ function handleWeredAction() {
       currentGameState.jokerSuits
     );
     if (!validPartition) {
-      if (currentGameState.mustMeld41) {
-        socket.emit('forfeit_ground_fail', { roomId: currentRoomId, userId });
-        selectedCardsSet.clear();
-        selectedCardId = null;
-        return;
-      }
       const cardNames = selectedCards.map(c => `${c.rank}${c.suit}`).join(' ');
       return alert(`የመረጥካቸው ካርታዎች [ ${cardNames} ] ትክክለኛ ትሪስ (Meld) አልሰሩም!\nተመሳሳይ ቁጥር (ለምሳሌ 7♥ 7♦ 7♠) ወይም ተከታታይ ካርታዎች (ለምሳሌ 5♥ 6♥ 7♥) መሆን አለባቸው።`);
     }

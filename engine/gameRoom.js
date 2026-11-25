@@ -519,11 +519,14 @@ class GameRoom {
       return { success: true, isWin: true, winner: playerId, payout };
     }
 
-    // Player picked from ground without having opened: MUST close & win! Otherwise immediate forfeit!
+    // Player picked from ground without having opened: cannot discard until 41 is melded or hand closes!
     if (this.mustMeld41PlayerId === playerId) {
       hand.splice(cardIndex, 0, discardedCard);
-      const forfeitRes = this.forfeitFromFailedGround(playerId);
-      return { success: true, isForfeit: true, ...forfeitRes };
+      return {
+        success: false,
+        mustMeld41: true,
+        message: '⚠️ 41 አልሞላም!'
+      };
     }
 
     // Rule: GEBI (ገቢ) Restriction on Discarding
@@ -619,10 +622,6 @@ class GameRoom {
     let meldPoints = 0;
     for (const group of meldsToLayDown) {
       if (!isValidTris(group, this.jokerRank, this.jokerSuits) && !isValidQuatris(group, this.jokerRank, this.jokerSuits)) {
-        if (this.mustMeld41PlayerId === playerId) {
-          const forfeitRes = this.forfeitFromFailedGround(playerId);
-          return { success: true, isForfeit: true, ...forfeitRes };
-        }
         return { success: false, message: 'ያልተሟላ ወይም የተሳሳተ ትሪስ/ሜልድ ነው!' };
       }
       for (const c of group) {
@@ -648,8 +647,11 @@ class GameRoom {
       this.tableMelds[playerId].push(group);
     }
 
-    // Clear ground-draw lock once player has laid down all 13 cards (1 card left to discard & win)
-    if (this.mustMeld41PlayerId === playerId && hand.length <= 1) {
+    // Clear ground-draw lock once total table melds reach 41 points OR all 13 cards are laid down (1 left to discard & win)
+    const totalTablePoints = (this.tableMelds[playerId] || []).reduce(
+      (sum, m) => sum + m.reduce((mSum, c) => mSum + (c.pointValue || 0), 0), 0
+    );
+    if (this.mustMeld41PlayerId === playerId && (totalTablePoints >= 41 || hand.length <= 1)) {
       this.mustMeld41PlayerId = null;
     }
 
