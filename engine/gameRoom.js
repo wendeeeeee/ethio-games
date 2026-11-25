@@ -375,6 +375,25 @@ class GameRoom {
       return { success: true, card: drawnCard, from: 'ground' };
     }
 
+    if (source === 'base') {
+      if (!this.baseCard) return { success: false, message: 'የተገለበጠው ካርታ ቀድሞ ተነስቷል!' };
+      const hasAlreadyOpened = this.tableMelds[playerId] && this.tableMelds[playerId].length > 0;
+      if (hasAlreadyOpened) {
+        return { success: false, message: 'ቀድመህ ስለወረድክ የተገለበጠውን ካርታ መሳብ አትችልም!' };
+      }
+
+      drawnCard = this.baseCard;
+      this.baseCard = null;
+      hand.push(drawnCard);
+      this.turnState = 'AWAITING_DISCARD';
+      this.mustMeld41PlayerId = playerId; // Must close & win Conquer!
+      this.resetPoke();
+      this.resetTurnTimer();
+
+      this.log(`⭐ ${this.getPlayerName(playerId)} የተገለበጠውን ካርታ (${drawnCard.rank}${drawnCard.suit}) ለመዝጋት ሳበ!`);
+      return { success: true, card: drawnCard, from: 'base' };
+    }
+
     return { success: false, message: 'Invalid draw source' };
   }
 

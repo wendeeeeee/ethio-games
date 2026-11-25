@@ -1958,6 +1958,19 @@ function handleDrawAction(source) {
     return;
   }
 
+  if (source === 'base') {
+    if (!currentGameState.baseCard) return;
+    const hasAlreadyOpened = currentGameState.tableMelds && currentGameState.tableMelds[userId] && currentGameState.tableMelds[userId].length > 0;
+    if (hasAlreadyOpened) {
+      showSortToast('⚠️ ቀድመህ ስለወረድክ የተገለበጠውን ካርታ መሳብ አትችልም!');
+      return;
+    }
+    playDrawSound();
+    currentGameState.mustMeld41 = true;
+    socket.emit('draw_card', { roomId: currentRoomId, userId, source: 'base' });
+    return;
+  }
+
   if (source === 'ground') {
     if (!currentGameState.topGroundCard) return;
     if (currentGameState.isFirstDiscard) {
@@ -2256,6 +2269,14 @@ cancelGroundMeldBtn.addEventListener('click', () => {
     renderPlayerHand(currentGameState.myHand);
   }
 });
+
+// Draw Card (Flipped Base Card underneath deck)
+if (baseJokerCardContainer) {
+  baseJokerCardContainer.addEventListener('click', (e) => {
+    e.stopPropagation();
+    handleDrawAction('base');
+  });
+}
 
 // Draw Card (Stock deck) - Both Slot & Button
 stockDeckSlot.addEventListener('click', (e) => {
@@ -3927,12 +3948,12 @@ function renderGame(state) {
   const isFinished = state.status === 'FINISHED';
   renderOpponentCards(oppCount, isInitialDeal);
 
-  // Center Field: Base Joker Card (Conquer only)
-  const canShowJokerCard = !isSeka && state.status === 'PLAYING' && (state.baseCard || state.jokerCard);
+  // Center Field: Base Joker Card (Conquer only — hidden once picked up)
+  const canShowJokerCard = !isSeka && state.status === 'PLAYING' && !!state.baseCard;
+  const hasJokerRuleInfo = !isSeka && state.status === 'PLAYING' && (state.baseCard || state.jokerCard);
   if (canShowJokerCard) {
-    const cardToShow = state.baseCard || state.jokerCard;
     baseJokerCardContainer.style.display = 'block';
-    baseJokerCardContainer.innerHTML = createCardHTML(cardToShow, false, true);
+    baseJokerCardContainer.innerHTML = createCardHTML(state.baseCard, false, true);
   } else {
     baseJokerCardContainer.style.display = 'none';
     baseJokerCardContainer.innerHTML = '';
@@ -3940,7 +3961,7 @@ function renderGame(state) {
 
   // Update Chosen Joker Badge at the "ሳብ" (Deck) location (Conquer only)
   if (deckJokerCallBadge) {
-    if (!isSeka && canShowJokerCard && state.jokerRank && state.jokerSuits && state.jokerSuits.length > 0) {
+    if (!isSeka && hasJokerRuleInfo && state.jokerRank && state.jokerSuits && state.jokerSuits.length > 0) {
       const choiceMap = {
         'high': 'ከፍ',
         'low': 'ዝቅ',
