@@ -31,6 +31,19 @@ const sekaRooms = new Map();
 // Socket to player map: { socketId: { userId, roomId, gameType } }
 const socketPlayerMap = new Map();
 
+// Prevent transient async errors (e.g. Supabase network hiccups) from crashing the server
+process.on('unhandledRejection', (reason) => {
+  console.error('[UnhandledRejection]', reason);
+});
+process.on('uncaughtException', (err) => {
+  console.error('[UncaughtException]', err);
+});
+
+// Health check endpoint for Render
+app.get('/health', (req, res) => {
+  res.status(200).json({ ok: true, uptime: process.uptime() });
+});
+
 // Supabase config endpoint (for frontend — anon key only)
 app.get('/api/config/supabase', (req, res) => {
   res.json({ url: SUPABASE_URL, anonKey: SUPABASE_ANON_KEY });
