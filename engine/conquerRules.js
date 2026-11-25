@@ -469,6 +469,52 @@ function sortMeldCards(meld, jokerRank, jokerSuits) {
   return [...meld].sort((a, b) => getCardSortVal(a) - getCardSortVal(b));
 }
 
+function isValidDubePair(c1, c2, jokerRank, jokerSuits) {
+  const jk1 = isWildJoker(c1, jokerRank, jokerSuits);
+  const jk2 = isWildJoker(c2, jokerRank, jokerSuits);
+  if (jk1 || jk2) return true;
+  const r1 = c1.isFalseJoker ? jokerRank : c1.rank;
+  const r2 = c2.isFalseJoker ? jokerRank : c2.rank;
+  return r1 === r2 && c1.suit === c2.suit;
+}
+
+function partitionIntoDubePairs(cards, jokerRank, jokerSuits) {
+  if (cards.length === 0) return [];
+  const first = cards[0];
+  for (let i = 1; i < cards.length; i++) {
+    if (isValidDubePair(first, cards[i], jokerRank, jokerSuits)) {
+      const rest = cards.filter((_, idx) => idx !== 0 && idx !== i);
+      const sub = partitionIntoDubePairs(rest, jokerRank, jokerSuits);
+      if (sub) return [[first, cards[i]], ...sub];
+    }
+  }
+  return null;
+}
+
+/**
+ * Dube (ዱቤ): 1 valid Tris (3 cards) + 5 identical pairs (10 cards) = 13 cards.
+ * Allowed ONLY when the player has NOT laid down any melds on the table yet.
+ */
+function findDubeWin(cards13, jokerRank, jokerSuits) {
+  if (!cards13 || cards13.length !== 13) return null;
+  const n = cards13.length;
+  for (let i = 0; i < n - 2; i++) {
+    for (let j = i + 1; j < n - 1; j++) {
+      for (let k = j + 1; k < n; k++) {
+        const tris = [cards13[i], cards13[j], cards13[k]];
+        if (isValidTris(tris, jokerRank, jokerSuits)) {
+          const rest = cards13.filter((_, idx) => idx !== i && idx !== j && idx !== k);
+          const pairs = partitionIntoDubePairs(rest, jokerRank, jokerSuits);
+          if (pairs && pairs.length === 5) {
+            return { valid: true, tris, pairs };
+          }
+        }
+      }
+    }
+  }
+  return null;
+}
+
 module.exports = {
   isWildJoker,
   isNaturalMeld,
@@ -482,6 +528,7 @@ module.exports = {
   isCardGebiToMeld,
   isCardGebiToTable,
   getJokerReplacementOptions,
-  sortMeldCards
+  sortMeldCards,
+  findDubeWin
 };
 

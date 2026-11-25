@@ -2533,13 +2533,19 @@ discardBtn.addEventListener('click', () => {
   let winningMelds = (currentGameState._winningMelds && currentGameState._winningMelds.length >= 3)
     ? currentGameState._winningMelds
     : null;
+  let isDubeWin = false;
   if (!winningMelds && remainingAfterDiscard.length === 13) {
     const autoMelds = partitionIntoValidMelds(remainingAfterDiscard, currentGameState.jokerRank, currentGameState.jokerSuits);
     if (autoMelds && autoMelds.length >= 3) {
       winningMelds = autoMelds;
+    } else {
+      const hasAlreadyOpened = currentGameState.tableMelds && currentGameState.tableMelds[userId] && currentGameState.tableMelds[userId].length > 0;
+      if (!hasAlreadyOpened && findDubeWinClient(remainingAfterDiscard, currentGameState.jokerRank, currentGameState.jokerSuits)) {
+        isDubeWin = true;
+      }
     }
   }
-  const isWinningHand = !!winningMelds || isLastCardWin;
+  const isWinningHand = !!winningMelds || isDubeWin || isLastCardWin;
 
   // If user drew from ground without having opened, they must close & win (or reach 41)
   if (currentGameState.mustMeld41 && !isWinningHand) {
@@ -2568,7 +2574,7 @@ discardBtn.addEventListener('click', () => {
     roomId: currentRoomId,
     userId,
     cardId: cardToDiscard,
-    toGebi: !!winningMelds,
+    toGebi: !!winningMelds || isDubeWin,
     melds: winningMelds
   });
   selectedCardsSet.clear();
@@ -5072,6 +5078,46 @@ function createCardHTML(card, isSelected = false, isBaseJoker = false, zIndex = 
   `;
 }
 
+
+function isValidDubePairClient(c1, c2, jokerRank, jokerSuits) {
+  const jk1 = isWildJoker(c1, jokerRank, jokerSuits);
+  const jk2 = isWildJoker(c2, jokerRank, jokerSuits);
+  if (jk1 || jk2) return true;
+  const r1 = c1.isFalseJoker ? jokerRank : c1.rank;
+  const r2 = c2.isFalseJoker ? jokerRank : c2.rank;
+  return r1 === r2 && c1.suit === c2.suit;
+}
+
+function partitionIntoDubePairsClient(cards, jokerRank, jokerSuits) {
+  if (cards.length === 0) return [];
+  const first = cards[0];
+  for (let i = 1; i < cards.length; i++) {
+    if (isValidDubePairClient(first, cards[i], jokerRank, jokerSuits)) {
+      const rest = cards.filter((_, idx) => idx !== 0 && idx !== i);
+      const sub = partitionIntoDubePairsClient(rest, jokerRank, jokerSuits);
+      if (sub) return [[first, cards[i]], ...sub];
+    }
+  }
+  return null;
+}
+
+function findDubeWinClient(cards13, jokerRank, jokerSuits) {
+  if (!cards13 || cards13.length !== 13) return null;
+  const n = cards13.length;
+  for (let i = 0; i < n - 2; i++) {
+    for (let j = i + 1; j < n - 1; j++) {
+      for (let k = j + 1; k < n; k++) {
+        const tris = [cards13[i], cards13[j], cards13[k]];
+        if (isValidTris(tris, jokerRank, jokerSuits)) {
+          const rest = cards13.filter((_, idx) => idx !== i && idx !== j && idx !== k);
+          const pairs = partitionIntoDubePairsClient(rest, jokerRank, jokerSuits);
+          if (pairs && pairs.length === 5) return { valid: true, tris, pairs };
+        }
+      }
+    }
+  }
+  return null;
+}
 
 // Helper: groups 13 cards into 4+3+3+3 or 4+4+3 for conquer check
 function autoGroupHandIntoMelds(cards) {

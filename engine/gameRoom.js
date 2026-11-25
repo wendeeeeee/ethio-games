@@ -10,7 +10,8 @@ const {
   isCardGebiToTable,
   isCardGebiToMeld,
   getJokerReplacementOptions,
-  sortMeldCards
+  sortMeldCards,
+  findDubeWin
 } = require('./conquerRules');
 const walletManager = require('./walletManager');
 
@@ -497,10 +498,15 @@ class GameRoom {
       return { success: true, isWin: true, winner: playerId, payout };
     }
 
-    // Finishing Conquer directly from hand (Rule 5 & 12) — allowed even without 41 on table!
+    // Finishing Conquer or Dube directly from hand (Rule 5 & 12) — allowed even without 41 on table!
     if (toGebi) {
+      const hasAlreadyOpened = this.tableMelds[playerId] && this.tableMelds[playerId].length > 0;
       const winValidation = validateConquerHand(melds, discardedCard, this.jokerRank, this.jokerCard, this.jokerSuits);
-      if (!winValidation.valid) {
+      const dubeResult = (!winValidation.valid && !hasAlreadyOpened && hand.length === 13)
+        ? findDubeWin(hand, this.jokerRank, this.jokerSuits)
+        : null;
+
+      if (!winValidation.valid && !dubeResult) {
         hand.splice(cardIndex, 0, discardedCard);
         if (this.mustMeld41PlayerId === playerId) {
           const forfeitRes = this.forfeitFromFailedGround(playerId);
@@ -509,16 +515,24 @@ class GameRoom {
         return { success: false, message: `Cannot Conquer: ${winValidation.message}` };
       }
 
+      if (dubeResult) {
+        this.tableMelds[playerId] = [dubeResult.tris, ...dubeResult.pairs];
+        this.hands[playerId] = [];
+      }
+
       this.mustMeld41PlayerId = null;
+      this.discardPile.push(discardedCard);
       this.status = 'FINISHED';
       this.winner = playerId;
-      this.winReason = `CONQUER! ${this.getPlayerName(playerId)} discarded ${discardedCard.rank}${discardedCard.suit} and won!`;
+      this.winReason = dubeResult
+        ? `👑 ዱቤ (DUBE)! ${this.getPlayerName(playerId)} 1 ትሪስ + 5 ጥንድ አውርዶ አሸነፈ!`
+        : `CONQUER! ${this.getPlayerName(playerId)} discarded ${discardedCard.rank}${discardedCard.suit} and won!`;
       this.log(`🏆 ${this.winReason}`);
 
       const payout = walletManager.payoutWinner(this.roomId, playerId);
       this.resetPoke();
       this.clearTurnTimer();
-      return { success: true, isWin: true, winner: playerId, payout };
+      return { success: true, isWin: true, isDube: !!dubeResult, winner: playerId, payout };
     }
 
     // Player picked from ground without having opened: cannot discard until 41 is melded or hand closes!
