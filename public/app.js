@@ -310,6 +310,7 @@ const confirmGroundMeldBtn = document.getElementById('confirmGroundMeldBtn');
 const forfeitGroundBtn = document.getElementById('forfeitGroundBtn');
 const cancelGroundMeldBtn = document.getElementById('cancelGroundMeldBtn');
 const weredBtn = document.getElementById('weredBtn');
+const gebiBtn = document.getElementById('gebiBtn');
 let currentMeldBarMode = 'ground'; // 'ground' or 'wered'
 
 // Leave Game & 1-Minute Return Window Elements
@@ -2058,6 +2059,60 @@ if (weredBtn) {
   weredBtn.addEventListener('click', handleWeredAction);
 }
 
+function handleGebiAction() {
+  if (!currentGameState || currentGameState.status !== 'PLAYING') return;
+  if (currentGameState.currentTurnPlayerId !== userId) {
+    return showSortToast('⚠️ የአንተ ተራ አይደለም!');
+  }
+
+  const selectedCards = (currentGameState.myHand || []).filter(c =>
+    selectedCardsSet.has(String(c.id)) || selectedCardsSet.has(c.id)
+  );
+
+  if (selectedCards.length !== 1) {
+    return showSortToast('👉 ገቢ ለማድረግ ከእጅህ 1 ካርታ ብቻ ምረጥ!');
+  }
+
+  const card = selectedCards[0];
+  const tableMelds = currentGameState.tableMelds || {};
+  let foundTarget = null;
+
+  for (const ownerId of Object.keys(tableMelds)) {
+    const meldsList = tableMelds[ownerId] || [];
+    for (let mIdx = 0; mIdx < meldsList.length; mIdx++) {
+      if (isCardGebiToMeld(card, meldsList[mIdx], currentGameState.jokerRank, currentGameState.jokerSuits)) {
+        foundTarget = { ownerId, meldIndex: mIdx };
+        break;
+      }
+    }
+    if (foundTarget) break;
+  }
+
+  if (!foundTarget) {
+    return showSortToast(`⚠️ [ ${card.rank}${card.suit} ] ጠረጴዛው ላይ ካሉት ሜልዶች ጋር ገቢ መሆን አይችልም!`);
+  }
+
+  playCardSound();
+  playerOrderedCardIds = playerOrderedCardIds.filter(id => id !== card.id);
+  currentGameState.myHand = currentGameState.myHand.filter(c => c.id !== card.id);
+  selectedCardsSet.clear();
+  selectedCardId = null;
+  renderPlayerHand(currentGameState.myHand);
+
+  socket.emit('attach_gebi_card', {
+    roomId: currentRoomId,
+    userId,
+    targetOwnerId: foundTarget.ownerId,
+    meldIndex: foundTarget.meldIndex,
+    cardId: card.id
+  });
+  showSortToast(`📥 [ ${card.rank}${card.suit} ] ወደ ሜልዱ ገቢ ተደረገ!`);
+}
+
+if (gebiBtn) {
+  gebiBtn.addEventListener('click', handleGebiAction);
+}
+
 // Live update points and hint in Ground Meld Bar as cards are selected
 function updateGroundMeldBar() {
   if (!groundMeldBar || groundMeldBar.style.display === 'none') return;
@@ -2240,6 +2295,10 @@ discardBtn.addEventListener('click', () => {
   }
 
   const cardToDiscard = selectedCardId || Array.from(selectedCardsSet)[0];
+  if (selectedCardsSet.size > 1) {
+    showSortToast('⚠️ መሬት ለመጣል 1 ካርታ ብቻ ይምረጡ!');
+    return;
+  }
   const cardObj = currentGameState.myHand?.find(c => c.id === cardToDiscard);
   const isLastCardWin = currentGameState.myHand && currentGameState.myHand.length === 1;
 
@@ -3407,18 +3466,8 @@ smartSortBtn.addEventListener('click', () => {
   const best = findSingleBestArrangement(currentGameState.myHand, currentGameState);
   currentGameState.myHand = best.arrangedCards;
   playerOrderedCardIds = currentGameState.myHand.map(c => c.id);
-
-  if (best.isConquer) {
-    currentGameState._winningMelds = best.meldsCards;
-    currentGameState._tetayCardId = best.tetayCard.id;
-    selectedCardId = best.tetayCard.id;
-    selectedCardsSet.clear();
-    selectedCardsSet.add(selectedCardId);
-    showSortToast(`👑 ኮንከር! 13ቱ ካርታዎች ተሰርተዋል (ተጣይ: ${best.tetayCard.rank}${best.tetayCard.suit})`);
-  } else {
-    currentGameState._winningMelds = null;
-    currentGameState._tetayCardId = null;
-  }
+  currentGameState._winningMelds = null;
+  currentGameState._tetayCardId = null;
 
   smartSortBtn.textContent = '✨ ደርድር';
   renderPlayerHand(currentGameState.myHand);
@@ -3772,9 +3821,6 @@ function findSingleBestArrangement(hand, state) {
 
   const isConquer = (maxMeldedCards === 13);
   const tetayCard = resultCards[resultCards.length - 1];
-  if (isConquer && tetayCard) {
-    tetayCard.isTetay = true;
-  }
 
   return {
     arrangedCards: resultCards,
@@ -3920,6 +3966,7 @@ function renderGame(state) {
     pokeTimerBanner.style.display = 'none';
     if (pokeBtn) pokeBtn.style.display = 'none';
     if (weredBtn) weredBtn.style.display = 'none';
+    if (gebiBtn) gebiBtn.style.display = 'none';
     const dBtn = document.getElementById('discardBtn');
     if (dBtn) dBtn.style.display = 'inline-block';
     const sWinBtn = document.getElementById('sekaWinBtn');
@@ -3933,6 +3980,7 @@ function renderGame(state) {
     const dBtn = document.getElementById('discardBtn');
     if (dBtn) dBtn.style.display = 'inline-block';
     if (weredBtn) weredBtn.style.display = 'inline-block';
+    if (gebiBtn) gebiBtn.style.display = 'inline-block';
     if (pokeBtn) pokeBtn.style.display = 'inline-block';
 
     if (state.pokeState && state.pokeState.active) {
@@ -4181,6 +4229,7 @@ function renderGame(state) {
     if (sekaWinBtn) sekaWinBtn.style.display = 'none';
     if (discardBtn) discardBtn.style.display = 'none';
     if (weredBtn) weredBtn.style.display = 'none';
+    if (gebiBtn) gebiBtn.style.display = 'none';
     if (pokeBtn) pokeBtn.style.display = 'none';
 
     // Reveal remaining deck cards on the deck slot when game finishes!
@@ -4513,8 +4562,9 @@ function bindCardInteractions(hand) {
 
       const cId = cardEl.getAttribute('data-id');
 
-      // Meld selection mode (e.g. 41 ground meld bar): multi-select
-      if (groundMeldBar && groundMeldBar.style.display !== 'none') {
+      // Multi-select in Conquer (for selecting Tris/Quatris to ወረድ) or when Ground Meld Bar is open
+      const isConquerMode = currentGameState && currentGameState.gameType !== 'SEKA';
+      if (isConquerMode || (groundMeldBar && groundMeldBar.style.display !== 'none')) {
         if (selectedCardsSet.has(cId)) {
           selectedCardsSet.delete(cId);
           if (selectedCardId === cId) {
@@ -4677,7 +4727,7 @@ function createCardHTML(card, isSelected = false, isBaseJoker = false, zIndex = 
   const delayStyle = animDelay ? `animation-delay: ${animDelay};` : '';
 
   const baseBadge = isBaseJoker ? `<div class="card-base-badge">BASE ⭐</div>` : '';
-  const tetayBadge = card.isTetay ? `<div class="card-tetay-badge">ተጣይ 🔻</div>` : '';
+  const tetayBadge = '';
 
   if (isPrintedWildJoker || isFalse) {
     const starHTML = `<div class="card-joker-star">⭐</div>`;
