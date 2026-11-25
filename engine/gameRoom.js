@@ -51,6 +51,57 @@ class GameRoom {
     this.winner = null;
     this.winReason = null;
     this.logs = [];
+
+    // 60-Second Turn Timer
+    this.turnDuration = 60 * 1000;
+    this.turnDeadline = null;
+    this.turnTimer = null;
+    this.onTurnTimeoutCallback = null;
+  }
+
+  clearTurnTimer() {
+    if (this.turnTimer) {
+      clearTimeout(this.turnTimer);
+      this.turnTimer = null;
+    }
+  }
+
+  resetTurnTimer(onTimeout) {
+    this.clearTurnTimer();
+    if (this.status !== 'PLAYING') return;
+
+    this.turnDeadline = Date.now() + this.turnDuration;
+    if (!this.currentTurnPlayerId || String(this.currentTurnPlayerId).startsWith('bot_')) {
+      return;
+    }
+
+    const cb = onTimeout || this.onTurnTimeoutCallback;
+    this.turnTimer = setTimeout(() => {
+      if (this.status === 'PLAYING') {
+        this.handleTurnTimeout(cb);
+      }
+    }, this.turnDuration);
+  }
+
+  handleTurnTimeout(onTimeout) {
+    if (this.status !== 'PLAYING') return;
+    const timedOutId = this.currentTurnPlayerId;
+    const timedOutName = this.getPlayerName(timedOutId);
+    const opponent = this.getOpponent(timedOutId);
+    if (!opponent) return;
+
+    this.status = 'FINISHED';
+    this.winner = opponent.id;
+    this.winReason = `⏰ ${timedOutName} በ1 ደቂቃ ውስጥ ካርታ ስላልጣለ ተሸንፏል! ${opponent.name} አሸናፊ ሆኗል!`;
+    this.log(`🏆 ${this.winReason}`);
+
+    walletManager.payoutWinner(this.roomId, opponent.id);
+    this.resetPoke();
+    this.clearTurnTimer();
+
+    if (onTimeout) {
+      onTimeout(this, opponent, { id: timedOutId, name: timedOutName });
+    }
   }
 
   log(message) {
@@ -162,6 +213,7 @@ class GameRoom {
     this.currentTurnPlayerId = this.creator.id;
     this.turnState = 'AWAITING_DISCARD';
     this.status = 'PLAYING';
+    this.resetTurnTimer();
 
     const colorDesc = targetSuits.includes('♥') ? 'ቀይ (Red)' : 'ጥቁር (Black)';
     this.log(`🃏 27 ካርታዎች ተከፋፈሉ (14 ለ${this.creator.name}፣ 13 ለ${this.joiner.name})።`);
@@ -224,6 +276,7 @@ class GameRoom {
       hand.push(drawnCard);
       this.turnState = 'AWAITING_DISCARD';
       this.resetPoke();
+      this.resetTurnTimer();
       this.log(`${this.getPlayerName(playerId)} drew a card from the deck.`);
       return { success: true, card: drawnCard, from: 'deck' };
     }
@@ -249,6 +302,7 @@ class GameRoom {
       }
 
       this.log(`${this.getPlayerName(playerId)} picked ${drawnCard.rank}${drawnCard.suit} from the ground.`);
+      this.resetTurnTimer();
       return { success: true, card: drawnCard, from: 'ground' };
     }
 
@@ -286,6 +340,7 @@ class GameRoom {
 
       const payout = walletManager.payoutWinner(this.roomId, playerId);
       this.resetPoke();
+      this.clearTurnTimer();
       return { success: true, isWin: true, winner: playerId, payout };
     }
 
@@ -317,6 +372,7 @@ class GameRoom {
 
       const payout = walletManager.payoutWinner(this.roomId, playerId);
       this.resetPoke();
+      this.clearTurnTimer();
       return { success: true, isWin: true, winner: playerId, payout };
     }
 
@@ -336,6 +392,7 @@ class GameRoom {
     this.currentTurnPlayerId = this.getOpponent(playerId).id;
     this.turnState = 'AWAITING_DRAW';
     this.resetPoke();
+    this.resetTurnTimer();
 
     return { success: true, isWin: false, nextTurnPlayerId: this.currentTurnPlayerId };
   }
@@ -383,6 +440,7 @@ class GameRoom {
     hand.push(drawnCard);
     this.turnState = 'AWAITING_DISCARD';
     this.resetPoke();
+    this.resetTurnTimer();
 
     this.log(`✅ ${this.getPlayerName(playerId)} melded ${meldPoints} points on the table and picked ${drawnCard.rank}${drawnCard.suit} from the ground!`);
     return { success: true, card: drawnCard, meldPoints };
@@ -448,6 +506,7 @@ class GameRoom {
 
     const payout = walletManager.payoutWinner(this.roomId, opponent.id);
     this.resetPoke();
+    this.clearTurnTimer();
     return { winner: opponent.id, winReason: this.winReason, payout };
   }
 
@@ -486,6 +545,7 @@ class GameRoom {
         this.winReason = `TIMEOUT WIN! ${target.name} did not play within 30 seconds after Poke.`;
         this.log(`🏆 ${this.winReason}`);
         const payout = walletManager.payoutWinner(this.roomId, pokerId);
+        this.clearTurnTimer();
         if (onTimeoutCallback) onTimeoutCallback(this.winner, this.winReason, payout);
       }
     }, 1000);
@@ -598,6 +658,8 @@ class GameRoom {
       isFirstDiscard: this.isFirstDiscard,
       currentTurnPlayerId: this.currentTurnPlayerId,
       turnState: this.turnState,
+      turnDeadline: this.turnDeadline,
+      turnSecondsLeft: this.turnDeadline ? Math.max(0, Math.round((this.turnDeadline - Date.now()) / 1000)) : 60,
       myHand: myHand,
       opponentHandCount: opponentHandCount,
       opponentHand: (this.status === 'FINISHED' && opponent) ? (isCreator ? this.joinerHand : this.creatorHand) : undefined,

@@ -2118,7 +2118,7 @@ function updateGroundMeldBar() {
   if (!groundMeldBar || groundMeldBar.style.display === 'none') return;
   if (!currentGameState || !currentGameState.myHand) return;
 
-  const selectedCards = currentGameState.myHand.filter(c => selectedCardsSet.has(c.id));
+  const selectedCards = currentGameState.myHand.filter(c => selectedCardsSet.has(c.id) || selectedCardsSet.has(String(c.id)));
   const jokerRank = currentGameState.jokerRank;
   const hasAlreadyOpened = currentGameState.tableMelds && currentGameState.tableMelds[userId] && currentGameState.tableMelds[userId].length > 0;
 
@@ -2179,7 +2179,7 @@ function updateGroundMeldBar() {
 // Confirm Ground Meld or Wered Lay Down
 confirmGroundMeldBtn.addEventListener('click', () => {
   if (!currentGameState || !currentGameState.myHand) return;
-  const selectedCards = currentGameState.myHand.filter(c => selectedCardsSet.has(c.id));
+  const selectedCards = currentGameState.myHand.filter(c => selectedCardsSet.has(c.id) || selectedCardsSet.has(String(c.id)));
   const validPartition = partitionIntoValidMelds(selectedCards, currentGameState.jokerRank);
 
   let totalPts = 0;
@@ -4575,9 +4575,9 @@ function bindCardInteractions(hand) {
           selectedCardId = cId;
         }
         playCardSound();
+        cardEl.classList.toggle('selected', selectedCardsSet.has(cId));
         updateTakeGroundButton();
         updateGroundMeldBar();
-        renderPlayerHand(currentGameState.myHand);
         return;
       }
 
@@ -4811,7 +4811,7 @@ function renderTableMelds(state) {
       myMeldsLabel.textContent = `የወረዱ ካርታዎችህ (${myMelds.length} ግሩፕ)`;
       myMeldsContainer.innerHTML = myMelds.map((group, mIdx) => `
         <div class="table-meld-group" data-owner="${myId}" data-meld-idx="${mIdx}" title="ካርታ ምረጥና እዚህ ላይ ገቢ አድርግ">
-          ${group.map(c => createMiniCardHTML(c)).join('')}
+          ${group.map(c => createCardHTML(c, false, false)).join('')}
         </div>
       `).join('');
     } else {
@@ -4825,7 +4825,7 @@ function renderTableMelds(state) {
       opponentMeldsLabel.textContent = `${state.opponent ? state.opponent.name : 'ተቃራኒ'} የወረዱ (${oppMelds.length} ግሩፕ)`;
       opponentMeldsContainer.innerHTML = oppMelds.map((group, mIdx) => `
         <div class="table-meld-group" data-owner="${oppId}" data-meld-idx="${mIdx}" title="ካርታ ምረጥና እዚህ ላይ ገቢ አድርግ">
-          ${group.map(c => createMiniCardHTML(c)).join('')}
+          ${group.map(c => createCardHTML(c, false, false)).join('')}
         </div>
       `).join('');
     } else {

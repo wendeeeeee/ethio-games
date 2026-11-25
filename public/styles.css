@@ -864,7 +864,8 @@ select:focus {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 /* Top Bar: Pot, Joker indicator, Poke */
@@ -1423,7 +1424,7 @@ select:focus {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45);
   transform-origin: center 170px !important;
   transform: translateX(var(--offset, 0px)) rotate(var(--angle, 0deg)) !important;
-  transition: transform 0.3s ease, box-shadow 0.3s ease !important;
+  transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.18s ease, border-color 0.18s ease !important;
   cursor: pointer;
 }
 
@@ -1872,11 +1873,12 @@ select:focus {
 
 /* Table Melds Area */
 .table-melds-area {
-  margin: 8px 20px;
-  padding: 10px 16px;
-  background: rgba(0, 0, 0, 0.5);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 10px;
+  margin: 4px 16px;
+  padding: 4px 8px;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  flex-shrink: 0;
 }
 
 .table-melds-label {
@@ -1906,17 +1908,17 @@ select:focus {
 
 .melds-cards-row {
   display: flex;
-  gap: 8px;
+  gap: 14px;
   flex-wrap: wrap;
 }
 
 .table-meld-group {
   display: flex;
-  gap: 2px;
-  padding: 4px 6px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 6px;
+  gap: 4px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 0;
 }
 
 /* Mini Card for table melds */
