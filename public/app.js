@@ -4126,6 +4126,27 @@ function renderGame(state) {
         const arranged = (opt && opt.arrangedCards && opt.arrangedCards.length > 0) ? opt.arrangedCards : state.myHand;
         renderPlayerHand(arranged);
       }
+    } else if (state.gameType !== 'SEKA') {
+      // Conquer finished: NEVER mix opponentHand into playerCardsContainer!
+      if (playerCardsContainer) {
+        if (state.myHand && state.myHand.length > 0) {
+          playerCardsContainer.className = 'fan player-cards';
+          renderPlayerHand(state.myHand);
+        } else {
+          playerCardsContainer.innerHTML = '';
+        }
+      }
+      if (opponentCardsContainer) {
+        if (state.opponentHand && state.opponentHand.length > 0) {
+          opponentCardsContainer.innerHTML = state.opponentHand.map(c => createCardHTML(c, false, false)).join('');
+          opponentCardsContainer.style.display = 'flex';
+          opponentCardsContainer.style.justifyContent = 'center';
+          opponentCardsContainer.style.gap = '4px';
+          opponentCardsContainer.style.flexWrap = 'wrap';
+        } else {
+          opponentCardsContainer.innerHTML = '';
+        }
+      }
     } else {
       let winMelds = state.winningMelds;
       let winDiscard = state.winningDiscard;
