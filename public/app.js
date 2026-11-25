@@ -434,6 +434,15 @@ function updateTurnDisplay(state) {
     if (sec <= 15) turnTimerBadge.classList.add('urgent');
     else turnTimerBadge.classList.remove('urgent');
   }
+
+  // Trigger server timeout check immediately when visible 60s countdown reaches 0s in Conquer
+  if (sec <= 0 && s.gameType !== 'SEKA' && currentRoomId) {
+    const now = Date.now();
+    if (!s._lastTimeoutPing || now - s._lastTimeoutPing >= 2000) {
+      s._lastTimeoutPing = now;
+      socket.emit('check_conquer_timeout', { roomId: currentRoomId });
+    }
+  }
 }
 
 // Local 1-second interval to keep the turn timer and countdown ticking down smoothly

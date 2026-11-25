@@ -165,6 +165,14 @@ class GameRoom {
     }
   }
 
+  checkTurnTimeout() {
+    if (this.status === 'PLAYING' && this.turnDeadline && Date.now() >= this.turnDeadline) {
+      this.handleTurnTimeout(this.onTurnTimeoutCallback);
+      return true;
+    }
+    return false;
+  }
+
   getActivePlayers() {
     return this.players.filter(p => !this.eliminatedPlayers.has(p.id));
   }

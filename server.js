@@ -696,6 +696,14 @@ io.on('connection', (socket) => {
     }
   });
 
+  // Client notifies server when visible 60s turn timer hits 0s
+  socket.on('check_conquer_timeout', ({ roomId }) => {
+    const room = rooms.get(roomId);
+    if (room && room.status === 'PLAYING') {
+      room.checkTurnTimeout();
+    }
+  });
+
   // Rule 8: Poke Player
   socket.on('poke_player', ({ roomId, userId }) => {
     const room = rooms.get(roomId);
