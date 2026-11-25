@@ -1036,6 +1036,8 @@ socket.on('player_timed_out', ({ winnerName, loserName, message }) => {
   hideActiveGameReturnBanner();
   if (loserName && playerName && loserName === playerName) {
     showSortToast(`❌ በ 60 ሰከንድ ውስጥ ካርታ ስላልጣልክ ተሸንፈሃል! (${winnerName || 'ተጋጣሚ'} አሸነፈ)`);
+  } else if (winnerName && playerName && winnerName === playerName) {
+    showSortToast(`🏆 አሸንፈሃል! ${loserName || 'ተጋጣሚ'} በ 60 ሰከንድ ውስጥ ካርታ ስላልጣለ አሸነፍክ!`);
   } else {
     showSortToast(message || '⏰ ተጫዋች በ 1 ደቂቃ ውስጥ ካርታ ስላልጣለ ተሸንፏል!');
   }
@@ -1045,6 +1047,8 @@ socket.on('player_abandoned', ({ winnerName, loserName, message }) => {
   hideActiveGameReturnBanner();
   if (loserName && playerName && loserName === playerName) {
     showSortToast(`❌ በ 60 ሰከንድ ውስጥ ስላልተመለስክ ተሸንፈሃል! (${winnerName || 'ተጋጣሚ'} አሸነፈ)`);
+  } else if (winnerName && playerName && winnerName === playerName) {
+    showSortToast(`🏆 አሸንፈሃል! ${loserName || 'ተጋጣሚ'} በ 60 ሰከንድ ውስጥ ስላልተመለሰ አሸነፍክ!`);
   } else {
     showSortToast(message || '❌ ተጫዋች በ 1 ደቂቃ ውስጥ ስላልተመለሰ ተሸንፏል!');
   }
@@ -4137,15 +4141,19 @@ function renderGame(state) {
         if (state.creator && state.creator.id === state.winner) winnerName = state.creator.name;
         else if (state.joiner && state.joiner.id === state.winner) winnerName = state.joiner.name;
         else if (state.opponent && state.opponent.id === state.winner) winnerName = state.opponent.name;
+        else if (Array.isArray(state.players)) {
+          const wp = state.players.find(p => p.id === state.winner);
+          if (wp && wp.name) winnerName = wp.name;
+        }
       }
       if (state.winReason === 'TIMEOUT_FORFEIT') {
         turnIndicator.textContent = iWon
-          ? '🏆 ተጋጣሚ በ 60 ሰከንድ ውስጥ ካርታ ስላልጣለ አሸነፍክ!'
+          ? `🏆 አሸንፈሃል! ተጋጣሚ በ 60 ሰከንድ ውስጥ ካርታ ስላልጣለ አሸነፍክ! (ደራሽ: ${state.pot || 0} ETB)`
           : `❌ በ 60 ሰከንድ ውስጥ ካርታ ስላልጣልክ ተሸንፈሃል! (አሸናፊ፦ ${winnerName})`;
         turnIndicator.style.color = iWon ? '#4ade80' : '#ef4444';
       } else if (state.winReason === 'ABANDON_FORFEIT') {
         turnIndicator.textContent = iWon
-          ? '🚪 ተጋጣሚ ከጠረጴዛው ወጥቶ ስላልተመለሰ አሸነፍክ!'
+          ? `🏆 አሸንፈሃል! ተጋጣሚ ከጠረጴዛው ወጥቶ ስላልተመለሰ አሸነፍክ! (ደራሽ: ${state.pot || 0} ETB)`
           : `❌ በ 60 ሰከንድ ውስጥ ስላልተመለስክ ተሸንፈሃል! (አሸናፊ፦ ${winnerName})`;
         turnIndicator.style.color = iWon ? '#4ade80' : '#ef4444';
       } else {
