@@ -258,16 +258,20 @@ class GameRoom {
       return { success: true, waitingForMore: true };
     }
 
-    // Lock bets into Escrow for all players once table is full
-    const escrowResult = walletManager.lockEscrow(this.roomId, this.players.map(p => p.id), this.stakeAmount);
-    if (!escrowResult.success) {
-      this.players.pop();
-      delete this.hands[player.id];
-      delete this.tableMelds[player.id];
-      if (this.joiner && this.joiner.id === player.id) this.joiner = null;
-      return { success: false, message: escrowResult.message };
+    // Lock bets into Escrow for all players once table is full (skip for free AI bot practice)
+    if (this.isFreeBot || this.stakeAmount <= 0) {
+      this.pot = 0;
+    } else {
+      const escrowResult = walletManager.lockEscrow(this.roomId, this.players.map(p => p.id), this.stakeAmount);
+      if (!escrowResult.success) {
+        this.players.pop();
+        delete this.hands[player.id];
+        delete this.tableMelds[player.id];
+        if (this.joiner && this.joiner.id === player.id) this.joiner = null;
+        return { success: false, message: escrowResult.message };
+      }
+      this.pot = escrowResult.pot;
     }
-    this.pot = escrowResult.pot;
 
     // 108-Card 2-Deck Setup (cards will be dealt after Joiner calls Joker!)
     this.deck = shuffleDeck(createConquerDeck(2));

@@ -1956,22 +1956,10 @@ if (playBotBtn) {
     if (!requireAuth('⚠️ ከቦት ጋር ለመጫወት እባክዎ መጀመሪያ ይግቡ ወይም ይመዝገቡ!')) {
       return;
     }
-    const stakeAmount = getConquerStakeAmount();
-    if (stakeAmount < 5) {
-      showSortToast('⚠️ ዝቅተኛው የውርርድ መጠን 5 ብር ነው!');
-      const inputEl = document.getElementById('stakeInput');
-      if (inputEl) inputEl.focus();
-      return;
-    }
-    if (currentUserBalance < stakeAmount) {
-      showSortToast(`⚠️ በቂ balance የለዎትም! ያለዎት ሂሳብ ${currentUserBalance.toLocaleString()} ETB ሲሆን የውርርድ መጠኑ ${stakeAmount.toLocaleString()} ETB ነው።`);
-      openDepositModal();
-      return;
-    }
     lastLobbyGameType = 'CONQUER';
     localStorage.setItem('conquer_last_game_type', 'CONQUER');
     playCardSound();
-    socket.emit('play_vs_bot', { userId, name: playerName || 'ተጫዋች', stakeAmount });
+    socket.emit('play_vs_bot', { userId, name: playerName || 'ተጫዋች', stakeAmount: 0 });
     switchToGameView();
   });
 }

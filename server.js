@@ -7,6 +7,7 @@ const path = require('path');
 const { randomUUID: uuidv4 } = require('crypto');
 
 const GameRoom = require('./engine/gameRoom');
+const { executeSmartBotTurn } = require('./engine/conquerBot');
 const { SekaGameRoom, SekaBotPlayer } = require('./engine/sekaGameRoom');
 const walletManager = require('./engine/walletManager');
 const depositManager = require('./engine/depositManager');
@@ -772,19 +773,10 @@ io.on('connection', (socket) => {
   });
 
   // Play Against AI Bot (Single Player mode for instant testing)
-  socket.on('play_vs_bot', ({ userId, name, stakeAmount }) => {
-    const stake = Math.floor(Number(stakeAmount) || 0);
-    if (stake < 5) {
-      return socket.emit('error_msg', '⚠️ ዝቅተኛው የውርርድ መጠን 5 ብር ነው!');
-    }
-    const userWallet = walletManager.getWallet(userId);
-    if (!userWallet || userWallet.balance < stake) {
-      const bal = userWallet ? userWallet.balance : 0;
-      return socket.emit('error_msg', `⚠️ በቂ balance የለዎትም! ያለዎት ሂሳብ ${bal.toLocaleString()} ETB ሲሆን የውርርድ መጠኑ ${stake.toLocaleString()} ETB ነው።`);
-    }
-
+  socket.on('play_vs_bot', ({ userId, name }) => {
     const roomId = `bot_room_${Math.floor(1000 + Math.random() * 9000)}`;
-    const room = new GameRoom(roomId, { id: userId, name, socketId: socket.id }, stake);
+    const room = new GameRoom(roomId, { id: userId, name, socketId: socket.id }, 0);
+    room.isFreeBot = true;
     attachConquerRoomCallbacks(room);
     rooms.set(roomId, room);
     socketPlayerMap.set(socket.id, { userId, name, roomId });
@@ -794,8 +786,7 @@ io.on('connection', (socket) => {
     const botResult = room.join({ id: botId, name: 'Abebe (AI Bot)', socketId: null });
     if (!botResult.success) return socket.emit('error_msg', botResult.message);
 
-    broadcastWallet(userId);
-    // Bot is Joiner, so Bot automatically calls High/Low after 1.5 seconds
+    // Bot is Joiner, so Bot automatically calls High/Low after 1.2 seconds
     broadcastRoomUpdate(room);
 
     setTimeout(() => {
@@ -1259,7 +1250,9 @@ function broadcastRoomUpdate(room) {
     }
   }
   if (room.status === 'FINISHED') {
-    recordRecentWinner(room, 'CONQUER');
+    if (!room.isFreeBot && room.stakeAmount > 0) {
+      recordRecentWinner(room, 'CONQUER');
+    }
     for (const p of players) {
       if (p && p.id) broadcastWallet(p.id);
     }
@@ -1304,39 +1297,9 @@ function broadcastWallet(userId) {
   });
 }
 
-// Simple AI Bot Logic to play Ethiopian Conquer turns
+// Smart AI Bot Logic to play Ethiopian Conquer turns
 function handleBotTurn(room) {
-  setTimeout(() => {
-    if (room.status !== 'PLAYING') return;
-    const botId = room.joiner.id.startsWith('bot_') ? room.joiner.id : room.creator.id;
-    if (room.currentTurnPlayerId !== botId) return;
-
-    const botHand = room.getHand(botId);
-
-    // If turn state is AWAITING_DISCARD (e.g. creator starts with 14 cards, must discard first)
-    if (room.turnState === 'AWAITING_DISCARD') {
-      const nonJokers = botHand.filter(c => !c.isJoker && c.rank !== room.jokerRank);
-      const cardToDiscard = nonJokers.length > 0 ? nonJokers[0] : botHand[0];
-      room.discardCard(botId, cardToDiscard.id, false);
-      broadcastRoomUpdate(room);
-      return;
-    }
-
-    // AWAITING_DRAW: Bot draws from deck
-    const drawRes = room.drawCard(botId, 'deck');
-    broadcastRoomUpdate(room);
-
-    // Bot waits 1.5 seconds then discards worst non-joker card
-    setTimeout(() => {
-      if (room.status !== 'PLAYING' || room.currentTurnPlayerId !== botId) return;
-      const updatedHand = room.getHand(botId);
-      const nonJokers = updatedHand.filter(c => !c.isJoker && c.rank !== room.jokerRank);
-      const cardToDiscard = nonJokers.length > 0 ? nonJokers[0] : updatedHand[0];
-
-      room.discardCard(botId, cardToDiscard.id, false);
-      broadcastRoomUpdate(room);
-    }, 1500);
-  }, 1200);
+  executeSmartBotTurn(room, broadcastRoomUpdate);
 }
 
 // Proactive background interval to expire waiting rooms older than 60 seconds
