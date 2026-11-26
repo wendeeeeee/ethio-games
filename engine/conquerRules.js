@@ -50,9 +50,12 @@ function isValidTris(cards, jokerRank, jokerSuits) {
       return suits.size >= 2;
     }
     const nonFalse = naturalCards.filter(c => !c.isFalseJoker);
+    const hasFalse = naturalCards.some(c => c.isFalseJoker);
     const seqSuit = nonFalse.length > 0 ? nonFalse[0].suit : naturalCards[0].suit;
-    const cardsWithRanks = naturalCards.map(c => ({ rank: getRank(c), suit: c.isFalseJoker ? seqSuit : c.suit }));
-    if (isSequenceSameSuit(cardsWithRanks)) return true;
+    if (!hasFalse || !jokerSuits || jokerSuits.includes(seqSuit)) {
+      const cardsWithRanks = naturalCards.map(c => ({ rank: getRank(c), suit: c.isFalseJoker ? seqSuit : c.suit }));
+      if (isSequenceSameSuit(cardsWithRanks)) return true;
+    }
   }
 
   // Case 2: Tris with 1 Joker
@@ -63,14 +66,17 @@ function isValidTris(cards, jokerRank, jokerSuits) {
       return true; // Joker acts as the 3rd card of that rank
     }
     const nonFalse = naturalCards.filter(c => !c.isFalseJoker);
+    const hasFalse = naturalCards.some(c => c.isFalseJoker);
     const seqSuit = nonFalse.length > 0 ? nonFalse[0].suit : naturalCards[0].suit;
-    const s0 = naturalCards[0].isFalseJoker ? seqSuit : naturalCards[0].suit;
-    const s1 = naturalCards[1].isFalseJoker ? seqSuit : naturalCards[1].suit;
-    if (s0 === s1) {
-      if (canFormSequenceWithJoker([
-        { rank: r0, suit: s0 },
-        { rank: r1, suit: s1 }
-      ], 1, 3)) return true;
+    if (!hasFalse || !jokerSuits || jokerSuits.includes(seqSuit)) {
+      const s0 = naturalCards[0].isFalseJoker ? seqSuit : naturalCards[0].suit;
+      const s1 = naturalCards[1].isFalseJoker ? seqSuit : naturalCards[1].suit;
+      if (s0 === s1) {
+        if (canFormSequenceWithJoker([
+          { rank: r0, suit: s0 },
+          { rank: r1, suit: s1 }
+        ], 1, 3)) return true;
+      }
     }
   }
 
@@ -101,9 +107,12 @@ function isValidQuatris(cards, jokerRank, jokerSuits) {
       return suits.size >= 2;
     }
     const nonFalse = naturalCards.filter(c => !c.isFalseJoker);
+    const hasFalse = naturalCards.some(c => c.isFalseJoker);
     const seqSuit = nonFalse.length > 0 ? nonFalse[0].suit : naturalCards[0].suit;
-    const cardsWithRanks = naturalCards.map(c => ({ rank: getRank(c), suit: c.isFalseJoker ? seqSuit : c.suit }));
-    if (isSequenceSameSuit(cardsWithRanks)) return true;
+    if (!hasFalse || !jokerSuits || jokerSuits.includes(seqSuit)) {
+      const cardsWithRanks = naturalCards.map(c => ({ rank: getRank(c), suit: c.isFalseJoker ? seqSuit : c.suit }));
+      if (isSequenceSameSuit(cardsWithRanks)) return true;
+    }
   }
 
   // Case 2: Quatris with 1 Joker
@@ -113,10 +122,13 @@ function isValidQuatris(cards, jokerRank, jokerSuits) {
       return true;
     }
     const nonFalse = naturalCards.filter(c => !c.isFalseJoker);
+    const hasFalse = naturalCards.some(c => c.isFalseJoker);
     const seqSuit = nonFalse.length > 0 ? nonFalse[0].suit : naturalCards[0].suit;
-    const mapped = naturalCards.map(c => ({ rank: getRank(c), suit: c.isFalseJoker ? seqSuit : c.suit }));
-    if (mapped.every(c => c.suit === seqSuit)) {
-      if (canFormSequenceWithJoker(mapped, 1, 4)) return true;
+    if (!hasFalse || !jokerSuits || jokerSuits.includes(seqSuit)) {
+      const mapped = naturalCards.map(c => ({ rank: getRank(c), suit: c.isFalseJoker ? seqSuit : c.suit }));
+      if (mapped.every(c => c.suit === seqSuit)) {
+        if (canFormSequenceWithJoker(mapped, 1, 4)) return true;
+      }
     }
   }
 

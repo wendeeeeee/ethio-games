@@ -579,6 +579,12 @@ io.on('connection', (socket) => {
     const room = rooms.get(roomId);
     if (!room || room.status === 'EXPIRED') return socket.emit('error_msg', 'Room expired or not found');
 
+    const userWallet = walletManager.getWallet(userId);
+    if (!userWallet || userWallet.balance < room.stakeAmount) {
+      const bal = userWallet ? userWallet.balance : 0;
+      return socket.emit('error_msg', `⚠️ በቂ balance የለዎትም! ያለዎት ሂሳብ ${bal.toLocaleString()} ETB ሲሆን የውርርድ መጠኑ ${room.stakeAmount.toLocaleString()} ETB ነው።`);
+    }
+
     const result = room.join({ id: userId, name, socketId: socket.id });
     if (!result.success) return socket.emit('error_msg', result.message);
 
