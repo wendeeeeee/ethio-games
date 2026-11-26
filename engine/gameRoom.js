@@ -1,5 +1,5 @@
 // engine/gameRoom.js
-const { createConquerDeck, shuffleDeck, getNextRank, getPrevRank } = require('./cardTypes');
+const { createConquerDeck, shuffleDeck, getNextRank, getPrevRank, getCardPointValue } = require('./cardTypes');
 const {
   calculateHandPoints,
   canDrawFromGround,
@@ -11,7 +11,8 @@ const {
   isCardGebiToMeld,
   getJokerReplacementOptions,
   sortMeldCards,
-  findDubeWin
+  findDubeWin,
+  getMeldPoints
 } = require('./conquerRules');
 const walletManager = require('./walletManager');
 
@@ -395,6 +396,7 @@ class GameRoom {
         card.isJoker = false;
         card.isMainJoker = false;
         card.effectiveRank = this.jokerRank;
+        card.pointValue = this.jokerRank ? getCardPointValue(this.jokerRank) : 0;
       }
     };
     for (const p of this.players) {
@@ -603,9 +605,7 @@ class GameRoom {
 
     if (meldsToLayDown && meldsToLayDown.length > 0) {
       for (const group of meldsToLayDown) {
-        for (const c of group) {
-          meldPoints += c.pointValue || 0;
-        }
+        meldPoints += getMeldPoints(group, this.jokerRank, this.jokerSuits);
       }
     }
 
@@ -648,9 +648,7 @@ class GameRoom {
       if (!isValidTris(group, this.jokerRank, this.jokerSuits) && !isValidQuatris(group, this.jokerRank, this.jokerSuits)) {
         return { success: false, message: 'ያልተሟላ ወይም የተሳሳተ ትሪስ/ሜልድ ነው!' };
       }
-      for (const c of group) {
-        meldPoints += c.pointValue || 0;
-      }
+      meldPoints += getMeldPoints(group, this.jokerRank, this.jokerSuits);
     }
 
     // Verify all cards exist in player hand
@@ -686,7 +684,7 @@ class GameRoom {
 
     // Clear ground-draw lock once total table melds reach 41 points OR all 13 cards are laid down (1 left to discard & win)
     const totalTablePoints = (this.tableMelds[playerId] || []).reduce(
-      (sum, m) => sum + m.reduce((mSum, c) => mSum + (c.pointValue || 0), 0), 0
+      (sum, m) => sum + getMeldPoints(m, this.jokerRank, this.jokerSuits), 0
     );
     if (this.mustMeld41PlayerId === playerId && (totalTablePoints >= 41 || hand.length <= 1)) {
       this.mustMeld41PlayerId = null;

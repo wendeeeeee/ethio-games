@@ -2096,7 +2096,7 @@ function handleWeredAction() {
     }
 
     let totalPts = 0;
-    selectedCards.forEach(c => { totalPts += c.pointValue || 0; });
+    validPartition.forEach(g => { totalPts += getMeldPointsClient(g, currentGameState.jokerRank, currentGameState.jokerSuits); });
 
     // Direct meld execution!
     executeMeldDown(validPartition, totalPts);
@@ -2104,6 +2104,36 @@ function handleWeredAction() {
   }
 
   showSortToast('👉 ለማውረድ ቢያንስ 1 ትሪስ (3 ካርታ) መርጠህ "ውረድ" ን ተጫን!');
+}
+
+function getRankPointClient(rank) {
+  if (!rank) return 0;
+  if (rank === 'A') return 11;
+  if (['K', 'Q', 'J', '10'].includes(rank)) return 10;
+  return parseInt(rank, 10) || 0;
+}
+
+function getMeldPointsClient(meld, jokerRank, jokerSuits) {
+  if (!meld || meld.length === 0) return 0;
+  const isJk = (c) => isWildJoker(c, jokerRank, jokerSuits);
+  const jkOpts = getJokerReplacementOptionsClient(meld, jokerRank, jokerSuits);
+  let total = 0;
+  for (const c of meld) {
+    if (c.isFalseJoker) {
+      total += jokerRank ? getRankPointClient(jokerRank) : (c.pointValue || 0);
+    } else if (isJk(c)) {
+      if (c.assignedCard && c.assignedCard.rank) {
+        total += getRankPointClient(c.assignedCard.rank);
+      } else if (jkOpts.length > 0) {
+        total += Math.max(...jkOpts.map(o => getRankPointClient(o.rank)));
+      } else {
+        total += c.pointValue || 0;
+      }
+    } else {
+      total += c.pointValue || getRankPointClient(c.rank);
+    }
+  }
+  return total;
 }
 
 function getJokerReplacementOptionsClient(meld, jokerRank, jokerSuits) {
@@ -2383,7 +2413,11 @@ function updateGroundMeldBar() {
   const validPartition = partitionIntoValidMelds(selectedCards, jokerRank);
 
   let totalPts = 0;
-  selectedCards.forEach(c => { totalPts += c.pointValue || 0; });
+  if (validPartition) {
+    validPartition.forEach(g => { totalPts += getMeldPointsClient(g, jokerRank, currentGameState.jokerSuits); });
+  } else {
+    selectedCards.forEach(c => { totalPts += c.isFalseJoker ? getRankPointClient(jokerRank) : (c.pointValue || 0); });
+  }
 
   groundMeldPointsVal.textContent = totalPts;
 
@@ -2437,10 +2471,14 @@ function updateGroundMeldBar() {
 confirmGroundMeldBtn.addEventListener('click', () => {
   if (!currentGameState || !currentGameState.myHand) return;
   const selectedCards = currentGameState.myHand.filter(c => selectedCardsSet.has(c.id) || selectedCardsSet.has(String(c.id)));
-  const validPartition = partitionIntoValidMelds(selectedCards, currentGameState.jokerRank);
+  const validPartition = partitionIntoValidMelds(selectedCards, currentGameState.jokerRank, currentGameState.jokerSuits);
 
   let totalPts = 0;
-  selectedCards.forEach(c => { totalPts += c.pointValue || 0; });
+  if (validPartition) {
+    validPartition.forEach(g => { totalPts += getMeldPointsClient(g, currentGameState.jokerRank, currentGameState.jokerSuits); });
+  } else {
+    selectedCards.forEach(c => { totalPts += c.isFalseJoker ? getRankPointClient(currentGameState.jokerRank) : (c.pointValue || 0); });
+  }
 
   const hasAlreadyOpened = currentGameState.tableMelds && currentGameState.tableMelds[userId] && currentGameState.tableMelds[userId].length > 0;
 
@@ -2798,7 +2836,9 @@ function isValidTris(cards, jokerRank, jokerSuits) {
       const suits = new Set(naturalCards.map(c => c.suit));
       return suits.size >= 2;
     }
-    const cardsWithRanks = naturalCards.map(c => ({ rank: getRank(c), suit: c.suit }));
+    const nonFalse = naturalCards.filter(c => !c.isFalseJoker);
+    const seqSuit = nonFalse.length > 0 ? nonFalse[0].suit : naturalCards[0].suit;
+    const cardsWithRanks = naturalCards.map(c => ({ rank: getRank(c), suit: c.isFalseJoker ? seqSuit : c.suit }));
     if (isSequenceSameSuit(cardsWithRanks)) return true;
   }
 
@@ -2807,10 +2847,14 @@ function isValidTris(cards, jokerRank, jokerSuits) {
     const r0 = getRank(naturalCards[0]);
     const r1 = getRank(naturalCards[1]);
     if (r0 && r0 === r1) return true;
-    if (naturalCards[0].suit === naturalCards[1].suit) {
+    const nonFalse = naturalCards.filter(c => !c.isFalseJoker);
+    const seqSuit = nonFalse.length > 0 ? nonFalse[0].suit : naturalCards[0].suit;
+    const s0 = naturalCards[0].isFalseJoker ? seqSuit : naturalCards[0].suit;
+    const s1 = naturalCards[1].isFalseJoker ? seqSuit : naturalCards[1].suit;
+    if (s0 === s1) {
       if (canFormSequenceWithJoker([
-        { rank: r0, suit: naturalCards[0].suit },
-        { rank: r1, suit: naturalCards[1].suit }
+        { rank: r0, suit: s0 },
+        { rank: r1, suit: s1 }
       ], 1, 3)) return true;
     }
   }
@@ -2835,7 +2879,9 @@ function isValidQuatris(cards, jokerRank, jokerSuits) {
       const suits = new Set(naturalCards.map(c => c.suit));
       return suits.size >= 2;
     }
-    const cardsWithRanks = naturalCards.map(c => ({ rank: getRank(c), suit: c.suit }));
+    const nonFalse = naturalCards.filter(c => !c.isFalseJoker);
+    const seqSuit = nonFalse.length > 0 ? nonFalse[0].suit : naturalCards[0].suit;
+    const cardsWithRanks = naturalCards.map(c => ({ rank: getRank(c), suit: c.isFalseJoker ? seqSuit : c.suit }));
     if (isSequenceSameSuit(cardsWithRanks)) return true;
   }
 
@@ -2843,8 +2889,11 @@ function isValidQuatris(cards, jokerRank, jokerSuits) {
   if (jokerCount === 1) {
     const r0 = getRank(naturalCards[0]);
     if (r0 && naturalCards.every(c => getRank(c) === r0)) return true;
-    if (naturalCards.every(c => c.suit === naturalCards[0].suit)) {
-      if (canFormSequenceWithJoker(naturalCards.map(c => ({ rank: getRank(c), suit: c.suit })), 1, 4)) return true;
+    const nonFalse = naturalCards.filter(c => !c.isFalseJoker);
+    const seqSuit = nonFalse.length > 0 ? nonFalse[0].suit : naturalCards[0].suit;
+    const mapped = naturalCards.map(c => ({ rank: getRank(c), suit: c.isFalseJoker ? seqSuit : c.suit }));
+    if (mapped.every(c => c.suit === seqSuit)) {
+      if (canFormSequenceWithJoker(mapped, 1, 4)) return true;
     }
   }
   return false;
