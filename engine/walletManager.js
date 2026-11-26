@@ -254,6 +254,12 @@ class WalletManager {
           .eq('id', userId)
           .maybeSingle();
         if (byId && byId.phone) {
+          const existingLive = this.wallets.get(byId.id);
+          if (existingLive) {
+            if (byId.name && !this._isGenericName(byId.name)) existingLive.name = byId.name;
+            if (byId.phone) existingLive.phone = byId.phone;
+            return existingLive;
+          }
           const w = {
             id: byId.id,
             name: byId.name || '',
@@ -276,6 +282,12 @@ class WalletManager {
             .limit(1);
           if (rows && rows.length > 0 && rows[0].phone) {
             const r = rows[0];
+            const existingLive = this.wallets.get(r.id);
+            if (existingLive) {
+              if (r.name && !this._isGenericName(r.name)) existingLive.name = r.name;
+              if (r.phone) existingLive.phone = r.phone;
+              return existingLive;
+            }
             const w = {
               id: r.id,
               name: r.name || '',
