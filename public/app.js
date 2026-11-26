@@ -992,6 +992,11 @@ socket.on('seka_reconnect_success', ({ roomId, status }) => {
   localStorage.setItem('conquer_active_room_id', roomId);
   if (status === 'WAITING') {
     currentWaitingRoomId = roomId;
+    lastLobbyGameType = 'SEKA';
+    localStorage.setItem('conquer_last_game_type', 'SEKA');
+    if (homeGameSelectView) homeGameSelectView.style.display = 'none';
+    if (conquerLobbySection) conquerLobbySection.style.display = 'none';
+    if (sekaLobbySection) sekaLobbySection.style.display = 'block';
     refreshSekaRoomsList();
     return;
   }
@@ -1010,6 +1015,11 @@ socket.on('conquer_reconnect_success', ({ roomId, status }) => {
   localStorage.setItem('conquer_active_room_id', roomId);
   if (status === 'WAITING') {
     currentWaitingRoomId = roomId;
+    lastLobbyGameType = 'CONQUER';
+    localStorage.setItem('conquer_last_game_type', 'CONQUER');
+    if (homeGameSelectView) homeGameSelectView.style.display = 'none';
+    if (sekaLobbySection) sekaLobbySection.style.display = 'none';
+    if (conquerLobbySection) conquerLobbySection.style.display = 'block';
     refreshRoomsList();
     return;
   }
@@ -2012,6 +2022,8 @@ async function refreshRoomsList() {
     }
     roomsListContainer.innerHTML = rooms.map(r => {
       const isMyRoom = (r.creatorId && r.creatorId === userId) || (r.roomId === currentWaitingRoomId);
+      const expSec = r.expiresIn !== undefined ? r.expiresIn : 60;
+      const expAt = Date.now() + expSec * 1000;
       if (isMyRoom) {
         return `
           <div class="room-list-item" style="background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 12px; padding: 10px 14px; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between;">
@@ -2021,7 +2033,7 @@ async function refreshRoomsList() {
                 ${r.stakeAmount} ETB • ${r.playersCount || 1}/${r.maxPlayers || 2} ተጫዋች
               </div>
             </div>
-            <span style="font-size: 12px; color: #059669; font-weight: 700; background: #ffffff; padding: 4px 10px; border-radius: 16px; border: 1px solid #a7f3d0;">⏳ ${r.expiresIn !== undefined ? r.expiresIn + 's' : '60s'}</span>
+            <span class="waiting-countdown-badge" data-expires-at="${expAt}" style="font-size: 12px; color: #059669; font-weight: 700; background: #ffffff; padding: 4px 10px; border-radius: 16px; border: 1px solid #a7f3d0;">⏳ ${expSec}s</span>
           </div>
         `;
       }
@@ -2029,7 +2041,7 @@ async function refreshRoomsList() {
         <div class="room-list-item">
           <div>
             <strong style="color: #0f172a; font-size: 14px;">${r.creatorName}</strong>
-            <div style="font-size: 12px; color: #64748b;">${r.stakeAmount} ETB • ${r.playersCount || 1}/${r.maxPlayers || 2} ተጫዋች ${r.expiresIn ? `• <span style="color: #059669; font-weight: 700;">⏳ ${r.expiresIn}s</span>` : ''}</div>
+            <div style="font-size: 12px; color: #64748b;">${r.stakeAmount} ETB • ${r.playersCount || 1}/${r.maxPlayers || 2} ተጫዋች ${r.expiresIn ? `• <span class="waiting-countdown-badge" data-expires-at="${expAt}" style="color: #059669; font-weight: 700;">⏳ ${expSec}s</span>` : ''}</div>
           </div>
           <button class="btn-primary" style="width: auto; padding: 6px 14px; font-size: 12px;" onclick="joinRoom('${r.roomId}')">ግባ</button>
         </div>
@@ -2051,6 +2063,8 @@ async function refreshSekaRoomsList() {
     }
     sekaContainer.innerHTML = rooms.map(r => {
       const isMyRoom = (r.creatorId && r.creatorId === userId) || (r.roomId === currentWaitingRoomId);
+      const expSec = r.expiresIn !== undefined ? r.expiresIn : 60;
+      const expAt = Date.now() + expSec * 1000;
       if (isMyRoom) {
         return `
           <div class="room-list-item" style="background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 12px; padding: 10px 14px; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between;">
@@ -2060,7 +2074,7 @@ async function refreshSekaRoomsList() {
                 ${r.stakeAmount} ETB • ${r.playersCount || 1}/${r.maxPlayers || 2} ተጫዋች
               </div>
             </div>
-            <span style="font-size: 12px; color: #059669; font-weight: 700; background: #ffffff; padding: 4px 10px; border-radius: 16px; border: 1px solid #a7f3d0;">⏳ ${r.expiresIn !== undefined ? r.expiresIn + 's' : '60s'}</span>
+            <span class="waiting-countdown-badge" data-expires-at="${expAt}" style="font-size: 12px; color: #059669; font-weight: 700; background: #ffffff; padding: 4px 10px; border-radius: 16px; border: 1px solid #a7f3d0;">⏳ ${expSec}s</span>
           </div>
         `;
       } else {
@@ -2070,7 +2084,7 @@ async function refreshSekaRoomsList() {
               <strong style="color: #0f172a; font-size: 14px;">${r.creatorName}</strong>
               <div style="font-size: 12px; color: #64748b; margin-top: 2px;">
                 ${r.stakeAmount} ETB • ${r.playersCount || 1}/${r.maxPlayers || 2} ተጫዋች
-                ${r.expiresIn !== undefined ? `• <span style="color: #059669; font-weight: 700;">⏳ ${r.expiresIn}s</span>` : ''}
+                ${r.expiresIn !== undefined ? `• <span class="waiting-countdown-badge" data-expires-at="${expAt}" style="color: #059669; font-weight: 700;">⏳ ${expSec}s</span>` : ''}
               </div>
             </div>
             <button class="btn-primary" style="width: auto; padding: 6px 14px; font-size: 12px;" onclick="joinSekaRoom('${r.roomId}')">ግባ</button>
@@ -2080,6 +2094,18 @@ async function refreshSekaRoomsList() {
     }).join('');
   } catch (e) { }
 }
+
+// Live 1-second countdown ticker for waiting rooms in Active Games
+setInterval(() => {
+  const badges = document.querySelectorAll('.waiting-countdown-badge[data-expires-at]');
+  if (!badges.length) return;
+  const now = Date.now();
+  badges.forEach(el => {
+    const exp = Number(el.getAttribute('data-expires-at')) || 0;
+    const sec = Math.max(0, Math.round((exp - now) / 1000));
+    el.textContent = `⏳ ${sec}s`;
+  });
+}, 1000);
 
 window.cancelCreatedRoom = function (roomId) {
   socket.emit('leave_seka_room', { roomId, userId });
