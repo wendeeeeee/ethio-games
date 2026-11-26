@@ -990,6 +990,11 @@ socket.on('connect', () => {
 socket.on('seka_reconnect_success', ({ roomId, status }) => {
   currentRoomId = roomId;
   localStorage.setItem('conquer_active_room_id', roomId);
+  if (status === 'WAITING') {
+    currentWaitingRoomId = roomId;
+    refreshSekaRoomsList();
+    return;
+  }
   isTemporarilyOut = false;
   activeGameReturnRoomId = null;
   hideActiveGameReturnBanner();
@@ -1003,6 +1008,11 @@ socket.on('seka_reconnect_success', ({ roomId, status }) => {
 socket.on('conquer_reconnect_success', ({ roomId, status }) => {
   currentRoomId = roomId;
   localStorage.setItem('conquer_active_room_id', roomId);
+  if (status === 'WAITING') {
+    currentWaitingRoomId = roomId;
+    refreshRoomsList();
+    return;
+  }
   isTemporarilyOut = false;
   activeGameReturnRoomId = null;
   hideActiveGameReturnBanner();
