@@ -4488,8 +4488,14 @@ function renderGame(state) {
 
   tableIdDisplay.textContent = '';
   if (potDisplay) {
-    potDisplay.textContent = `💰 ደራሽ: ${state.pot || 0} ETB`;
-    potDisplay.style.display = 'inline-flex';
+    const potVal = Number(state.pot) || 0;
+    if (potVal > 0) {
+      potDisplay.textContent = `💰 ደራሽ: ${potVal.toLocaleString()} ETB`;
+      potDisplay.style.display = 'inline-flex';
+    } else {
+      potDisplay.textContent = '';
+      potDisplay.style.display = 'none';
+    }
   }
   const deckCnt = state.deckCount !== undefined ? state.deckCount : (state.deckCardCount !== undefined ? state.deckCardCount : 0);
   if (deckCount) {
