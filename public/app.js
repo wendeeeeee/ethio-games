@@ -5398,7 +5398,8 @@ function createCardHTML(card, isSelected = false, isBaseJoker = false, zIndex = 
   const delayStyle = animDelay ? `animation-delay: ${animDelay};` : '';
 
   const baseBadge = isBaseJoker ? `<div class="card-base-badge">BASE ⭐</div>` : '';
-  const assignedBadge = card.assignedCard ? `<div class="card-assigned-badge">=${card.assignedCard.rank}${card.assignedCard.suit}</div>` : '';
+  const assignedIsRed = card.assignedCard && (card.assignedCard.suit === '♦' || card.assignedCard.suit === '♥');
+  const assignedBadge = card.assignedCard ? `<div class="card-assigned-badge" style="color: ${assignedIsRed ? '#dc2626' : '#0f172a'};">=${card.assignedCard.rank}${card.assignedCard.suit}</div>` : '';
   const tetayBadge = '';
 
   if (isPrintedWildJoker || isFalse) {
