@@ -29,11 +29,12 @@ function isBotJoker(card, room) {
 function findDisjointMelds(hand, jokerRank, jokerSuits) {
   const usedIds = new Set();
   const melds = [];
+  const roomRef = { jokerRank, jokerSuits };
 
   // 1. Find pure sequences (3-4+ same suit consecutive) without consuming jokers first
   const bySuit = {};
   for (const c of hand) {
-    if (c.isJoker || c.rank === jokerRank) continue;
+    if (isBotJoker(c, roomRef)) continue;
     if (!bySuit[c.suit]) bySuit[c.suit] = [];
     bySuit[c.suit].push(c);
   }
@@ -71,7 +72,7 @@ function findDisjointMelds(hand, jokerRank, jokerSuits) {
   const remaining = hand.filter(c => !usedIds.has(c.id));
   const byRank = {};
   for (const c of remaining) {
-    if (c.isJoker || c.rank === jokerRank) continue;
+    if (isBotJoker(c, roomRef)) continue;
     if (!byRank[c.rank]) byRank[c.rank] = [];
     byRank[c.rank].push(c);
   }
@@ -93,11 +94,11 @@ function findDisjointMelds(hand, jokerRank, jokerSuits) {
     }
   }
 
-  // 3. Use remaining Jokers to complete 2-card pairs (same rank diff suit) or 2-card near-sequences
-  const jokers = hand.filter(c => !usedIds.has(c.id) && (c.isJoker || c.rank === jokerRank));
+  // 3. Use remaining Jokers to complete 2-card Tris pairs OR 2-card Sequences
+  const jokers = hand.filter(c => !usedIds.has(c.id) && isBotJoker(c, roomRef));
   if (jokers.length > 0) {
-    const remNonJokers = hand.filter(c => !usedIds.has(c.id) && !c.isJoker && c.rank !== jokerRank);
-    // Try 2-card same-rank pairs + 1 joker
+    const remNonJokers = hand.filter(c => !usedIds.has(c.id) && !isBotJoker(c, roomRef));
+    // 3a. Try 2-card same-rank pairs + 1 joker
     const remByRank = {};
     for (const c of remNonJokers) {
       if (!remByRank[c.rank]) remByRank[c.rank] = [];
@@ -113,6 +114,32 @@ function findDisjointMelds(hand, jokerRank, jokerSuits) {
           melds.push(candidate);
           candidate.forEach(c => usedIds.add(c.id));
           jokers.shift();
+        }
+      }
+    }
+
+    // 3b. Try 2-card same-suit near-sequences (rank diff 1 or 2) + 1 joker
+    if (jokers.length > 0) {
+      const remBySuit = {};
+      for (const c of hand) {
+        if (usedIds.has(c.id) || isBotJoker(c, roomRef)) continue;
+        if (!remBySuit[c.suit]) remBySuit[c.suit] = [];
+        remBySuit[c.suit].push(c);
+      }
+      for (const suit of Object.keys(remBySuit)) {
+        if (jokers.length === 0) break;
+        const sc = remBySuit[suit].sort((a, b) => (RANK_VALUES[a.rank] || 0) - (RANK_VALUES[b.rank] || 0));
+        for (let i = 0; i < sc.length - 1 && jokers.length > 0; i++) {
+          if (usedIds.has(sc[i].id) || usedIds.has(sc[i + 1].id)) continue;
+          const diff = (RANK_VALUES[sc[i + 1].rank] || 0) - (RANK_VALUES[sc[i].rank] || 0);
+          if (diff === 1 || diff === 2) {
+            const candidate = [sc[i], sc[i + 1], jokers[0]];
+            if (isValidQuatris(candidate, jokerRank, jokerSuits)) {
+              melds.push(candidate);
+              candidate.forEach(c => usedIds.add(c.id));
+              jokers.shift();
+            }
+          }
         }
       }
     }
@@ -281,17 +308,21 @@ function executeSmartBotTurn(room, broadcastRoomUpdate) {
           if (gRes && gRes.success) drewFromGround = true;
         }
       } else {
-        // Not opened yet: can pick from ground if Joker OR if ground card lets us open 41+ immediately
+        // Not opened yet: can pick from ground if Joker OR if hand already has 41+ melds and ground card helps!
         if (isBotJoker(topGround, room)) {
           const gRes = room.drawCard(botId, 'ground');
           if (gRes && gRes.success) drewFromGround = true;
         } else {
-          const testHand = [...botHand, topGround];
-          const { melds, totalPoints } = findDisjointMelds(testHand, room.jokerRank, room.jokerSuits);
-          const usesGround = melds.some(m => m.some(c => c.id === topGround.id));
-          if (usesGround && totalPoints >= 41 && testHand.length - melds.reduce((s, m) => s + m.length, 0) >= 1) {
-            const gRes = room.drawCardFromGroundWithMelds(botId, melds);
-            if (gRes && gRes.success) drewFromGround = true;
+          const { melds, totalPoints, leftovers } = findDisjointMelds(botHand, room.jokerRank, room.jokerSuits);
+          if (melds.length > 0 && totalPoints >= 41 && botHand.length - melds.reduce((s, m) => s + m.length, 0) >= 0) {
+            const helpsLeftover = findDisjointMelds([...leftovers, topGround], room.jokerRank, room.jokerSuits).melds.some(
+              m => m.some(c => c.id === topGround.id)
+            );
+            const helpsMeld = melds.some(m => isCardGebiToMeld(topGround, m, room.jokerRank, room.jokerSuits));
+            if (helpsLeftover || helpsMeld) {
+              const gRes = room.drawCardFromGroundWithMelds(botId, melds);
+              if (gRes && gRes.success) drewFromGround = true;
+            }
           }
         }
       }
