@@ -2406,8 +2406,10 @@ function getJokerReplacementOptionsClient(meld, jokerRank, jokerSuits) {
     return ['♠', '♥', '♦', '♣'].filter(s => !usedSuits.has(s)).map(suit => ({ rank: firstRank, suit }));
   }
 
-  const suit = naturals[0].suit;
-  if (!naturals.every(c => c.suit === suit)) return [];
+  const nonFalse = naturals.filter(c => !c.isFalseJoker);
+  const suit = nonFalse.length > 0 ? nonFalse[0].suit : naturals[0].suit;
+  if (!nonFalse.every(c => c.suit === suit)) return [];
+  if (naturals.some(c => c.isFalseJoker) && jokerSuits && !jokerSuits.includes(suit)) return [];
   const numToRank = (n) => (n === 1 || n === 14 ? 'A' : n === 11 ? 'J' : n === 12 ? 'Q' : n === 13 ? 'K' : String(n));
   const options = [];
   const seen = new Set();

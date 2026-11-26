@@ -450,9 +450,11 @@ function getJokerReplacementOptions(meld, jokerRank, jokerSuits) {
     return allSuits.filter(s => !usedSuits.has(s)).map(suit => ({ rank: firstRank, suit }));
   }
 
-  // Case 2: Same-suit sequence (e.g. 3♥ 4♥ + Joker -> 2♥ or 5♥)
-  const suit = naturals[0].suit;
-  if (!naturals.every(c => c.suit === suit)) return [];
+  // Case 2: Same-suit sequence (e.g. 3♥ 4♥ + Joker -> 2♥ or 5♥; handles False Joker too)
+  const nonFalse = naturals.filter(c => !c.isFalseJoker);
+  const suit = nonFalse.length > 0 ? nonFalse[0].suit : naturals[0].suit;
+  if (!nonFalse.every(c => c.suit === suit)) return [];
+  if (naturals.some(c => c.isFalseJoker) && jokerSuits && !jokerSuits.includes(suit)) return [];
 
   const numToRank = (n) => {
     if (n === 1 || n === 14) return 'A';
