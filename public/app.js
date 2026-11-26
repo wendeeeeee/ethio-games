@@ -2102,8 +2102,8 @@ function handleWeredAction() {
       currentGameState.jokerSuits
     );
     if (!validPartition) {
-      const cardNames = selectedCards.map(c => `${c.rank}${c.suit}`).join(' ');
-      return alert(`የመረጥካቸው ካርታዎች [ ${cardNames} ] ትክክለኛ ትሪስ (Meld) አልሰሩም!\nተመሳሳይ ቁጥር (ለምሳሌ 7♥ 7♦ 7♠) ወይም ተከታታይ ካርታዎች (ለምሳሌ 5♥ 6♥ 7♥) መሆን አለባቸው።`);
+      showSortToast('⚠️ የተመረጠው ትሪስ ትክክል አይደለም!');
+      return;
     }
 
     let totalPts = 0;
