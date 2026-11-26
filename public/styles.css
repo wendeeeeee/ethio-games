@@ -3736,18 +3736,19 @@ body.in-game .user-profile-badge {
 /* Active Game Floating Return Banner (Sticky at top when user leaves to lobby) */
 .active-game-return-banner {
   position: fixed;
-  top: 60px;
+  top: 56px;
   left: 50%;
   transform: translateX(-50%);
-  width: calc(100% - 32px);
-  max-width: 600px;
+  width: calc(100% - 20px);
+  max-width: 480px;
   background: #0f172a;
   border: 1.5px solid #059669;
-  border-radius: 14px;
-  padding: 12px 18px;
+  border-radius: 12px;
+  padding: 10px 14px;
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25);
   z-index: 9999;
   animation: slideDownBanner 0.3s ease-out;
+  box-sizing: border-box;
 }
 
 @keyframes slideDownBanner {
@@ -3776,15 +3777,21 @@ body.in-game .user-profile-badge {
 
 .return-banner-text {
   font-size: 13px;
-  line-height: 1.4;
+  font-weight: 700;
+  line-height: 1.3;
   flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .return-banner-timer {
-  display: block;
+  display: inline-block;
   font-size: 12px;
   color: #fca5a5;
-  margin-top: 2px;
+  font-weight: 800;
 }
 
 .btn-return-game {
@@ -3793,10 +3800,11 @@ body.in-game .user-profile-badge {
   border: 1px solid #34d399;
   border-radius: 10px;
   font-weight: 800;
-  font-size: 13px;
-  padding: 8px 16px;
+  font-size: 12px;
+  padding: 7px 14px;
   cursor: pointer;
   white-space: nowrap;
+  flex-shrink: 0;
   box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
 }
 

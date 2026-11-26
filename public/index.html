@@ -8,7 +8,7 @@
   <title>CONQUER - Ethiopian Card Betting Game</title>
   <!-- Telegram Web App SDK (Enables seamless Telegram Mini App mode) -->
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <link rel="stylesheet" href="styles.css?v=58">
+  <link rel="stylesheet" href="styles.css?v=59">
 </head>
 
 <body>
@@ -50,12 +50,11 @@
   <!-- Active Game Return Banner (Visible when user leaves active table to lobby) -->
   <div id="activeGameReturnBanner" class="active-game-return-banner" style="display: none;">
     <div class="return-banner-content">
-      <span class="return-banner-icon">⚠️</span>
       <div class="return-banner-text">
-        <span id="returnBannerGameName">በሴካ ጨዋታ ላይ ነዎት!</span> <strong>ጠረጴዛ <span id="returnBannerTableId">#---</span></strong>
-        <span class="return-banner-timer">⏳ <strong id="returnBannerCountdown">60s</strong> ውስጥ ካልተመለሱ ይሸነፋሉ!</span>
+        <span id="returnBannerGameName">በጨዋታ ላይ ነዎት</span>
+        <span class="return-banner-timer">⏳ <strong id="returnBannerCountdown">60s</strong></span>
       </div>
-      <button id="returnToGameBtn" class="btn-return-game">↩️ ወደ ጨዋታው ተመለስ (Return)</button>
+      <button id="returnToGameBtn" class="btn-return-game">↩️ ተመለስ</button>
     </div>
   </div>
 
@@ -828,7 +827,7 @@
 
   <!-- Socket.io & App Script -->
   <script src="/socket.io/socket.io.js"></script>
-  <script src="app.js?v=65"></script>
+  <script src="app.js?v=66"></script>
 </body>
 
 </html>

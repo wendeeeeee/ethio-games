@@ -331,9 +331,8 @@ function showActiveGameReturnBanner(roomId, deadline, gameType) {
   const returnBannerGameName = document.getElementById('returnBannerGameName');
   const isSeka = gameType === 'SEKA' || (currentGameState && currentGameState.gameType === 'SEKA') || String(roomId || '').startsWith('seka_');
   if (returnBannerGameName) {
-    returnBannerGameName.textContent = isSeka ? 'በሴካ ጨዋታ ላይ ነዎት!' : 'በኮንከር ጨዋታ ላይ ነዎት!';
+    returnBannerGameName.textContent = isSeka ? 'በሴካ ጨዋታ ላይ ነዎት' : 'በኮንከር ጨዋታ ላይ ነዎት';
   }
-  if (returnBannerTableId) returnBannerTableId.textContent = '#' + String(roomId || '').replace(/^seka_/, '');
   activeGameReturnBanner.style.display = 'block';
 
   if (returnBannerTimer) clearInterval(returnBannerTimer);
@@ -1991,16 +1990,16 @@ async function refreshRoomsList() {
     const res = await fetch('/api/rooms');
     const rooms = await res.json();
     if (rooms.length === 0) {
-      roomsListContainer.innerHTML = `<p style="color: #64748b; font-size: 14px;">No tables waiting. Create one or play against the AI Bot!</p>`;
+      roomsListContainer.innerHTML = `<p style="color: #64748b; font-size: 13px;">ክፍት ጨዋታ የለም።</p>`;
       return;
     }
     roomsListContainer.innerHTML = rooms.map(r => `
       <div class="room-list-item">
         <div>
-          <strong style="color: #0f172a;">${r.creatorName}</strong>
-          <div style="font-size: 12px; color: #64748b;">Stake: ${r.stakeAmount} ETB | ${r.playersCount || 1}/${r.maxPlayers || 2} ተጫዋቾች ${r.expiresIn ? `| <span style="color: #059669; font-weight: 700;">⏳ ${r.expiresIn}s ይቀራል</span>` : ''}</div>
+          <strong style="color: #0f172a; font-size: 14px;">${r.creatorName}</strong>
+          <div style="font-size: 12px; color: #64748b;">${r.stakeAmount} ETB • ${r.playersCount || 1}/${r.maxPlayers || 2} ${r.expiresIn ? `• <span style="color: #059669; font-weight: 700;">⏳ ${r.expiresIn}s</span>` : ''}</div>
         </div>
-        <button class="btn-primary" style="width: auto; padding: 6px 14px; font-size: 12px;" onclick="joinRoom('${r.roomId}')">Join Table</button>
+        <button class="btn-primary" style="width: auto; padding: 6px 14px; font-size: 12px;" onclick="joinRoom('${r.roomId}')">ግባ</button>
       </div>
     `).join('');
   } catch (e) { }
@@ -2014,42 +2013,34 @@ async function refreshSekaRoomsList() {
     const sekaContainer = document.getElementById('sekaRoomsListContainer');
     if (!sekaContainer) return;
     if (rooms.length === 0) {
-      sekaContainer.innerHTML = `<p style="color: #64748b; font-size: 14px;">በአሁኑ ሰዓት ክፍት የሴካ ጨዋታ የለም። አዲስ ጨዋታ ለመፍጠር "Create Game" የሚለውን ይጫኑ ወይም ከ AI Bot ጋር ይጫወቱ!</p>`;
+      sekaContainer.innerHTML = `<p style="color: #64748b; font-size: 13px;">ክፍት ጨዋታ የለም።</p>`;
       return;
     }
     sekaContainer.innerHTML = rooms.map(r => {
       const isMyRoom = (r.creatorId && r.creatorId === userId) || (r.roomId === currentWaitingRoomId);
       if (isMyRoom) {
         return `
-          <div class="room-list-item" style="background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 12px; padding: 12px 16px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2px 8px rgba(5, 150, 105, 0.08);">
+          <div class="room-list-item" style="background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 12px; padding: 10px 14px; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between;">
             <div>
-              <div style="display: flex; align-items: center; gap: 8px;">
-                <strong style="color: #065f46; font-size: 14px;">🃏 የእርስዎ ጨዋታ (${r.creatorName})</strong>
-                <span style="background: #ecfdf5; color: #047857; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 12px; border: 1px solid #a7f3d0;">ተጫዋች በመጠበቅ ላይ...</span>
-              </div>
-              <div style="font-size: 12px; color: #475569; margin-top: 4px;">
-                ውርርድ: <strong>${r.stakeAmount} ETB</strong> | ${r.playersCount || 1}/${r.maxPlayers || 2} ተጫዋቾች 
-                ${r.expiresIn !== undefined ? `| <span style="color: #059669; font-weight: 700;">⏳ ${r.expiresIn}s ይቀራል</span>` : ''}
+              <strong style="color: #065f46; font-size: 14px;">${r.creatorName}</strong>
+              <div style="font-size: 12px; color: #475569; margin-top: 2px;">
+                ${r.stakeAmount} ETB • ${r.playersCount || 1}/${r.maxPlayers || 2}
               </div>
             </div>
-            <div style="display: flex; align-items: center; gap: 8px;">
-              <span style="font-size: 13px; color: #059669; font-weight: 700; background: #ffffff; padding: 5px 12px; border-radius: 20px; border: 1px solid #a7f3d0;">⏳ ${r.expiresIn !== undefined ? r.expiresIn + 's' : '60s'}</span>
-            </div>
+            <span style="font-size: 12px; color: #059669; font-weight: 700; background: #ffffff; padding: 4px 10px; border-radius: 16px; border: 1px solid #a7f3d0;">⏳ ${r.expiresIn !== undefined ? r.expiresIn + 's' : '60s'}</span>
           </div>
         `;
       } else {
         return `
-          <div class="room-list-item" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px 16px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between;">
+          <div class="room-list-item" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 10px 14px; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between;">
             <div>
-              <strong style="color: #0f172a; font-size: 14px;">🃏 ${r.creatorName}</strong>
-              <div style="font-size: 12px; color: #64748b; margin-top: 4px;">
-                ውርርድ: <strong>${r.stakeAmount} ETB</strong> | ${r.playersCount || 1}/${r.maxPlayers || 2} ተጫዋቾች 
-                ${r.expiresIn !== undefined ? `| <span style="color: #059669; font-weight: 700;">⏳ ${r.expiresIn}s ይቀራል</span>` : ''}
+              <strong style="color: #0f172a; font-size: 14px;">${r.creatorName}</strong>
+              <div style="font-size: 12px; color: #64748b; margin-top: 2px;">
+                ${r.stakeAmount} ETB • ${r.playersCount || 1}/${r.maxPlayers || 2}
+                ${r.expiresIn !== undefined ? `• <span style="color: #059669; font-weight: 700;">⏳ ${r.expiresIn}s</span>` : ''}
               </div>
             </div>
-            <button class="btn-primary" style="width: auto; padding: 7px 16px; font-size: 13px;" onclick="joinSekaRoom('${r.roomId}')">
-              ተቀላቀል (Join) →
-            </button>
+            <button class="btn-primary" style="width: auto; padding: 6px 14px; font-size: 12px;" onclick="joinSekaRoom('${r.roomId}')">ግባ</button>
           </div>
         `;
       }
