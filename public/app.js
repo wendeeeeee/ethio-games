@@ -3235,11 +3235,36 @@ function isValidQuatris(cards, jokerRank, jokerSuits) {
   return false;
 }
 
-// Partitions a set of selected cards (e.g. 6 or 7 cards) into valid disjoint Tris / Quatris melds
+function isValidSequenceMeld(cards, jokerRank, jokerSuits) {
+  if (!cards || cards.length < 3 || cards.length > 13) return false;
+  const isJk = (c) => isWildJoker(c, jokerRank, jokerSuits);
+  const jokerCount = cards.filter(isJk).length;
+  if (jokerCount > 1) return false;
+
+  const naturalCards = cards.filter(c => !isJk(c));
+  const getRank = (c) => (c.isFalseJoker ? jokerRank : c.rank);
+  const nonFalse = naturalCards.filter(c => !c.isFalseJoker);
+  const hasFalse = naturalCards.some(c => c.isFalseJoker);
+  const seqSuit = nonFalse.length > 0 ? nonFalse[0].suit : naturalCards[0].suit;
+  if (hasFalse && jokerSuits && !jokerSuits.includes(seqSuit)) return false;
+
+  const mapped = naturalCards.map(c => ({ rank: getRank(c), suit: c.isFalseJoker ? seqSuit : c.suit }));
+  if (!mapped.every(c => c.suit === seqSuit)) return false;
+  if (jokerCount === 0) return isSequenceSameSuit(mapped);
+  return canFormSequenceWithJoker(mapped, 1, cards.length);
+}
+
+function isValidConquerMeld(cards, jokerRank, jokerSuits) {
+  if (!cards || cards.length < 3) return false;
+  if (cards.length === 3) return isValidTris(cards, jokerRank, jokerSuits);
+  if (cards.length === 4) return isValidQuatris(cards, jokerRank, jokerSuits);
+  return isValidSequenceMeld(cards, jokerRank, jokerSuits);
+}
+
+// Partitions a set of selected cards into valid disjoint Conquer melds (3, 4, or 5+ sequences)
 function partitionIntoValidMelds(cards, jokerRank, jokerSuits) {
   if (!cards || cards.length < 3) return null;
-  if (cards.length === 3 && isValidTris(cards, jokerRank, jokerSuits)) return [cards];
-  if (cards.length === 4 && isValidQuatris(cards, jokerRank, jokerSuits)) return [cards];
+  if (isValidConquerMeld(cards, jokerRank, jokerSuits)) return [cards];
   if (cards.length === 6) {
     for (let i = 0; i < 4; i++) {
       for (let j = i + 1; j < 5; j++) {

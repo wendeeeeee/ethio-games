@@ -153,6 +153,35 @@ function isValidQuatris(cards, jokerRank, jokerSuits) {
   return false;
 }
 
+/**
+ * Checks if a group of 3..13 cards forms a valid same-suit sequence (max 1 Joker, False Joker supported).
+ */
+function isValidSequenceMeld(cards, jokerRank, jokerSuits) {
+  if (!cards || cards.length < 3 || cards.length > 13) return false;
+  const isJk = (c) => isWildJoker(c, jokerRank, jokerSuits);
+  const jokerCount = cards.filter(isJk).length;
+  if (jokerCount > 1) return false;
+
+  const naturalCards = cards.filter(c => !isJk(c));
+  const getRank = (c) => (c.isFalseJoker ? jokerRank : c.rank);
+  const nonFalse = naturalCards.filter(c => !c.isFalseJoker);
+  const hasFalse = naturalCards.some(c => c.isFalseJoker);
+  const seqSuit = nonFalse.length > 0 ? nonFalse[0].suit : naturalCards[0].suit;
+  if (hasFalse && jokerSuits && !jokerSuits.includes(seqSuit)) return false;
+
+  const mapped = naturalCards.map(c => ({ rank: getRank(c), suit: c.isFalseJoker ? seqSuit : c.suit }));
+  if (!mapped.every(c => c.suit === seqSuit)) return false;
+  if (jokerCount === 0) return isSequenceSameSuit(mapped);
+  return canFormSequenceWithJoker(mapped, 1, cards.length);
+}
+
+function isValidConquerMeld(cards, jokerRank, jokerSuits) {
+  if (!cards || cards.length < 3) return false;
+  if (cards.length === 3) return isValidTris(cards, jokerRank, jokerSuits);
+  if (cards.length === 4) return isValidQuatris(cards, jokerRank, jokerSuits);
+  return isValidSequenceMeld(cards, jokerRank, jokerSuits);
+}
+
 // Helper: check if natural cards form an unbroken sequence of the same suit
 function isSequenceSameSuit(cards) {
   if (!cards || cards.length < 3) return false;
@@ -318,20 +347,12 @@ function canDrawFromGround(hand, groundCard, isFirstDiscard, jokerRank) {
  */
 function validateConquerHand(melds, gebiCard, jokerRank, baseCard, jokerSuits = null) {
   if (!gebiCard) return { valid: false, message: 'You must select a final card to discard!' };
-  if (!melds || melds.length < 3) return { valid: false, message: 'Must have at least 3 valid melds (Tris/Quatris)!' };
+  if (!melds || melds.length < 1) return { valid: false, message: 'Must have valid melds!' };
 
   let totalCardsCount = 0;
   for (const group of melds) {
-    if (group.length === 3) {
-      if (!isValidTris(group, jokerRank, jokerSuits)) {
-        return { valid: false, message: 'One of your 3-card groups is not a valid Tris!' };
-      }
-    } else if (group.length === 4) {
-      if (!isValidQuatris(group, jokerRank, jokerSuits)) {
-        return { valid: false, message: 'One of your 4-card groups is not a valid Quatris!' };
-      }
-    } else {
-      return { valid: false, message: 'Melds must be exactly 3 cards (Tris) or 4 cards (Quatris)!' };
+    if (!isValidConquerMeld(group, jokerRank, jokerSuits)) {
+      return { valid: false, message: 'One of your card groups is not a valid Tris/Quatris/Sequence!' };
     }
     totalCardsCount += group.length;
   }
@@ -653,6 +674,8 @@ module.exports = {
   isSequenceSameSuit,
   isValidTris,
   isValidQuatris,
+  isValidSequenceMeld,
+  isValidConquerMeld,
   calculateHandPoints,
   findHandTris,
   canDrawFromGround,

@@ -7,6 +7,7 @@ const {
   findHandTris,
   isValidTris,
   isValidQuatris,
+  isValidConquerMeld,
   isCardGebiToTable,
   isCardGebiToMeld,
   getJokerReplacementOptions,
@@ -671,7 +672,7 @@ class GameRoom {
 
     let meldPoints = 0;
     for (const group of meldsToLayDown) {
-      if (!isValidTris(group, this.jokerRank, this.jokerSuits) && !isValidQuatris(group, this.jokerRank, this.jokerSuits)) {
+      if (!isValidConquerMeld(group, this.jokerRank, this.jokerSuits)) {
         return { success: false, message: 'ያልተሟላ ወይም የተሳሳተ ትሪስ ነው!' };
       }
       meldPoints += getMeldPoints(group, this.jokerRank, this.jokerSuits);
