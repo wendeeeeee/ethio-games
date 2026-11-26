@@ -347,27 +347,42 @@ function isCardGebiToMeld(card, meld, jokerRank, jokerSuits) {
     }
   }
 
-  // 2. Same-suit sequence (can extend on either end)
+  // 2. Same-suit sequence (can extend on either end, including assigned/placed Joker positions)
   const isSeq = naturals.every(c => c.suit === naturals[0].suit);
   if (isSeq) {
     const suit = naturals[0].suit;
-    if (card.suit !== suit) return false;
+    if (card.suit !== suit && !(card.isFalseJoker && (!jokerSuits || jokerSuits.includes(suit)))) return false;
 
-    // Rank numbers with Ace as 1
-    const numsAs1 = naturals.map(c => RANK_ORDER[c.rank]).sort((a, b) => a - b);
-    const min1 = numsAs1[0];
-    const max1 = numsAs1[numsAs1.length - 1];
-    const cardNum1 = RANK_ORDER[card.rank];
+    const cardRankEff = card.isFalseJoker ? jokerRank : card.rank;
+    const cardNum1 = RANK_ORDER[cardRankEff];
+    const cardNum14 = cardRankEff === 'A' ? 14 : RANK_ORDER[cardRankEff];
 
-    if (cardNum1 === min1 - 1 || cardNum1 === max1 + 1) return true;
+    const jokersInMeld = meld.filter(isJk);
+    const baseRanks = naturals.map(c => (c.isFalseJoker ? jokerRank : c.rank));
 
-    // Rank numbers with Ace as 14 (Ace High)
-    const numsAs14 = naturals.map(c => (c.rank === 'A' ? 14 : RANK_ORDER[c.rank])).sort((a, b) => a - b);
-    const min14 = numsAs14[0];
-    const max14 = numsAs14[numsAs14.length - 1];
-    const cardNum14 = card.rank === 'A' ? 14 : RANK_ORDER[card.rank];
+    const checkWithExtraRanks = (ranksList) => {
+      const numsAs1 = ranksList.map(r => RANK_ORDER[r]).filter(Boolean).sort((a, b) => a - b);
+      if (numsAs1.length > 0 && !numsAs1.includes(cardNum1)) {
+        if (cardNum1 === numsAs1[0] - 1 || cardNum1 === numsAs1[numsAs1.length - 1] + 1) return true;
+      }
+      const numsAs14 = ranksList.map(r => (r === 'A' ? 14 : RANK_ORDER[r])).filter(Boolean).sort((a, b) => a - b);
+      if (numsAs14.length > 0 && !numsAs14.includes(cardNum14)) {
+        if (cardNum14 === numsAs14[0] - 1 || cardNum14 === numsAs14[numsAs14.length - 1] + 1) return true;
+      }
+      return false;
+    };
 
-    if (cardNum14 === min14 - 1 || cardNum14 === max14 + 1) return true;
+    const assignedJokers = jokersInMeld.filter(jk => jk.assignedCard && jk.assignedCard.rank);
+    if (assignedJokers.length === jokersInMeld.length) {
+      return checkWithExtraRanks([...baseRanks, ...assignedJokers.map(jk => jk.assignedCard.rank)]);
+    }
+
+    // Fallback if a Joker in the meld has no assignedCard yet: check each valid Joker placement
+    const jkOpts = getJokerReplacementOptions(meld, jokerRank, jokerSuits);
+    if (jkOpts.length > 0) {
+      return jkOpts.some(opt => checkWithExtraRanks([...baseRanks, opt.rank]));
+    }
+    return checkWithExtraRanks(baseRanks);
   }
 
   return false;
