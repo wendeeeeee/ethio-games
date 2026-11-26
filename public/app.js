@@ -3094,11 +3094,16 @@ function isCardGebiToTable(card, tableMelds, jokerRank, jokerSuits) {
 // Connection score between two cards (Rank pair = 100, Suited consecutive = 80, Suited 1-gap = 50)
 function getCardConnectionScore(a, b) {
   if (!a || !b) return 0;
-  if (a.rank === b.rank) return 100;
-  if (a.suit === b.suit) {
-    const d = getCardRankDistance(a, b);
-    if (d === 1) return 80;
-    if (d === 2) return 50;
+  const jRank = (typeof currentGameState !== 'undefined' && currentGameState) ? currentGameState.jokerRank : null;
+  const rA = (a.isFalseJoker && jRank) ? jRank : a.rank;
+  const rB = (b.isFalseJoker && jRank) ? jRank : b.rank;
+  if (rA && rA === rB) return 100;
+  if (a.suit === b.suit || a.isFalseJoker || b.isFalseJoker) {
+    const cardA = a.isFalseJoker && jRank ? { ...a, rank: jRank } : a;
+    const cardB = b.isFalseJoker && jRank ? { ...b, rank: jRank } : b;
+    const d = getCardRankDistance(cardA, cardB);
+    if (d === 1) return (a.isFalseJoker || b.isFalseJoker) ? 75 : 80;
+    if (d === 2) return (a.isFalseJoker || b.isFalseJoker) ? 45 : 50;
   }
   return 0;
 }
@@ -3130,8 +3135,11 @@ function buildChainsFromCards(cards) {
     let c1 = bestPair[0];
     let c2 = bestPair[1];
     let currentChain;
-    if (c1.suit === c2.suit) {
-      currentChain = isCardHigherRank(c2, c1) ? [c1, c2] : [c2, c1];
+    const jRankChain = (typeof currentGameState !== 'undefined' && currentGameState) ? currentGameState.jokerRank : null;
+    if (c1.suit === c2.suit || c1.isFalseJoker || c2.isFalseJoker) {
+      const n1 = c1.isFalseJoker && jRankChain ? { ...c1, rank: jRankChain } : c1;
+      const n2 = c2.isFalseJoker && jRankChain ? { ...c2, rank: jRankChain } : c2;
+      currentChain = isCardHigherRank(n2, n1) ? [c1, c2] : [c2, c1];
     } else {
       currentChain = [c1, c2];
     }
