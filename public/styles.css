@@ -1887,14 +1887,28 @@ select:focus {
 
 /* Table Melds Area */
 .table-melds-area {
-  margin: 4px 16px;
-  padding: 4px 8px;
+  margin: 2px 12px;
+  padding: 2px 6px;
   background: transparent;
   border: none;
   border-radius: 0;
-  max-height: 155px;
-  overflow-y: auto;
+  max-height: none;
+  overflow: visible;
   flex-shrink: 0;
+}
+
+.table-melds-area .card {
+  width: 60px;
+  height: 86px;
+  padding: 4px 5px;
+}
+
+@media (max-width: 768px) {
+  .table-melds-area .card {
+    width: 46px;
+    height: 66px;
+    padding: 3px 4px;
+  }
 }
 
 .table-melds-label {
