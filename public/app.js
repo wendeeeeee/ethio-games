@@ -18,7 +18,7 @@ let storedName = localStorage.getItem('conquer_user_name') || '';
 let userPhone = localStorage.getItem('conquer_user_phone') || '';
 let isUserRegistered = localStorage.getItem('conquer_user_registered') === 'true' && Boolean(userPhone);
 let playerName = storedName || (isUserRegistered ? 'ተጫዋች' : '');
-let currentUserBalance = 0;
+let currentUserBalance = isUserRegistered ? (Number(localStorage.getItem('conquer_user_balance')) || 0) : 0;
 let socket = io();
 let currentRoomId = null;
 let currentGameState = null;
@@ -501,6 +501,7 @@ function applyWalletUpdate(wallet) {
   const w = (wallet.wallet && typeof wallet.wallet === 'object' && (wallet.wallet.id || wallet.wallet.phone)) ? wallet.wallet : wallet;
   if (w.balance !== undefined) {
     currentUserBalance = Number(w.balance) || 0;
+    localStorage.setItem('conquer_user_balance', String(currentUserBalance));
     if (walletBalanceDisplay) {
       walletBalanceDisplay.textContent = `${currentUserBalance.toLocaleString()} ETB`;
     }
@@ -530,6 +531,9 @@ function applyWalletUpdate(wallet) {
   if (playerNameInput && playerName) playerNameInput.value = playerName;
   updateAuthUI();
 }
+if (walletBalanceDisplay) {
+  walletBalanceDisplay.textContent = isUserRegistered ? `${currentUserBalance.toLocaleString()} ETB` : '0 ETB';
+}
 updateAuthUI();
 
 if (headerSignupBtn) {
@@ -546,6 +550,7 @@ if (headerLogoutBtn) {
     localStorage.removeItem('conquer_user_registered');
     localStorage.removeItem('conquer_user_name');
     localStorage.removeItem('conquer_user_phone');
+    localStorage.removeItem('conquer_user_balance');
 
     userId = 'user_' + Math.floor(1000 + Math.random() * 9000);
     localStorage.setItem('conquer_user_id', userId);
@@ -3321,25 +3326,31 @@ function isCardGebiToTable(card, tableMelds, jokerRank, jokerSuits) {
   return false;
 }
 
+function isFalseJokerCard(c) {
+  return Boolean(c && (c.isFalseJoker || c.rank === 'FALSE' || c.rank === 'JK'));
+}
+
 // Connection score between two cards (Rank pair = 100, Suited consecutive = 80, Suited 1-gap = 50)
 function getCardConnectionScore(a, b) {
   if (!a || !b) return 0;
   const jRank = (typeof currentGameState !== 'undefined' && currentGameState) ? currentGameState.jokerRank : null;
   const jSuits = (typeof currentGameState !== 'undefined' && currentGameState) ? currentGameState.jokerSuits : null;
-  const rA = (a.isFalseJoker && jRank) ? jRank : a.rank;
-  const rB = (b.isFalseJoker && jRank) ? jRank : b.rank;
+  const aFalse = isFalseJokerCard(a);
+  const bFalse = isFalseJokerCard(b);
+  const rA = (aFalse && jRank) ? jRank : a.rank;
+  const rB = (bFalse && jRank) ? jRank : b.rank;
   if (rA && rA === rB) return 100;
 
   const isFalseSeqMatch =
-    (a.isFalseJoker && (!jSuits || jSuits.includes(b.suit))) ||
-    (b.isFalseJoker && (!jSuits || jSuits.includes(a.suit)));
+    (aFalse && (!jSuits || jSuits.includes(b.suit))) ||
+    (bFalse && (!jSuits || jSuits.includes(a.suit)));
 
   if (a.suit === b.suit || isFalseSeqMatch) {
-    const cardA = a.isFalseJoker && jRank ? { ...a, rank: jRank } : a;
-    const cardB = b.isFalseJoker && jRank ? { ...b, rank: jRank } : b;
+    const cardA = aFalse && jRank ? { ...a, rank: jRank } : a;
+    const cardB = bFalse && jRank ? { ...b, rank: jRank } : b;
     const d = getCardRankDistance(cardA, cardB);
-    if (d === 1) return (a.isFalseJoker || b.isFalseJoker) ? 75 : 80;
-    if (d === 2) return (a.isFalseJoker || b.isFalseJoker) ? 45 : 50;
+    if (d === 1) return (aFalse || bFalse) ? 75 : 80;
+    if (d === 2) return (aFalse || bFalse) ? 45 : 50;
   }
   return 0;
 }
@@ -3372,9 +3383,9 @@ function buildChainsFromCards(cards) {
     let c2 = bestPair[1];
     let currentChain;
     const jRankChain = (typeof currentGameState !== 'undefined' && currentGameState) ? currentGameState.jokerRank : null;
-    if (c1.suit === c2.suit || c1.isFalseJoker || c2.isFalseJoker) {
-      const n1 = c1.isFalseJoker && jRankChain ? { ...c1, rank: jRankChain } : c1;
-      const n2 = c2.isFalseJoker && jRankChain ? { ...c2, rank: jRankChain } : c2;
+    if (c1.suit === c2.suit || isFalseJokerCard(c1) || isFalseJokerCard(c2)) {
+      const n1 = isFalseJokerCard(c1) && jRankChain ? { ...c1, rank: jRankChain } : c1;
+      const n2 = isFalseJokerCard(c2) && jRankChain ? { ...c2, rank: jRankChain } : c2;
       currentChain = isCardHigherRank(n2, n1) ? [c1, c2] : [c2, c1];
     } else {
       currentChain = [c1, c2];
