@@ -994,6 +994,8 @@ socket.on('seka_reconnect_success', ({ roomId, status }) => {
     currentWaitingRoomId = roomId;
     lastLobbyGameType = 'SEKA';
     localStorage.setItem('conquer_last_game_type', 'SEKA');
+    if (gameView) gameView.style.display = 'none';
+    if (lobbyView) lobbyView.style.display = 'block';
     if (homeGameSelectView) homeGameSelectView.style.display = 'none';
     if (conquerLobbySection) conquerLobbySection.style.display = 'none';
     if (sekaLobbySection) sekaLobbySection.style.display = 'block';
@@ -1017,6 +1019,8 @@ socket.on('conquer_reconnect_success', ({ roomId, status }) => {
     currentWaitingRoomId = roomId;
     lastLobbyGameType = 'CONQUER';
     localStorage.setItem('conquer_last_game_type', 'CONQUER');
+    if (gameView) gameView.style.display = 'none';
+    if (lobbyView) lobbyView.style.display = 'block';
     if (homeGameSelectView) homeGameSelectView.style.display = 'none';
     if (sekaLobbySection) sekaLobbySection.style.display = 'none';
     if (conquerLobbySection) conquerLobbySection.style.display = 'block';
@@ -1309,7 +1313,12 @@ socket.on('seka_game_state', (state) => {
     playerOrderedCardIds = [];
     currentRoomId = state.roomId;
   }
-  if (state.status === 'PLAYING' || state.status === 'WAITING') {
+  if (state.status === 'WAITING') {
+    localStorage.setItem('conquer_active_room_id', state.roomId);
+    refreshSekaRoomsList();
+    return;
+  }
+  if (state.status === 'PLAYING') {
     localStorage.setItem('conquer_active_room_id', state.roomId);
   } else if (state.status === 'FINISHED' || state.status === 'EXPIRED') {
     localStorage.removeItem('conquer_active_room_id');

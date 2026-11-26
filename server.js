@@ -1187,7 +1187,6 @@ io.on('connection', (socket) => {
     if (sRoom) {
       const isPlayer = sRoom.players && sRoom.players.some(p => p.id === userId);
       if (isPlayer && (sRoom.status === 'PLAYING' || sRoom.status === 'WAITING')) {
-        sRoom.playerReturn(userId);
         const p = sRoom.players.find(p => p.id === userId);
         if (p) p.socketId = socket.id;
         if (sRoom.creator && sRoom.creator.id === userId) sRoom.creator.socketId = socket.id;
@@ -1195,8 +1194,11 @@ io.on('connection', (socket) => {
         socketPlayerMap.set(socket.id, { userId, name: p ? p.name : '', roomId, gameType: 'SEKA' });
         socket.join(roomId);
         socket.emit('seka_reconnect_success', { roomId, status: sRoom.status });
-        socket.emit('seka_game_state', sRoom.getPublicState(userId));
-        broadcastSekaRoomUpdate(sRoom);
+        if (sRoom.status === 'PLAYING') {
+          sRoom.playerReturn(userId);
+          socket.emit('seka_game_state', sRoom.getPublicState(userId));
+          broadcastSekaRoomUpdate(sRoom);
+        }
         return;
       }
     }
@@ -1205,7 +1207,6 @@ io.on('connection', (socket) => {
       const pObj = cRoom.players ? cRoom.players.find(p => p.id === userId) : null;
       const isPlayer = !!pObj || (cRoom.creator && cRoom.creator.id === userId) || (cRoom.joiner && cRoom.joiner.id === userId);
       if (isPlayer && (cRoom.status === 'PLAYING' || cRoom.status === 'WAITING' || cRoom.status === 'CUTTING_JOKER')) {
-        cRoom.playerReturn(userId);
         if (pObj) pObj.socketId = socket.id;
         if (cRoom.creator && cRoom.creator.id === userId) cRoom.creator.socketId = socket.id;
         if (cRoom.joiner && cRoom.joiner.id === userId) cRoom.joiner.socketId = socket.id;
@@ -1213,8 +1214,11 @@ io.on('connection', (socket) => {
         socketPlayerMap.set(socket.id, { userId, name: pName, roomId, gameType: 'CONQUER' });
         socket.join(roomId);
         socket.emit('conquer_reconnect_success', { roomId, status: cRoom.status });
-        socket.emit('game_state', cRoom.getClientState(userId));
-        broadcastRoomUpdate(cRoom);
+        if (cRoom.status !== 'WAITING') {
+          cRoom.playerReturn(userId);
+          socket.emit('game_state', cRoom.getClientState(userId));
+          broadcastRoomUpdate(cRoom);
+        }
         return;
       }
     }
