@@ -3299,7 +3299,15 @@ function getRankNum(rank, aceHigh = false) {
 function orderSameRankSet(cards) {
   if (!cards || cards.length < 3) return cards;
 
-  const isRed = (c) => c.suit === '♥' || c.suit === '♦';
+  const jSuits = (typeof currentGameState !== 'undefined' && currentGameState) ? currentGameState.jokerSuits : null;
+  const isRed = (c) => {
+    if (c.suit === '♥' || c.suit === '♦') return true;
+    if (c.suit === '♠' || c.suit === '♣') return false;
+    if (isFalseJokerCard(c) && Array.isArray(jSuits) && jSuits.length > 0) {
+      return jSuits.some(s => s === '♥' || s === '♦');
+    }
+    return c.color === 'red';
+  };
   const reds = cards.filter(isRed);
   const blacks = cards.filter(c => !isRed(c));
 
@@ -3536,8 +3544,10 @@ function buildChainsFromCards(cards) {
       }
     }
 
-    // Apply color sandwich if chain is same rank of 3 or 4 cards
-    if (currentChain.length >= 3 && currentChain.every(c => c.rank === currentChain[0].rank)) {
+    // Apply color sandwich if chain is same rank of 3 or 4 cards (including False Joker)
+    const jRankSet = (typeof currentGameState !== 'undefined' && currentGameState) ? currentGameState.jokerRank : null;
+    const effRankOf = (c) => (isFalseJokerCard(c) && jRankSet ? jRankSet : c.rank);
+    if (currentChain.length >= 3 && currentChain.every(c => effRankOf(c) === effRankOf(currentChain[0]))) {
       currentChain = orderSameRankSet(currentChain);
     }
 
@@ -4875,9 +4885,9 @@ function renderGame(state) {
         renderPlayerHand(arranged);
       }
     } else if (state.gameType !== 'SEKA') {
-      // Conquer finished: NEVER mix opponentHand into playerCardsContainer!
+      // Conquer finished: winner has no cards left in hand; loser keeps their remaining hand
       if (playerCardsContainer) {
-        if (state.myHand && state.myHand.length > 0) {
+        if (!iWon && state.myHand && state.myHand.length > 0) {
           playerCardsContainer.className = 'fan player-cards';
           renderPlayerHand(state.myHand);
         } else {

@@ -551,6 +551,9 @@ class GameRoom {
       if (dubeResult) {
         this.tableMelds[playerId] = [dubeResult.tris, ...dubeResult.pairs];
         this.hands[playerId] = [];
+      } else if (Array.isArray(melds) && melds.length > 0) {
+        this.tableMelds[playerId] = melds.map(g => sortMeldCards(g, this.jokerRank, this.jokerSuits));
+        this.hands[playerId] = [];
       }
 
       this.mustMeld41PlayerId = null;
