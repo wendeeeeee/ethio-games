@@ -1169,8 +1169,11 @@ socket.on('player_eliminated', ({ loserName, message }) => {
 
 socket.on('room_created', ({ roomId }) => {
   currentRoomId = roomId;
+  currentWaitingRoomId = roomId;
   localStorage.setItem('conquer_active_room_id', roomId);
-  switchToGameView();
+  playCardSound();
+  showSortToast('⏳ ጨዋታ ተፈጥሯል! ተጋጣሚ እየተጠበቀ ነው...');
+  refreshRoomsList();
 });
 
 // Real-Time Game State Sync (Conquer)
@@ -1179,11 +1182,15 @@ socket.on('game_state', (state) => {
     playerOrderedCardIds = [];
     currentRoomId = state.roomId;
   }
-  if (state.status === 'PLAYING' || state.status === 'WAITING' || state.status === 'CUTTING_JOKER') {
+  if (state.status === 'PLAYING' || state.status === 'CUTTING_JOKER') {
     localStorage.setItem('conquer_active_room_id', state.roomId);
     if (gameView && gameView.style.display === 'none') {
       switchToGameView();
     }
+  } else if (state.status === 'WAITING') {
+    localStorage.setItem('conquer_active_room_id', state.roomId);
+    refreshRoomsList();
+    return;
   } else if (state.status === 'FINISHED' || state.status === 'EXPIRED') {
     localStorage.removeItem('conquer_active_room_id');
   }
@@ -1993,15 +2000,31 @@ async function refreshRoomsList() {
       roomsListContainer.innerHTML = `<p style="color: #64748b; font-size: 13px;">ክፍት ጨዋታ የለም።</p>`;
       return;
     }
-    roomsListContainer.innerHTML = rooms.map(r => `
-      <div class="room-list-item">
-        <div>
-          <strong style="color: #0f172a; font-size: 14px;">${r.creatorName}</strong>
-          <div style="font-size: 12px; color: #64748b;">${r.stakeAmount} ETB • ${r.playersCount || 1}/${r.maxPlayers || 2} ${r.expiresIn ? `• <span style="color: #059669; font-weight: 700;">⏳ ${r.expiresIn}s</span>` : ''}</div>
+    roomsListContainer.innerHTML = rooms.map(r => {
+      const isMyRoom = (r.creatorId && r.creatorId === userId) || (r.roomId === currentWaitingRoomId);
+      if (isMyRoom) {
+        return `
+          <div class="room-list-item" style="background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 12px; padding: 10px 14px; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between;">
+            <div>
+              <strong style="color: #065f46; font-size: 14px;">${r.creatorName}</strong>
+              <div style="font-size: 12px; color: #475569; margin-top: 2px;">
+                ${r.stakeAmount} ETB • ${r.playersCount || 1}/${r.maxPlayers || 2}
+              </div>
+            </div>
+            <span style="font-size: 12px; color: #059669; font-weight: 700; background: #ffffff; padding: 4px 10px; border-radius: 16px; border: 1px solid #a7f3d0;">⏳ ${r.expiresIn !== undefined ? r.expiresIn + 's' : '60s'}</span>
+          </div>
+        `;
+      }
+      return `
+        <div class="room-list-item">
+          <div>
+            <strong style="color: #0f172a; font-size: 14px;">${r.creatorName}</strong>
+            <div style="font-size: 12px; color: #64748b;">${r.stakeAmount} ETB • ${r.playersCount || 1}/${r.maxPlayers || 2} ${r.expiresIn ? `• <span style="color: #059669; font-weight: 700;">⏳ ${r.expiresIn}s</span>` : ''}</div>
+          </div>
+          <button class="btn-primary" style="width: auto; padding: 6px 14px; font-size: 12px;" onclick="joinRoom('${r.roomId}')">ግባ</button>
         </div>
-        <button class="btn-primary" style="width: auto; padding: 6px 14px; font-size: 12px;" onclick="joinRoom('${r.roomId}')">ግባ</button>
-      </div>
-    `).join('');
+      `;
+    }).join('');
   } catch (e) { }
   refreshSekaRoomsList();
 }

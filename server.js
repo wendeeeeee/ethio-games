@@ -630,6 +630,7 @@ app.get('/api/rooms', (req, res) => {
       const expiresIn = room.expiresAt ? Math.max(0, Math.round((room.expiresAt - now) / 1000)) : 60;
       list.push({
         roomId: room.roomId,
+        creatorId: room.creator ? room.creator.id : null,
         creatorName: room.creator.name,
         stakeAmount: room.stakeAmount,
         maxPlayers: room.maxPlayers || 2,
