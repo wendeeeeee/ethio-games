@@ -5402,7 +5402,7 @@ function createCardHTML(card, isSelected = false, isBaseJoker = false, zIndex = 
   const tetayBadge = '';
 
   if (isPrintedWildJoker || isFalse) {
-    const starHTML = `<div class="card-joker-star">⭐</div>`;
+    const starHTML = isFalse ? '' : `<div class="card-joker-star">⭐</div>`;
     const effRank = card.effectiveRank || (currentGameState && currentGameState.jokerRank) || '';
     const falseLabel = effRank ? `FALSE • ${effRank}` : 'FALSE';
     const falseHTML = isFalse ? `<div class="card-false-badge ${isRed ? 'red' : 'black'}">${falseLabel}</div>` : '';
