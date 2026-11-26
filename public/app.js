@@ -2305,7 +2305,7 @@ function openWeredMeldBar() {
     groundMeldTitle.textContent = hasAlreadyOpened ? '📥 ካርታዎችን ወደ ጠረጴዛ አውርድ' : '📥 ለመውረድ ቢያንስ 41 ነጥብ ትሪስ ምረጥ';
   }
   if (groundTargetCardBadge) {
-    groundTargetCardBadge.textContent = hasAlreadyOpened ? 'ሜልድ' : 'መጀመሪያ ማውረድ (41+)';
+    groundTargetCardBadge.textContent = hasAlreadyOpened ? 'መውረድ' : 'መጀመሪያ ማውረድ (41+)';
   }
   if (forfeitGroundBtn) {
     forfeitGroundBtn.style.display = 'none'; // Only applies when taking from ground
@@ -2665,7 +2665,7 @@ function updateGroundMeldBar() {
         ? '👉 ወደ ጠረጴዛ ለማውረድ የሚሆኑ ትሪሶችን ከእጅህ ምረጥ!'
         : '👉 ለመጀመሪያ ጊዜ ለመውረድ 41 የሚሞሉትን ካርታዎች ከእጅህ ምረጥ!';
     } else {
-      groundMeldHintText.textContent = '👉 ከመሬት ለማንሳት 41 የሚሞሉትን ካርታዎች (Melds) ከእጅህ ምረጥ!';
+      groundMeldHintText.textContent = '👉 ከመሬት ለማንሳት 41 የሚሞሉትን ካርታዎች ከእጅህ ምረጥ!';
     }
     groundMeldHintText.style.color = '#f5b041';
     confirmGroundMeldBtn.disabled = true;
@@ -2674,9 +2674,9 @@ function updateGroundMeldBar() {
   } else if (!validPartition) {
     const isMultipleJokers = selectedCards.filter(c => isWildJoker(c, currentGameState.jokerRank, currentGameState.jokerSuits) || isSekaWildJoker(c)).length > 1;
     if (isMultipleJokers) {
-      groundMeldHintText.textContent = `⚠️ ተከታታይ ጆከር ማድረግ አይቻልም! በአንድ ሜልድ ውስጥ ከአንድ ጆከር በላይ መጠቀም አይቻልም!`;
+      groundMeldHintText.textContent = `⚠️ ተከታታይ ጆከር ማድረግ አይቻልም! በአንድ ቡድን ውስጥ ከአንድ ጆከር በላይ መጠቀም አይቻልም!`;
     } else {
-      groundMeldHintText.textContent = `⚠️ የተመረጡት ካርታዎች (${selectedCards.length}) ትክክለኛ ትሪስ (Meld) አልሰሩም! 3 ወይም 4 የሚሆኑ ተመሳሳይ ወይም ተከታታይ ካርታዎችን ምረጥ!`;
+      groundMeldHintText.textContent = `⚠️ የተመረጡት ካርታዎች (${selectedCards.length}) ትክክለኛ ትሪስ አልሰሩም! 3 ወይም 4 የሚሆኑ ተመሳሳይ ወይም ተከታታይ ካርታዎችን ምረጥ!`;
     }
     groundMeldHintText.style.color = '#f87171';
     confirmGroundMeldBtn.disabled = true;
@@ -2684,7 +2684,7 @@ function updateGroundMeldBar() {
     confirmGroundMeldBtn.textContent = currentMeldBarMode === 'wered' ? '✅ አውርድ' : '✅ 41 ሞልቷል - አውርድና አንሳ';
   } else if (!hasAlreadyOpened && totalPts < 41) {
     const meldNames = validPartition.map(m => m.map(c => c.rank + c.suit).join('-')).join(' + ');
-    groundMeldHintText.textContent = `⚠️ ${totalPts} ነጥብ ብቻ ነው (${meldNames})! 41 አልሞላም — እባክህ ሌላ ትሪስ (Meld) ጨምር!`;
+    groundMeldHintText.textContent = `⚠️ ${totalPts} ነጥብ ብቻ ነው (${meldNames})! 41 አልሞላም — እባክህ ሌላ ትሪስ ጨምር!`;
     groundMeldHintText.style.color = '#f87171';
     confirmGroundMeldBtn.disabled = true;
     confirmGroundMeldBtn.style.opacity = '0.5';
@@ -2722,7 +2722,7 @@ confirmGroundMeldBtn.addEventListener('click', () => {
 
   if (currentMeldBarMode === 'wered') {
     if (!validPartition || (!hasAlreadyOpened && totalPts < 41)) {
-      return alert('ያልተሟላ ወይም ከ41 ነጥብ በታች የሆነ ሜልድ ነው!');
+      return alert('ያልተሟላ ወይም ከ41 ነጥብ በታች ነው!');
     }
     executeMeldDown(validPartition, totalPts);
     return;
@@ -2861,7 +2861,7 @@ discardBtn.addEventListener('click', () => {
 
   // Rule: GEBI (ገቢ) Restriction on Discarding (exempt final winning discard!)
   if (!isWinningHand && cardObj && isCardGebiToTable(cardObj, currentGameState.tableMelds, currentGameState.jokerRank, currentGameState.jokerSuits)) {
-    showSortToast(`⚠️ [ ${cardObj.rank}${cardObj.suit} ] ወደ ጠረጴዛው ሜልድ ገቢ (GEBI) ስለሚሆን ወደ መሬት መጣል አትችልም! ጠረጴዛው ላይ ገቢ አድርግ ወይም ሌላ ካርታ ጣል!`);
+    showSortToast(`⚠️ [ ${cardObj.rank}${cardObj.suit} ] ወደ ጠረጴዛው የወረደ ካርታ ገቢ (GEBI) ስለሚሆን ወደ መሬት መጣል አትችልም! ጠረጴዛው ላይ ገቢ አድርግ ወይም ሌላ ካርታ ጣል!`);
     return;
   }
 
@@ -5603,7 +5603,7 @@ function bindTableMeldClicks() {
         return;
       }
 
-      showSortToast(`⚠️ [ ${card.rank}${card.suit} ] ወደዚህ ሜልድ ገቢ (GEBI) መሆን አይችልም!`);
+      showSortToast(`⚠️ [ ${card.rank}${card.suit} ] ወደዚህ ቡድን ገቢ (GEBI) መሆን አይችልም!`);
     });
   });
 }

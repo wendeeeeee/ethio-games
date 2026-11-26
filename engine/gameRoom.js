@@ -584,7 +584,7 @@ class GameRoom {
       return {
         success: false,
         isGebi: true,
-        message: `⚠️ [ ${discardedCard.rank}${discardedCard.suit} ] ወደ ጠረጴዛው ሜልድ ገቢ (GEBI) ስለሚሆን ወደ መሬት መጣል አትችልም! ሌላ ካርታ ምረጥ።`
+        message: `⚠️ [ ${discardedCard.rank}${discardedCard.suit} ] ወደ ጠረጴዛው የወረደ ካርታ ገቢ (GEBI) ስለሚሆን ወደ መሬት መጣል አትችልም! ሌላ ካርታ ምረጥ።`
       };
     }
 
@@ -652,7 +652,7 @@ class GameRoom {
     this.resetPoke();
     this.resetTurnTimer();
 
-    this.log(`✅ ${this.getPlayerName(playerId)} melded ${meldPoints} points on the table and picked ${drawnCard.rank}${drawnCard.suit} from the ground!`);
+    this.log(`✅ ${this.getPlayerName(playerId)} ${meldPoints} ነጥብ አውርዶ ${drawnCard.rank}${drawnCard.suit} ከመሬት አነሳ!`);
     return { success: true, card: drawnCard, meldPoints };
   }
 
@@ -660,7 +660,7 @@ class GameRoom {
   layDownMelds(playerId, meldsToLayDown) {
     if (this.status !== 'PLAYING') return { success: false, message: 'Game not in progress' };
     if (this.currentTurnPlayerId !== playerId) return { success: false, message: 'Not your turn' };
-    if (!meldsToLayDown || meldsToLayDown.length === 0) return { success: false, message: 'No melds provided' };
+    if (!meldsToLayDown || meldsToLayDown.length === 0) return { success: false, message: 'ምንም ካርታ አልተመረጠም' };
 
     const hand = this.getHand(playerId);
     const hasAlreadyOpened = this.tableMelds[playerId] && this.tableMelds[playerId].length > 0;
@@ -668,7 +668,7 @@ class GameRoom {
     let meldPoints = 0;
     for (const group of meldsToLayDown) {
       if (!isValidTris(group, this.jokerRank, this.jokerSuits) && !isValidQuatris(group, this.jokerRank, this.jokerSuits)) {
-        return { success: false, message: 'ያልተሟላ ወይም የተሳሳተ ትሪስ/ሜልድ ነው!' };
+        return { success: false, message: 'ያልተሟላ ወይም የተሳሳተ ትሪስ ነው!' };
       }
       meldPoints += getMeldPoints(group, this.jokerRank, this.jokerSuits);
     }
@@ -801,11 +801,11 @@ class GameRoom {
     }
 
     const melds = this.tableMelds[targetPlayerMeldOwnerId];
-    if (!melds || !melds[meldIndex]) return { success: false, message: 'Meld not found' };
+    if (!melds || !melds[meldIndex]) return { success: false, message: 'የወረደ ቡድን አልተገኘም' };
 
     const targetMeld = melds[meldIndex];
     const jokerIndex = targetMeld.findIndex(c => c.isJoker || c.rank === this.jokerRank);
-    if (jokerIndex === -1) return { success: false, message: 'No Joker in this meld' };
+    if (jokerIndex === -1) return { success: false, message: 'በዚህ ቡድን ውስጥ ጆከር የለም' };
 
     const stolenJoker = targetMeld[jokerIndex];
     const expected = stolenJoker.assignedCard;
@@ -850,11 +850,11 @@ class GameRoom {
     const card = playerHand[cardIndex];
 
     const melds = this.tableMelds[targetPlayerMeldOwnerId];
-    if (!melds || !melds[meldIndex]) return { success: false, message: 'Meld not found' };
+    if (!melds || !melds[meldIndex]) return { success: false, message: 'የወረደ ቡድን አልተገኘም' };
     const targetMeld = melds[meldIndex];
 
     if (!isCardGebiToMeld(card, targetMeld, this.jokerRank, this.jokerSuits)) {
-      return { success: false, message: 'ይህ ካርታ ወደዚህ ሜልድ ገቢ (GEBI) መሆን አይችልም!' };
+      return { success: false, message: 'ይህ ካርታ ወደዚህ ቡድን ገቢ (GEBI) መሆን አይችልም!' };
     }
 
     // Attach card to target meld and sort into proper sequence order (e.g. 2 + 3-4-5 -> 2-3-4-5)
@@ -862,7 +862,7 @@ class GameRoom {
     melds[meldIndex] = sortMeldCards(targetMeld, this.jokerRank, this.jokerSuits);
     playerHand.splice(cardIndex, 1);
 
-    this.log(`📥 ${this.getPlayerName(playerId)} attached ${card.rank}${card.suit} to table meld (ገቢ አደረገ)!`);
+    this.log(`📥 ${this.getPlayerName(playerId)} ${card.rank}${card.suit} ጠረጴዛ ላይ ገቢ አደረገ!`);
     return { success: true, card, meld: targetMeld };
   }
 
