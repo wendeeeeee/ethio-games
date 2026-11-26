@@ -639,9 +639,8 @@ function openLoginModal() {
 function openRegistrationModal() {
   if (!registerModal) return;
   setAuthMode('register');
-  const tgUser = (tgApp && tgApp.initDataUnsafe && tgApp.initDataUnsafe.user) ? tgApp.initDataUnsafe.user : null;
-  if (regNameInput) regNameInput.value = tgUser ? (tgUser.first_name || '') : '';
-  if (regPhoneInput) regPhoneInput.value = userPhone || '';
+  if (regNameInput) regNameInput.value = '';
+  if (regPhoneInput) regPhoneInput.value = '';
   if (regPassInput) regPassInput.value = '';
   if (regConfirmPassInput) regConfirmPassInput.value = '';
   registerModal.style.display = 'flex';
@@ -1014,6 +1013,22 @@ socket.on('active_room_expired', () => {
 
 socket.on('wallet_update', (wallet) => {
   applyWalletUpdate(wallet);
+});
+
+socket.on('user_not_registered', () => {
+  localStorage.removeItem('conquer_user_registered');
+  localStorage.removeItem('conquer_user_name');
+  localStorage.removeItem('conquer_user_phone');
+  isUserRegistered = false;
+  playerName = '';
+  userPhone = '';
+  currentUserBalance = 0;
+  if (walletUserDisplay) walletUserDisplay.textContent = '';
+  if (walletBalanceDisplay) walletBalanceDisplay.textContent = '0 ETB';
+  const sNameDisp = document.getElementById('sekaPlayerNameDisplayVal');
+  if (sNameDisp) sNameDisp.textContent = 'ተጫዋች';
+  updateAuthUI();
+  openRegistrationModal();
 });
 
 socket.on(`wallet_${userId}`, (wallet) => {

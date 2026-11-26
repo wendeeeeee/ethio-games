@@ -479,11 +479,15 @@ app.get('/api/seka/rooms', (req, res) => {
 
 // Socket.io Events
 io.on('connection', (socket) => {
-  // Join Lobby / Register Player
+  // Join Lobby / Check Registered Player (never auto-creates unauthenticated users)
   socket.on('register_user', async ({ userId, name, phone }) => {
     socketPlayerMap.set(socket.id, { userId, name, phone });
-    const wallet = await walletManager.getWalletAsync(userId, name, phone);
-    socket.emit('wallet_update', wallet);
+    const wallet = await walletManager.findRegisteredUser(userId, phone);
+    if (wallet) {
+      socket.emit('wallet_update', wallet);
+    } else {
+      socket.emit('user_not_registered');
+    }
   });
 
   // Update Profile

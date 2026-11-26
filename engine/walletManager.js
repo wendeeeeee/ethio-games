@@ -242,6 +242,76 @@ class WalletManager {
       l === 'ተጫዋች' || l.startsWith('ተጫዋች') || l.startsWith('user_');
   }
 
+  // Check if user is actually registered in Supabase or local usersList (never creates a new user)
+  async findRegisteredUser(userId, phone = '') {
+    if (this._isBot(userId)) return null;
+
+    try {
+      if (userId) {
+        const { data: byId } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', userId)
+          .maybeSingle();
+        if (byId && byId.phone) {
+          const w = {
+            id: byId.id,
+            name: byId.name || '',
+            phone: byId.phone || '',
+            balance: byId.balance,
+            locked: byId.locked,
+            transactions: []
+          };
+          this.wallets.set(w.id, w);
+          return w;
+        }
+      }
+      if (phone) {
+        const norm = this._normPhone(phone);
+        if (norm) {
+          const { data: rows } = await supabase
+            .from('users')
+            .select('*')
+            .ilike('phone', `%${norm}%`)
+            .limit(1);
+          if (rows && rows.length > 0 && rows[0].phone) {
+            const r = rows[0];
+            const w = {
+              id: r.id,
+              name: r.name || '',
+              phone: r.phone || '',
+              balance: r.balance,
+              locked: r.locked,
+              transactions: []
+            };
+            this.wallets.set(w.id, w);
+            return w;
+          }
+        }
+      }
+    } catch (e) { }
+
+    const localMatch = (this.usersList || []).find(u =>
+      (userId && u.id === userId && u.phone) ||
+      (phone && u.phone && this._normPhone(u.phone) === this._normPhone(phone))
+    );
+    if (localMatch) {
+      const live = this.wallets.get(localMatch.id);
+      const w = live || {
+        id: localMatch.id,
+        name: localMatch.name || '',
+        phone: localMatch.phone || '',
+        balance: localMatch.balance ?? 1000,
+        locked: localMatch.locked ?? 0,
+        transactions: []
+      };
+      this.wallets.set(w.id, w);
+      return w;
+    }
+
+    return null;
+  }
+
   // Get or create a user wallet (checks Supabase first, then cache)
   async getWalletAsync(userId, name = '', phone = '') {
     // Never persist bots to the database
