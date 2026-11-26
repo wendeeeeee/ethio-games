@@ -683,8 +683,9 @@ class WalletManager {
       }
     }
 
-    // Credit full pot to winner (5% platform fee)
-    const platformRake = Math.floor(escrow.pot * 0.05);
+    // Credit pot to winner (10% platform fee on winnings / profit)
+    const profit = Math.max(0, escrow.pot - escrow.stakeAmount);
+    const platformRake = Math.floor(profit * 0.10);
     const netWin = escrow.pot - platformRake;
 
     winnerWallet.balance += netWin;

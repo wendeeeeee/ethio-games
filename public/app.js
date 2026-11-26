@@ -2279,8 +2279,6 @@ function executeMeldDown(melds, totalPts) {
     selectedCardsSet.clear();
     selectedCardId = null;
     if (groundMeldBar) groundMeldBar.style.display = 'none';
-
-    showSortToast(`📥 ${totalPts} ነጥብ ወረደ!`);
   });
 }
 
