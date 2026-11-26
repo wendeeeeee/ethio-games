@@ -996,6 +996,99 @@
     }
 
     function renderDeposits() {
+      if (currentTab === 'all') {
+        const combined = [
+          ...depositsData.map(d => ({ ...d, _kind: 'DEPOSIT' })),
+          ...withdrawalsData.map(w => ({ ...w, _kind: 'WITHDRAW' }))
+        ].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+        if (combined.length === 0) {
+          depositList.innerHTML = `
+            <div class="empty-state">
+              <div class="empty-icon">📂</div>
+              <div class="empty-text">ምንም የDeposit እና Withdraw ታሪክ የለም</div>
+            </div>
+          `;
+          return;
+        }
+
+        depositList.innerHTML = combined.map(item => {
+          const date = new Date(item.createdAt).toLocaleString('am-ET', {
+            month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+          });
+          const statusClass = (item.status || 'pending').toLowerCase();
+          if (item._kind === 'WITHDRAW') {
+            const methodLabel = item.method === 'cbe' ? '🏦 CBE' : '📱 Telebirr';
+            return `
+              <div class="deposit-card ${statusClass}" id="hist_wd_${item.id}">
+                <div class="card-top">
+                  <div class="card-user-info">
+                    <div class="user-name">💸 WITHDRAW — 👤 ${escapeHtml(item.userName || 'Unknown')}</div>
+                    <div class="user-phone">📞 ${escapeHtml(item.userPhone || item.userId || '')}</div>
+                  </div>
+                  <div class="amount-badge" style="color: #fbbf24;">
+                    -${Number(item.amount).toLocaleString()} ETB
+                  </div>
+                </div>
+                <div class="card-txn-row">
+                  <span class="txn-text">${methodLabel}: ${escapeHtml(item.accountNumber || '')} ${item.accountName ? `(${escapeHtml(item.accountName)})` : ''}</span>
+                  <button class="btn-copy" onclick="copyTxn('${item.id}', '${escapeHtml(item.accountNumber || '')}')">📋 Copy</button>
+                </div>
+                <div class="card-meta">
+                  <span>0% Fee</span>
+                  <span>📅 ${date}</span>
+                </div>
+                ${item.status === 'PENDING' ? `
+                  <div class="card-actions">
+                    <button class="btn-approve" onclick="approveWithdraw('${item.id}')">✅ ከፍያለሁ (Approve)</button>
+                    <button class="btn-reject" onclick="rejectWithdraw('${item.id}')">❌ መልስ (Reject & Refund)</button>
+                  </div>
+                ` : `
+                  <div style="font-size: 12px; font-weight: 700; color: ${item.status === 'APPROVED' ? '#10b981' : '#ef4444'};">
+                    ${item.status === 'APPROVED' ? `✅ ተልኳል ${item.payoutTxnId ? '(TXN: ' + escapeHtml(item.payoutTxnId) + ')' : ''}` : '❌ ውድቅ ተደርጎ ተመልሷል'}: ${escapeHtml(item.adminNote || '')}
+                  </div>
+                `}
+              </div>
+            `;
+          }
+
+          const methodIcons = { telebirr: '📱 Telebirr', cbebirr: '🏦 CBE Birr', bank: '💳 Bank' };
+          const methodLabel = methodIcons[item.method] || item.method;
+          return `
+            <div class="deposit-card ${statusClass}" id="card_${item.id}">
+              <div class="card-top">
+                <div class="card-user-info">
+                  <div class="user-name">💰 DEPOSIT — 👤 ${escapeHtml(item.userName || 'Unknown')}</div>
+                  <div class="user-phone">📞 ${escapeHtml(item.userPhone || item.userId || '')}</div>
+                </div>
+                <div class="amount-badge">
+                  +${Number(item.amount).toLocaleString()} ETB
+                </div>
+              </div>
+              <div class="card-txn-row">
+                <span class="txn-text" id="txn_${item.id}">${escapeHtml(item.transactionId)}</span>
+                <button class="btn-copy" onclick="copyTxn('${item.id}', '${escapeHtml(item.transactionId)}')">📋 Copy TXN</button>
+              </div>
+              <div class="card-meta">
+                <span>${methodLabel}</span>
+                <span>📅 ${date}</span>
+              </div>
+              ${item.status === 'PENDING' ? `
+                <div class="card-actions">
+                  <button class="btn-approve" onclick="approveDeposit('${item.id}')">✅ አጽድቅ (Approve)</button>
+                  <button class="btn-reject" onclick="rejectDeposit('${item.id}')">❌ ሰርዝ (Reject)</button>
+                </div>
+              ` : `
+                <div style="font-size: 12px; font-weight: 700; color: ${item.status === 'APPROVED' ? '#10b981' : '#ef4444'};">
+                  ${item.status === 'APPROVED' ? '✅ ተረጋግጦ ገቢ ሆኗል' : '❌ ተቀባይነት አላገኘም'}: ${escapeHtml(item.adminNote || '')}
+                </div>
+              `}
+            </div>
+          `;
+        }).join('');
+        return;
+      }
+
       let list = depositsData;
       if (currentTab === 'pending') {
         list = depositsData.filter(d => d.status === 'PENDING');
@@ -1149,6 +1242,9 @@
             withdrawBadge.style.display = pendingCnt > 0 ? 'inline-block' : 'none';
           }
           renderWithdrawals();
+          if (currentTab === 'all') {
+            renderDeposits();
+          }
         }
       } catch (e) {
         console.error('Error loading withdrawals:', e);
