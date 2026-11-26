@@ -5133,12 +5133,14 @@ function createCardHTML(card, isSelected = false, isBaseJoker = false, zIndex = 
   const tetayBadge = '';
 
   if (isPrintedWildJoker || isFalse) {
-    const starHTML = `<div class="card-joker-star">⭐</div>`;
-    const falseHTML = isFalse ? `<div class="card-false-badge ${isRed ? 'red' : 'black'}">FALSE</div>` : '';
+    const starHTML = isFalse ? '' : `<div class="card-joker-star">⭐</div>`;
+    const effRank = card.effectiveRank || (currentGameState && currentGameState.jokerRank) || '';
+    const falseLabel = effRank ? `FALSE • ${effRank}` : 'FALSE';
+    const falseHTML = isFalse ? `<div class="card-false-badge ${isRed ? 'red' : 'black'}">${falseLabel}</div>` : '';
     const jokerImgSrc = isRed ? '/images/joker_red.png' : '/images/joker_black.png';
 
     return `
-      <div class="card card-joker-authentic ${colorClass} ${selectedClass} ${groupStartClass} ${animClass}" data-id="${card.id}" style="z-index: ${zIndex}; ${delayStyle} ${extraStyle}">
+      <div class="card card-joker-authentic ${isFalse ? 'card-false-joker' : ''} ${colorClass} ${selectedClass} ${groupStartClass} ${animClass}" data-id="${card.id}" style="z-index: ${zIndex}; ${delayStyle} ${extraStyle}">
         <img src="${jokerImgSrc}" class="joker-full-art" alt="Joker" />
         ${starHTML}
         ${falseHTML}
