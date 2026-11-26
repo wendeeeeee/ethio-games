@@ -4000,9 +4000,9 @@ function findSingleBestArrangement(hand, state) {
 
       if (isSeq) {
         const hasA = cards.some(c => c.rank === 'A');
-        const hasK = cards.some(c => c.rank === 'K');
-        const has2 = cards.some(c => c.rank === '2');
-        const aceHigh = hasA && hasK && !has2;
+        const hasHighFace = naturals.some(c => ['10', 'J', 'Q', 'K'].includes(c.rank));
+        const has2 = naturals.some(c => c.rank === '2');
+        const aceHigh = hasA && hasHighFace && !has2;
         naturals.sort((a, b) => getRankNum(a.rank, aceHigh) - getRankNum(b.rank, aceHigh));
 
         if (jokers.length === 1 && naturals.length >= 2) {

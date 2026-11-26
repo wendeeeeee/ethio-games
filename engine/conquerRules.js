@@ -464,8 +464,9 @@ function sortMeldCards(meld, jokerRank, jokerSuits) {
   }
 
   // Sequence: determine whether Ace is high (14) or low (1)
-  const hasHighFace = naturals.some(c => ['J', 'Q', 'K'].includes(getRank(c)));
-  const getOrder = (rank) => (rank === 'A' && hasHighFace ? 14 : (RANK_ORDER[rank] || 0));
+  const hasHighFace = naturals.some(c => ['10', 'J', 'Q', 'K'].includes(getRank(c)));
+  const has2 = naturals.some(c => getRank(c) === '2');
+  const getOrder = (rank) => (rank === 'A' && hasHighFace && !has2 ? 14 : (RANK_ORDER[rank] || 0));
 
   const getCardSortVal = (c) => {
     if (isJk(c)) {
