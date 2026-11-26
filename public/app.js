@@ -263,6 +263,19 @@ const turnIndicator = document.getElementById('turnIndicator');
 const pointsDisplay = document.getElementById('pointsDisplay');
 const groundEligibilityBadge = document.getElementById('groundEligibilityBadge');
 const playerCardsContainer = document.getElementById('playerCardsContainer');
+const playerAreaEl = document.querySelector('.player-area');
+if (playerAreaEl) {
+  playerAreaEl.addEventListener('click', (e) => {
+    if (e.target.closest('.card') || e.target.closest('button') || e.target.closest('.ground-meld-bar')) return;
+    if (selectedCardsSet.size > 0 && currentGameState && currentGameState.myHand) {
+      selectedCardsSet.clear();
+      selectedCardId = null;
+      playerAreaEl.querySelectorAll('.card.selected').forEach(el => el.classList.remove('selected'));
+      updateTakeGroundButton();
+      updateGroundMeldBar();
+    }
+  });
+}
 const discardBtn = document.getElementById('discardBtn');
 const conquerBtn = document.getElementById('conquerBtn');
 const smartSortBtn = document.getElementById('smartSortBtn');
@@ -5480,8 +5493,8 @@ function bindCardInteractions(hand) {
       const dx = touch.clientX - touchStartX;
       const dy = touch.clientY - touchStartY;
 
-      // Start drag only if finger moved more than 8px
-      if (Math.hypot(dx, dy) > 8) {
+      // Start drag only if finger moved more than 16px (prevents accidental drag when tapping to select/deselect)
+      if (Math.hypot(dx, dy) > 16) {
         isTouchDragging = true;
         if (e.cancelable) e.preventDefault(); // Stop screen scrolling while repositioning card
         cardEl.classList.add('dragging');
