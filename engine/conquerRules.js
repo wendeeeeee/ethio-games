@@ -11,7 +11,7 @@ function isNaturalMeld(cards) {
   if (isSequenceSameSuit(cards)) return true;
   if (cards.every(c => c.rank === cards[0].rank)) {
     const suits = new Set(cards.map(c => c.suit));
-    return suits.size >= 2;
+    return suits.size === cards.length;
   }
   return false;
 }
@@ -46,8 +46,13 @@ function isValidTris(cards, jokerRank, jokerSuits) {
   if (jokerCount === 0) {
     const r0 = getRank(naturalCards[0]);
     if (r0 && getRank(naturalCards[1]) === r0 && getRank(naturalCards[2]) === r0) {
-      const suits = new Set(naturalCards.map(c => c.suit));
-      return suits.size >= 2;
+      const nonFalse = naturalCards.filter(c => !c.isFalseJoker);
+      const nonFalseSuits = new Set(nonFalse.map(c => c.suit));
+      if (nonFalseSuits.size !== nonFalse.length) return false;
+      const falseCount = naturalCards.length - nonFalse.length;
+      if (falseCount === 0) return nonFalseSuits.size === 3;
+      const availForFalse = (jokerSuits || ['♠', '♥', '♦', '♣']).filter(s => !nonFalseSuits.has(s));
+      return availForFalse.length >= falseCount;
     }
     const nonFalse = naturalCards.filter(c => !c.isFalseJoker);
     const hasFalse = naturalCards.some(c => c.isFalseJoker);
@@ -63,7 +68,11 @@ function isValidTris(cards, jokerRank, jokerSuits) {
     const r0 = getRank(naturalCards[0]);
     const r1 = getRank(naturalCards[1]);
     if (r0 && r0 === r1) {
-      return true; // Joker acts as the 3rd card of that rank
+      const nonFalse = naturalCards.filter(c => !c.isFalseJoker);
+      const nonFalseSuits = new Set(nonFalse.map(c => c.suit));
+      if (nonFalseSuits.size === nonFalse.length) {
+        return true; // Joker acts as the 3rd distinct suit of that rank
+      }
     }
     const nonFalse = naturalCards.filter(c => !c.isFalseJoker);
     const hasFalse = naturalCards.some(c => c.isFalseJoker);
@@ -103,8 +112,13 @@ function isValidQuatris(cards, jokerRank, jokerSuits) {
   if (jokerCount === 0) {
     const r0 = getRank(naturalCards[0]);
     if (r0 && naturalCards.every(c => getRank(c) === r0)) {
-      const suits = new Set(naturalCards.map(c => c.suit));
-      return suits.size >= 2;
+      const nonFalse = naturalCards.filter(c => !c.isFalseJoker);
+      const nonFalseSuits = new Set(nonFalse.map(c => c.suit));
+      if (nonFalseSuits.size !== nonFalse.length) return false;
+      const falseCount = naturalCards.length - nonFalse.length;
+      if (falseCount === 0) return nonFalseSuits.size === 4;
+      const availForFalse = (jokerSuits || ['♠', '♥', '♦', '♣']).filter(s => !nonFalseSuits.has(s));
+      return availForFalse.length >= falseCount;
     }
     const nonFalse = naturalCards.filter(c => !c.isFalseJoker);
     const hasFalse = naturalCards.some(c => c.isFalseJoker);
@@ -119,7 +133,11 @@ function isValidQuatris(cards, jokerRank, jokerSuits) {
   if (jokerCount === 1) {
     const r0 = getRank(naturalCards[0]);
     if (r0 && naturalCards.every(c => getRank(c) === r0)) {
-      return true;
+      const nonFalse = naturalCards.filter(c => !c.isFalseJoker);
+      const nonFalseSuits = new Set(nonFalse.map(c => c.suit));
+      if (nonFalseSuits.size === nonFalse.length) {
+        return true;
+      }
     }
     const nonFalse = naturalCards.filter(c => !c.isFalseJoker);
     const hasFalse = naturalCards.some(c => c.isFalseJoker);
