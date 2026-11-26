@@ -1979,6 +1979,24 @@ select:focus {
 }
 
 @media (max-width: 768px) {
+  .table-melds-area {
+    max-height: 155px;
+  }
+
+  .table-melds-area.multi-player-melds {
+    max-height: 145px;
+  }
+
+  .table-melds-area.multi-player-melds .card {
+    width: 38px;
+    height: 55px;
+    padding: 2px 3px;
+  }
+
+  .table-melds-area.multi-player-melds .table-meld-group .card:not(:first-child) {
+    margin-left: -13px;
+  }
+
   .table-melds-area .card {
     width: 46px;
     height: 66px;

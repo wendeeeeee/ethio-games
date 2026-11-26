@@ -5699,6 +5699,8 @@ function renderTableMelds(state) {
   }
 
   tableMeldsArea.style.display = 'block';
+  const isMultiPlayer = (state.maxPlayers >= 3) || (state.opponents && state.opponents.length >= 2);
+  tableMeldsArea.classList.toggle('multi-player-melds', !!isMultiPlayer);
 
   if (myMeldsBox) {
     if (myMelds.length > 0) {
