@@ -115,25 +115,26 @@ class WalletManager {
     };
     this.wallets.set(newId, wallet);
 
-    // Save to Supabase (including password_hash; fallback without if column not yet added)
-    supabase.from('users').insert({
+    // Save to Supabase (upsert so pre-existing guest IDs like user_4860 get updated with name, phone & password_hash)
+    const { error: upsertErr } = await supabase.from('users').upsert({
       id: newId,
       name: cleanName,
       phone: cleanPhone,
       password_hash: passHash,
       balance: 1000,
-      locked: 0
-    }).then(({ error }) => {
-      if (error && error.message && error.message.includes('password_hash')) {
-        supabase.from('users').insert({
-          id: newId,
-          name: cleanName,
-          phone: cleanPhone,
-          balance: 1000,
-          locked: 0
-        }).then(() => { }).catch(() => { });
-      }
-    }).catch(() => { });
+      locked: 0,
+      updated_at: new Date().toISOString()
+    }, { onConflict: 'id' });
+    if (upsertErr && upsertErr.message && upsertErr.message.includes('password_hash')) {
+      await supabase.from('users').upsert({
+        id: newId,
+        name: cleanName,
+        phone: cleanPhone,
+        balance: 1000,
+        locked: 0,
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'id' });
+    }
 
     // Welcome bonus log
     supabase.from('transactions').insert({
@@ -350,21 +351,23 @@ class WalletManager {
       transactions: []
     };
 
-    await supabase.from('users').insert({
-      id: userId,
-      name: newWallet.name,
-      phone: newWallet.phone,
-      balance: 1000,
-      locked: 0
-    });
+    if (resolvedName || phone) {
+      await supabase.from('users').insert({
+        id: userId,
+        name: newWallet.name,
+        phone: newWallet.phone,
+        balance: 1000,
+        locked: 0
+      });
 
-    // Log the welcome bonus
-    await supabase.from('transactions').insert({
-      user_id: userId,
-      type: 'WELCOME_BONUS',
-      amount: 1000,
-      description: 'የአዲስ ተጫዋች ቦነስ (Welcome bonus)'
-    });
+      // Log the welcome bonus
+      await supabase.from('transactions').insert({
+        user_id: userId,
+        type: 'WELCOME_BONUS',
+        amount: 1000,
+        description: 'የአዲስ ተጫዋች ቦነስ (Welcome bonus)'
+      });
+    }
 
     this.wallets.set(userId, newWallet);
     return newWallet;
