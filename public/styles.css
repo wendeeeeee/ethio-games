@@ -2447,7 +2447,8 @@ select:focus {
     border-radius: 20px;
   }
 
-  .deposit-btn {
+  .deposit-btn,
+  .withdraw-btn {
     padding: 3px 8px;
     font-size: 10px;
   }
@@ -2878,16 +2879,17 @@ select:focus {
   }
 
   .user-profile-badge {
-    padding: 2px 5px !important;
-    font-size: 10px !important;
-    max-width: 72px !important;
+    padding: 2px 4px !important;
+    font-size: 9.5px !important;
+    max-width: 56px !important;
     white-space: nowrap !important;
-    flex-shrink: 0 !important;
+    flex-shrink: 1 !important;
+    overflow: hidden !important;
   }
 
   #walletUserDisplay {
-    max-width: 48px !important;
-    font-size: 10px !important;
+    max-width: 38px !important;
+    font-size: 9.5px !important;
     white-space: nowrap !important;
     overflow: hidden !important;
     text-overflow: ellipsis !important;
@@ -2907,8 +2909,8 @@ select:focus {
   }
 
   .header-logout-btn {
-    padding: 3px 6px !important;
-    font-size: 10px !important;
+    padding: 3px 5px !important;
+    font-size: 9.5px !important;
     font-weight: 700 !important;
     white-space: nowrap !important;
     border-radius: 12px !important;
@@ -2921,9 +2923,10 @@ select:focus {
     padding: 0 3px;
   }
 
-  .deposit-btn {
+  .deposit-btn,
+  .withdraw-btn {
     padding: 3px 6px !important;
-    font-size: 10px !important;
+    font-size: 9.5px !important;
     font-weight: 700 !important;
     white-space: nowrap !important;
     border-radius: 12px !important;
