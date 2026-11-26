@@ -2008,7 +2008,7 @@ async function refreshRoomsList() {
             <div>
               <strong style="color: #065f46; font-size: 14px;">${r.creatorName}</strong>
               <div style="font-size: 12px; color: #475569; margin-top: 2px;">
-                ${r.stakeAmount} ETB • ${r.playersCount || 1}/${r.maxPlayers || 2}
+                ${r.stakeAmount} ETB • ${r.playersCount || 1}/${r.maxPlayers || 2} ተጫዋች
               </div>
             </div>
             <span style="font-size: 12px; color: #059669; font-weight: 700; background: #ffffff; padding: 4px 10px; border-radius: 16px; border: 1px solid #a7f3d0;">⏳ ${r.expiresIn !== undefined ? r.expiresIn + 's' : '60s'}</span>
@@ -2019,7 +2019,7 @@ async function refreshRoomsList() {
         <div class="room-list-item">
           <div>
             <strong style="color: #0f172a; font-size: 14px;">${r.creatorName}</strong>
-            <div style="font-size: 12px; color: #64748b;">${r.stakeAmount} ETB • ${r.playersCount || 1}/${r.maxPlayers || 2} ${r.expiresIn ? `• <span style="color: #059669; font-weight: 700;">⏳ ${r.expiresIn}s</span>` : ''}</div>
+            <div style="font-size: 12px; color: #64748b;">${r.stakeAmount} ETB • ${r.playersCount || 1}/${r.maxPlayers || 2} ተጫዋች ${r.expiresIn ? `• <span style="color: #059669; font-weight: 700;">⏳ ${r.expiresIn}s</span>` : ''}</div>
           </div>
           <button class="btn-primary" style="width: auto; padding: 6px 14px; font-size: 12px;" onclick="joinRoom('${r.roomId}')">ግባ</button>
         </div>
@@ -2047,7 +2047,7 @@ async function refreshSekaRoomsList() {
             <div>
               <strong style="color: #065f46; font-size: 14px;">${r.creatorName}</strong>
               <div style="font-size: 12px; color: #475569; margin-top: 2px;">
-                ${r.stakeAmount} ETB • ${r.playersCount || 1}/${r.maxPlayers || 2}
+                ${r.stakeAmount} ETB • ${r.playersCount || 1}/${r.maxPlayers || 2} ተጫዋች
               </div>
             </div>
             <span style="font-size: 12px; color: #059669; font-weight: 700; background: #ffffff; padding: 4px 10px; border-radius: 16px; border: 1px solid #a7f3d0;">⏳ ${r.expiresIn !== undefined ? r.expiresIn + 's' : '60s'}</span>
@@ -2059,7 +2059,7 @@ async function refreshSekaRoomsList() {
             <div>
               <strong style="color: #0f172a; font-size: 14px;">${r.creatorName}</strong>
               <div style="font-size: 12px; color: #64748b; margin-top: 2px;">
-                ${r.stakeAmount} ETB • ${r.playersCount || 1}/${r.maxPlayers || 2}
+                ${r.stakeAmount} ETB • ${r.playersCount || 1}/${r.maxPlayers || 2} ተጫዋች
                 ${r.expiresIn !== undefined ? `• <span style="color: #059669; font-weight: 700;">⏳ ${r.expiresIn}s</span>` : ''}
               </div>
             </div>
