@@ -38,3 +38,26 @@ CREATE POLICY "Service role full access on users" ON users
 
 CREATE POLICY "Service role full access on transactions" ON transactions
   FOR ALL USING (true) WITH CHECK (true);
+
+-- 5. Deposits table (stores Telebirr/CBE deposit requests & approvals)
+CREATE TABLE IF NOT EXISTS deposits (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  user_name TEXT DEFAULT '',
+  user_phone TEXT DEFAULT '',
+  amount INTEGER NOT NULL DEFAULT 0,
+  method TEXT DEFAULT 'telebirr',
+  transaction_id TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'PENDING',
+  admin_note TEXT DEFAULT '',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  reviewed_at TIMESTAMPTZ DEFAULT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_deposits_status ON deposits(status);
+CREATE INDEX IF NOT EXISTS idx_deposits_txn ON deposits(transaction_id);
+
+ALTER TABLE deposits ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Service role full access on deposits" ON deposits
+  FOR ALL USING (true) WITH CHECK (true);
