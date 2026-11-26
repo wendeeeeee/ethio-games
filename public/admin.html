@@ -557,6 +557,8 @@
     const usersSearchInput = document.getElementById('usersSearchInput');
     const refreshUsersBtn = document.getElementById('refreshUsersBtn');
     let usersData = [];
+    let usersPage = 1;
+    const USERS_PER_PAGE = 15;
     const smsPaymentsList = document.getElementById('smsPaymentsList');
     const webhookUrlDisplay = document.getElementById('webhookUrlDisplay');
     const simAmtInput = document.getElementById('simAmtInput');
@@ -709,7 +711,10 @@
       refreshUsersBtn.addEventListener('click', loadUsers);
     }
     if (usersSearchInput) {
-      usersSearchInput.addEventListener('input', renderUsers);
+      usersSearchInput.addEventListener('input', () => {
+        usersPage = 1;
+        renderUsers();
+      });
     }
 
     async function loadUsers() {
@@ -749,6 +754,12 @@
         return;
       }
 
+      const totalPages = Math.max(1, Math.ceil(filtered.length / USERS_PER_PAGE));
+      if (usersPage > totalPages) usersPage = totalPages;
+      if (usersPage < 1) usersPage = 1;
+      const startIdx = (usersPage - 1) * USERS_PER_PAGE;
+      const pageItems = filtered.slice(startIdx, startIdx + USERS_PER_PAGE);
+
       usersListContainer.innerHTML = `
         <div style="overflow-x: auto; background: #1e293b; border: 1px solid #334155; border-radius: 14px;">
           <table style="width: 100%; border-collapse: collapse; font-size: 13px; text-align: left;">
@@ -763,11 +774,11 @@
               </tr>
             </thead>
             <tbody>
-              ${filtered.map((u, idx) => {
+              ${pageItems.map((u, idx) => {
                 const dateStr = u.createdAt ? new Date(u.createdAt).toLocaleString() : '—';
                 return `
                   <tr style="border-bottom: 1px solid #334155;">
-                    <td style="padding: 10px 14px; color: #64748b; font-weight: 700;">${idx + 1}</td>
+                    <td style="padding: 10px 14px; color: #64748b; font-weight: 700;">${startIdx + idx + 1}</td>
                     <td style="padding: 10px 14px; color: #f8fafc; font-weight: 700;">👤 ${u.name || 'Player'}</td>
                     <td style="padding: 10px 14px; color: #cbd5e1;">${u.phone || '—'}</td>
                     <td style="padding: 10px 14px; color: #4ade80; font-weight: 800;">${(Number(u.balance) || 0).toLocaleString()} ETB</td>
@@ -777,7 +788,19 @@
               }).join('')}
             </tbody>
           </table>
-        </div>`;
+        </div>
+        ${totalPages > 1 ? `
+          <div style="display: flex; justify-content: center; align-items: center; gap: 12px; margin-top: 10px;">
+            <button type="button" id="usersPrevPageBtn" ${usersPage <= 1 ? 'disabled' : ''} style="padding: 6px 14px; border-radius: 8px; border: 1px solid #334155; background: ${usersPage <= 1 ? '#0f172a' : '#334155'}; color: ${usersPage <= 1 ? '#475569' : '#f8fafc'}; cursor: ${usersPage <= 1 ? 'not-allowed' : 'pointer'}; font-weight: 700; font-size: 12px;">← ቀዳሚ (Prev)</button>
+            <span style="font-size: 13px; color: #cbd5e1; font-weight: 700;">ገጽ ${usersPage} / ${totalPages}</span>
+            <button type="button" id="usersNextPageBtn" ${usersPage >= totalPages ? 'disabled' : ''} style="padding: 6px 14px; border-radius: 8px; border: 1px solid #334155; background: ${usersPage >= totalPages ? '#0f172a' : '#334155'}; color: ${usersPage >= totalPages ? '#475569' : '#f8fafc'}; cursor: ${usersPage >= totalPages ? 'not-allowed' : 'pointer'}; font-weight: 700; font-size: 12px;">ቀጣይ (Next) →</button>
+          </div>
+        ` : ''}`;
+
+      const prevBtn = document.getElementById('usersPrevPageBtn');
+      const nextBtn = document.getElementById('usersNextPageBtn');
+      if (prevBtn) prevBtn.addEventListener('click', () => { if (usersPage > 1) { usersPage--; renderUsers(); } });
+      if (nextBtn) nextBtn.addEventListener('click', () => { if (usersPage < totalPages) { usersPage++; renderUsers(); } });
     }
 
     if (refreshSmsBtn) {
