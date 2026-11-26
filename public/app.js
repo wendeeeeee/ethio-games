@@ -3261,55 +3261,48 @@ function isValidConquerMeld(cards, jokerRank, jokerSuits) {
   return isValidSequenceMeld(cards, jokerRank, jokerSuits);
 }
 
-// Partitions a set of selected cards into valid disjoint Conquer melds (3, 4, or 5+ sequences)
+// Partitions a set of selected cards into valid disjoint Conquer melds (any mix of 3, 4, 5+ sequences)
 function partitionIntoValidMelds(cards, jokerRank, jokerSuits) {
-  if (!cards || cards.length < 3) return null;
+  if (!cards || cards.length < 3 || cards.length > 14) return null;
   if (isValidConquerMeld(cards, jokerRank, jokerSuits)) return [cards];
-  if (cards.length === 6) {
-    for (let i = 0; i < 4; i++) {
-      for (let j = i + 1; j < 5; j++) {
-        for (let k = j + 1; k < 6; k++) {
-          const m1 = [cards[i], cards[j], cards[k]];
-          const m2 = cards.filter((_, idx) => idx !== i && idx !== j && idx !== k);
-          if (isValidTris(m1, jokerRank, jokerSuits) && isValidTris(m2, jokerRank, jokerSuits)) {
-            return [m1, m2];
-          }
-        }
+
+  function solve(rem) {
+    if (rem.length === 0) return [];
+    if (rem.length < 3) return null;
+    if (isValidConquerMeld(rem, jokerRank, jokerSuits)) return [rem];
+
+    const pivot = rem[0];
+    const rest = rem.slice(1);
+
+    // Try forming a valid meld of size `len` containing `pivot` (prefer 3, 4, 5+ melds)
+    const maxLen = Math.min(rem.length - 3, 10); // leave at least 3 cards if not full
+    const tryLen = (len, startIdx, chosenIndices) => {
+      if (chosenIndices.length === len - 1) {
+        const group = [pivot, ...chosenIndices.map(idx => rest[idx])];
+        if (!isValidConquerMeld(group, jokerRank, jokerSuits)) return null;
+        const chosenSet = new Set(chosenIndices);
+        const nextRem = rest.filter((_, idx) => !chosenSet.has(idx));
+        const sub = solve(nextRem);
+        if (sub) return [group, ...sub];
+        return null;
       }
-    }
-  }
-  if (cards.length === 7) {
-    for (let i = 0; i < cards.length; i++) {
-      for (let j = i + 1; j < cards.length; j++) {
-        for (let k = j + 1; k < cards.length; k++) {
-          for (let l = k + 1; l < cards.length; l++) {
-            const m1 = [cards[i], cards[j], cards[k], cards[l]];
-            const m2 = cards.filter((_, idx) => idx !== i && idx !== j && idx !== k && idx !== l);
-            if ((isValidQuatris(m1, jokerRank, jokerSuits) && isValidTris(m2, jokerRank, jokerSuits)) ||
-              (isValidTris(m1, jokerRank, jokerSuits) && isValidQuatris(m2, jokerRank, jokerSuits))) {
-              return [m1, m2];
-            }
-          }
-        }
+      for (let i = startIdx; i < rest.length; i++) {
+        chosenIndices.push(i);
+        const found = tryLen(len, i + 1, chosenIndices);
+        if (found) return found;
+        chosenIndices.pop();
       }
+      return null;
+    };
+
+    for (let len = 3; len <= maxLen; len++) {
+      const res = tryLen(len, 0, []);
+      if (res) return res;
     }
+    return null;
   }
-  if (cards.length === 8) {
-    for (let i = 0; i < cards.length; i++) {
-      for (let j = i + 1; j < cards.length; j++) {
-        for (let k = j + 1; k < cards.length; k++) {
-          for (let l = k + 1; l < cards.length; l++) {
-            const m1 = [cards[i], cards[j], cards[k], cards[l]];
-            const m2 = cards.filter((_, idx) => idx !== i && idx !== j && idx !== k && idx !== l);
-            if (isValidQuatris(m1, jokerRank, jokerSuits) && isValidQuatris(m2, jokerRank, jokerSuits)) {
-              return [m1, m2];
-            }
-          }
-        }
-      }
-    }
-  }
-  return null;
+
+  return solve(cards);
 }
 
 function getRankNum(rank, aceHigh = false) {
