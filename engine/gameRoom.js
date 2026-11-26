@@ -927,7 +927,7 @@ class GameRoom {
       turnSecondsLeft: this.turnDeadline ? Math.max(0, Math.round((this.turnDeadline - Date.now()) / 1000)) : 60,
       myHand: myHand,
       opponentHandCount: opponentHandCount,
-      opponentHand: (this.status === 'FINISHED' && primaryOpp) ? this.getHand(primaryOpp.id) : undefined,
+      opponentHand: undefined,
       opponent: primaryOpp ? { id: primaryOpp.id, name: primaryOpp.name } : null,
       tableMelds: this.tableMelds,
       points: pointsInfo.total,

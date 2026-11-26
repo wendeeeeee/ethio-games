@@ -4719,15 +4719,12 @@ function renderGame(state) {
         }
       }
       if (opponentCardsContainer) {
-        if (state.opponentHand && state.opponentHand.length > 0) {
-          opponentCardsContainer.innerHTML = state.opponentHand.map(c => createCardHTML(c, false, false)).join('');
-          opponentCardsContainer.style.display = 'flex';
-          opponentCardsContainer.style.justifyContent = 'center';
-          opponentCardsContainer.style.gap = '4px';
-          opponentCardsContainer.style.flexWrap = 'wrap';
-        } else {
-          opponentCardsContainer.innerHTML = '';
-        }
+        // Keep opponent's remaining hand cards hidden (face-down backs) when Conquer finishes
+        opponentCardsContainer.innerHTML = Array.from({ length: Math.max(0, oppCount) }, () => '<div class="card back mini-card"></div>').join('');
+        opponentCardsContainer.style.display = 'flex';
+        opponentCardsContainer.style.justifyContent = 'center';
+        opponentCardsContainer.style.gap = '4px';
+        opponentCardsContainer.style.flexWrap = 'wrap';
       }
     } else {
       let winMelds = state.winningMelds;
