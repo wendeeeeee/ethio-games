@@ -483,29 +483,39 @@ function sortMeldCards(meld, jokerRank, jokerSuits) {
   const getRank = (c) => (c.isFalseJoker ? jokerRank : c.rank);
   const firstRank = getRank(naturals[0]);
   if (firstRank && naturals.every(c => getRank(c) === firstRank)) {
-    // Same-rank set: alternate colors (Red-Black-Red or Black-Red-Black)
+    // Same-rank set: alternate colors (Red-Black-Red or Black-Red-Black), using Joker's assignedCard suit color!
     const isRedCard = (c) => {
-      if (c.suit === '♥' || c.suit === '♦') return true;
-      if (c.suit === '♠' || c.suit === '♣') return false;
+      const suit = (c.assignedCard && c.assignedCard.suit) ? c.assignedCard.suit : c.suit;
+      if (suit === '♥' || suit === '♦') return true;
+      if (suit === '♠' || suit === '♣') return false;
       return c.color === 'red';
     };
-    const reds = naturals.filter(isRedCard);
-    const blacks = naturals.filter(c => !isRedCard(c));
-    const jokers = meld.filter(isJk);
+    const reds = [];
+    const blacks = [];
+    const unassignedJokers = [];
+    for (const c of meld) {
+      if (isJk(c) && !(c.assignedCard && c.assignedCard.suit)) {
+        unassignedJokers.push(c);
+      } else if (isRedCard(c)) {
+        reds.push(c);
+      } else {
+        blacks.push(c);
+      }
+    }
 
-    if (reds.length === 2 && blacks.length === 1 && jokers.length === 0) {
+    if (reds.length === 2 && blacks.length === 1 && unassignedJokers.length === 0) {
       return [reds[0], blacks[0], reds[1]];
     }
-    if (blacks.length === 2 && reds.length === 1 && jokers.length === 0) {
+    if (blacks.length === 2 && reds.length === 1 && unassignedJokers.length === 0) {
       return [blacks[0], reds[0], blacks[1]];
     }
-    if (reds.length === 2 && jokers.length === 1 && blacks.length === 0) {
-      return [reds[0], jokers[0], reds[1]];
+    if (reds.length === 2 && unassignedJokers.length === 1 && blacks.length === 0) {
+      return [reds[0], unassignedJokers[0], reds[1]];
     }
-    if (blacks.length === 2 && jokers.length === 1 && reds.length === 0) {
-      return [blacks[0], jokers[0], blacks[1]];
+    if (blacks.length === 2 && unassignedJokers.length === 1 && reds.length === 0) {
+      return [blacks[0], unassignedJokers[0], blacks[1]];
     }
-    // General alternating fallback (handles 4-card sets or 1R+1B+1J)
+    // General alternating fallback
     const arranged = [];
     const rCopy = [...reds];
     const bCopy = [...blacks];
@@ -517,7 +527,7 @@ function sortMeldCards(meld, jokerRank, jokerSuits) {
       else if (bCopy.length > 0) arranged.push(bCopy.shift());
       pickRed = !pickRed;
     }
-    return [...arranged, ...jokers];
+    return [...arranged, ...unassignedJokers];
   }
 
   // Sequence: determine whether Ace is high (14) or low (1)
