@@ -483,11 +483,41 @@ function sortMeldCards(meld, jokerRank, jokerSuits) {
   const getRank = (c) => (c.isFalseJoker ? jokerRank : c.rank);
   const firstRank = getRank(naturals[0]);
   if (firstRank && naturals.every(c => getRank(c) === firstRank)) {
-    // Same-rank set: keep naturals first, sorted by suit, then any joker
-    const suitOrder = { '♠': 1, '♥': 2, '♦': 3, '♣': 4 };
-    const sortedNat = [...naturals].sort((a, b) => (suitOrder[a.suit] || 9) - (suitOrder[b.suit] || 9));
+    // Same-rank set: alternate colors (Red-Black-Red or Black-Red-Black)
+    const isRedCard = (c) => {
+      if (c.suit === '♥' || c.suit === '♦') return true;
+      if (c.suit === '♠' || c.suit === '♣') return false;
+      return c.color === 'red';
+    };
+    const reds = naturals.filter(isRedCard);
+    const blacks = naturals.filter(c => !isRedCard(c));
     const jokers = meld.filter(isJk);
-    return [...sortedNat, ...jokers];
+
+    if (reds.length === 2 && blacks.length === 1 && jokers.length === 0) {
+      return [reds[0], blacks[0], reds[1]];
+    }
+    if (blacks.length === 2 && reds.length === 1 && jokers.length === 0) {
+      return [blacks[0], reds[0], blacks[1]];
+    }
+    if (reds.length === 2 && jokers.length === 1 && blacks.length === 0) {
+      return [reds[0], jokers[0], reds[1]];
+    }
+    if (blacks.length === 2 && jokers.length === 1 && reds.length === 0) {
+      return [blacks[0], jokers[0], blacks[1]];
+    }
+    // General alternating fallback (handles 4-card sets or 1R+1B+1J)
+    const arranged = [];
+    const rCopy = [...reds];
+    const bCopy = [...blacks];
+    let pickRed = rCopy.length >= bCopy.length;
+    while (rCopy.length > 0 || bCopy.length > 0) {
+      if (pickRed && rCopy.length > 0) arranged.push(rCopy.shift());
+      else if (!pickRed && bCopy.length > 0) arranged.push(bCopy.shift());
+      else if (rCopy.length > 0) arranged.push(rCopy.shift());
+      else if (bCopy.length > 0) arranged.push(bCopy.shift());
+      pickRed = !pickRed;
+    }
+    return [...arranged, ...jokers];
   }
 
   // Sequence: determine whether Ace is high (14) or low (1)
