@@ -3091,10 +3091,16 @@ function isCardGebiToTable(card, tableMelds, jokerRank, jokerSuits) {
 function getCardConnectionScore(a, b) {
   if (!a || !b) return 0;
   const jRank = (typeof currentGameState !== 'undefined' && currentGameState) ? currentGameState.jokerRank : null;
+  const jSuits = (typeof currentGameState !== 'undefined' && currentGameState) ? currentGameState.jokerSuits : null;
   const rA = (a.isFalseJoker && jRank) ? jRank : a.rank;
   const rB = (b.isFalseJoker && jRank) ? jRank : b.rank;
   if (rA && rA === rB) return 100;
-  if (a.suit === b.suit || a.isFalseJoker || b.isFalseJoker) {
+
+  const isFalseSeqMatch =
+    (a.isFalseJoker && (!jSuits || jSuits.includes(b.suit))) ||
+    (b.isFalseJoker && (!jSuits || jSuits.includes(a.suit)));
+
+  if (a.suit === b.suit || isFalseSeqMatch) {
     const cardA = a.isFalseJoker && jRank ? { ...a, rank: jRank } : a;
     const cardB = b.isFalseJoker && jRank ? { ...b, rank: jRank } : b;
     const d = getCardRankDistance(cardA, cardB);
