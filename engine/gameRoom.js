@@ -48,6 +48,7 @@ class GameRoom {
     this.turnState = null; // 'AWAITING_DRAW', 'AWAITING_DISCARD'
     this.isFirstDiscard = true; // Rule 1: Starter's first discard protected
     this.mustMeld41PlayerId = null; // Player who picked from ground and must meld 41
+    this.gebiOpenPoints = {}; // Tracks Gebi card points attached before/while reaching 41
 
     this.pokeState = {
       active: false,
@@ -573,7 +574,7 @@ class GameRoom {
       return {
         success: false,
         mustMeld41: true,
-        message: '⚠️ 41 አልሞላም!'
+        message: '⚠️ ከመሬት ስላነሳህ 41 የሚሞላ መውረድ አለብህ!'
       };
     }
 
@@ -704,12 +705,14 @@ class GameRoom {
       this.tableMelds[playerId].push(sortMeldCards(laidGroup, this.jokerRank, this.jokerSuits));
     }
 
-    // Clear ground-draw lock once total table melds reach 41 points OR all 13 cards are laid down (1 left to discard & win)
+    // Combined table melds + Gebi points toward 41 opening threshold
     const totalTablePoints = (this.tableMelds[playerId] || []).reduce(
       (sum, m) => sum + getMeldPoints(m, this.jokerRank, this.jokerSuits), 0
-    );
-    if (this.mustMeld41PlayerId === playerId && (totalTablePoints >= 41 || hand.length <= 1)) {
-      this.mustMeld41PlayerId = null;
+    ) + (this.gebiOpenPoints[playerId] || 0);
+    if (totalTablePoints >= 41 || hand.length <= 1) {
+      if (this.mustMeld41PlayerId === playerId) this.mustMeld41PlayerId = null;
+    } else if (!hasAlreadyOpened) {
+      this.mustMeld41PlayerId = playerId;
     }
 
     this.log(`📥 ${this.getPlayerName(playerId)} ወረደ (ወደ ጠረጴዛ አወረደ): ${meldPoints} ነጥብ!`);
@@ -838,11 +841,7 @@ class GameRoom {
   attachGebiCard(playerId, targetPlayerMeldOwnerId, meldIndex, cardId) {
     if (this.status !== 'PLAYING') return { success: false, message: 'Game not active' };
     if (this.currentTurnPlayerId !== playerId) return { success: false, message: 'Can only attach cards on your turn' };
-
-    const hasAlreadyOpened = this.tableMelds[playerId] && this.tableMelds[playerId].length > 0;
-    if (!hasAlreadyOpened) {
-      return { success: false, message: '⚠️ ገቢ (GEBI) ለማድረግ መጀመሪያ መውረድ አለብህ! ሳትወርድ ገቢ ማድረግ አትችልም!' };
-    }
+    if (this.turnState !== 'AWAITING_DISCARD') return { success: false, message: 'መጀመሪያ ካርታ ማንሳት አለብህ!' };
 
     const playerHand = this.getHand(playerId);
     const cardIndex = playerHand.findIndex(c => String(c.id) === String(cardId));
@@ -862,8 +861,21 @@ class GameRoom {
     melds[meldIndex] = sortMeldCards(targetMeld, this.jokerRank, this.jokerSuits);
     playerHand.splice(cardIndex, 1);
 
-    this.log(`📥 ${this.getPlayerName(playerId)} ${card.rank}${card.suit} ጠረጴዛ ላይ ገቢ አደረገ!`);
-    return { success: true, card, meld: targetMeld };
+    const cardPts = card.isFalseJoker ? getCardPointValue(this.jokerRank) : (card.pointValue || getCardPointValue(card.rank) || 0);
+    this.gebiOpenPoints[playerId] = (this.gebiOpenPoints[playerId] || 0) + cardPts;
+
+    const totalCombinedPoints = (this.tableMelds[playerId] || []).reduce(
+      (sum, m) => sum + getMeldPoints(m, this.jokerRank, this.jokerSuits), 0
+    ) + this.gebiOpenPoints[playerId];
+
+    if (totalCombinedPoints >= 41 || playerHand.length <= 1) {
+      if (this.mustMeld41PlayerId === playerId) this.mustMeld41PlayerId = null;
+    } else {
+      this.mustMeld41PlayerId = playerId;
+    }
+
+    this.log(`📥 ${this.getPlayerName(playerId)} ${card.rank}${card.suit} ጠረጴዛ ላይ ገቢ አደረገ! (+${cardPts} ነጥብ)`);
+    return { success: true, card, meld: targetMeld, totalCombinedPoints };
   }
 
   getPlayerName(playerId) {

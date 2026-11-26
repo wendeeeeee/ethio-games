@@ -2521,9 +2521,8 @@ function handleGebiAction() {
     return showSortToast('⚠️ የአንተ ተራ አይደለም!');
   }
 
-  const hasAlreadyOpened = currentGameState.tableMelds && currentGameState.tableMelds[userId] && currentGameState.tableMelds[userId].length > 0;
-  if (!hasAlreadyOpened) {
-    return showSortToast('⚠️ ገቢ (GEBI) ለማድረግ መጀመሪያ መውረድ አለብህ! ሳትወርድ ገቢ ማድረግ አትችልም!');
+  if (currentGameState.turnState !== 'AWAITING_DISCARD') {
+    return showSortToast('⚠️ ገቢ (GEBI) ለማድረግ መጀመሪያ ካርታ አንሳ!');
   }
 
   const selectedCards = (currentGameState.myHand || []).filter(c =>
@@ -2684,11 +2683,19 @@ function updateGroundMeldBar() {
     confirmGroundMeldBtn.textContent = currentMeldBarMode === 'wered' ? '✅ አውርድ' : '✅ 41 ሞልቷል - አውርድና አንሳ';
   } else if (!hasAlreadyOpened && totalPts < 41) {
     const meldNames = validPartition.map(m => m.map(c => c.rank + c.suit).join('-')).join(' + ');
-    groundMeldHintText.textContent = `⚠️ ${totalPts} ነጥብ ብቻ ነው (${meldNames})! 41 አልሞላም — እባክህ ሌላ ትሪስ ጨምር!`;
-    groundMeldHintText.style.color = '#f87171';
-    confirmGroundMeldBtn.disabled = true;
-    confirmGroundMeldBtn.style.opacity = '0.5';
-    confirmGroundMeldBtn.textContent = currentMeldBarMode === 'wered' ? '✅ አውርድ' : '✅ 41 ሞልቷል - አውርድና አንሳ';
+    if (currentMeldBarMode === 'wered') {
+      groundMeldHintText.textContent = `⚠️ ${totalPts} ነጥብ (${meldNames}) — ከገቢ ጋር ተደምሮ 41 እንዲሞላ አውርደህ ገቢ አድርግ!`;
+      groundMeldHintText.style.color = '#fbbf24';
+      confirmGroundMeldBtn.disabled = false;
+      confirmGroundMeldBtn.style.opacity = '1';
+      confirmGroundMeldBtn.textContent = '✅ አውርድ (ከገቢ ጋር 41+)';
+    } else {
+      groundMeldHintText.textContent = `⚠️ ${totalPts} ነጥብ ብቻ ነው (${meldNames})! 41 አልሞላም — እባክህ ሌላ ትሪስ ጨምር!`;
+      groundMeldHintText.style.color = '#f87171';
+      confirmGroundMeldBtn.disabled = true;
+      confirmGroundMeldBtn.style.opacity = '0.5';
+      confirmGroundMeldBtn.textContent = '✅ 41 ሞልቷል - አውርድና አንሳ';
+    }
   } else {
     // Reached 41 or has already opened!
     const meldNames = validPartition.map(m => m.map(c => c.rank + c.suit).join('-')).join(' + ');
@@ -2721,8 +2728,8 @@ confirmGroundMeldBtn.addEventListener('click', () => {
   const hasAlreadyOpened = currentGameState.tableMelds && currentGameState.tableMelds[userId] && currentGameState.tableMelds[userId].length > 0;
 
   if (currentMeldBarMode === 'wered') {
-    if (!validPartition || (!hasAlreadyOpened && totalPts < 41)) {
-      return alert('ያልተሟላ ወይም ከ41 ነጥብ በታች ነው!');
+    if (!validPartition) {
+      return alert('ያልተሟላ ወይም የተሳሳተ ትሪስ ነው!');
     }
     executeMeldDown(validPartition, totalPts);
     return;
@@ -2753,7 +2760,7 @@ confirmGroundMeldBtn.addEventListener('click', () => {
 // Forfeit Ground Draw (kelelw gin yeshenefal)
 forfeitGroundBtn.addEventListener('click', () => {
   if (!currentRoomId) return;
-  if (confirm('⚠️ 41 አልሞላም! እጅ መስጠት ትፈልጋለህ?')) {
+  if (confirm('⚠️ ከመሬት ስላነሳህ 41 የሚሞላ መውረድ አለብህ! እጅ መስጠት ትፈልጋለህ?')) {
     socket.emit('forfeit_ground_fail', { roomId: currentRoomId, userId });
     groundMeldBar.style.display = 'none';
     selectedCardsSet.clear();
@@ -2855,7 +2862,7 @@ discardBtn.addEventListener('click', () => {
 
   // If user drew from ground without having opened, they must close & win (or reach 41)
   if (currentGameState.mustMeld41 && !isWinningHand) {
-    showSortToast('⚠️ 41 አልሞላም!');
+    showSortToast('⚠️ ከመሬት ስላነሳህ 41 የሚሞላ መውረድ አለብህ!');
     return;
   }
 
