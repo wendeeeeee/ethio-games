@@ -4526,16 +4526,8 @@ function renderGame(state) {
   opponentCardCount.textContent = oppCount;
   const isInitialDeal = !hasPlayedDealingAnim && state.status === 'PLAYING';
   const isFinished = state.status === 'FINISHED';
-  if (!isSeka) {
-    // In Conquer, keep opponentCardsContainer empty to free up space for table melds (especially in 3-4 player games)
-    if (opponentCardsContainer) {
-      opponentCardsContainer.innerHTML = '';
-      opponentCardsContainer.style.display = 'none';
-    }
-  } else {
-    if (opponentCardsContainer) opponentCardsContainer.style.display = 'flex';
-    renderOpponentCards(oppCount, isInitialDeal);
-  }
+  if (opponentCardsContainer) opponentCardsContainer.style.display = 'flex';
+  renderOpponentCards(oppCount, isInitialDeal);
 
   // Center Field: Base Joker Card (Conquer only — hidden once picked up)
   const canShowJokerCard = !isSeka && state.status === 'PLAYING' && !!state.baseCard;
@@ -4769,9 +4761,12 @@ function renderGame(state) {
         }
       }
       if (opponentCardsContainer) {
-        // Keep opponent's card area empty in Conquer so table melds have full room
-        opponentCardsContainer.innerHTML = '';
-        opponentCardsContainer.style.display = 'none';
+        // Keep opponent's remaining hand cards hidden (face-down backs) when Conquer finishes
+        opponentCardsContainer.innerHTML = Array.from({ length: Math.max(0, oppCount) }, () => '<div class="card back mini-card"></div>').join('');
+        opponentCardsContainer.style.display = 'flex';
+        opponentCardsContainer.style.justifyContent = 'center';
+        opponentCardsContainer.style.gap = '4px';
+        opponentCardsContainer.style.flexWrap = 'wrap';
       }
     } else {
       let winMelds = state.winningMelds;
