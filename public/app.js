@@ -2565,7 +2565,7 @@ function handleGebiAction() {
   }
 
   if (!foundTarget) {
-    return showSortToast(`⚠️ [ ${card.rank}${card.suit} ] ጠረጴዛው ላይ ካሉት ሜልዶች ጋር ገቢ መሆን አይችልም!`);
+    return showSortToast(`⚠️ [ ${card.rank}${card.suit} ] ጠረጴዛው ላይ ካሉት ቡድኖች ጋር ገቢ መሆን አይችልም!`);
   }
 
   playCardSound();
@@ -2582,7 +2582,7 @@ function handleGebiAction() {
     meldIndex: foundTarget.meldIndex,
     cardId: card.id
   });
-  showSortToast(`📥 [ ${card.rank}${card.suit} ] ወደ ሜልዱ ገቢ ተደረገ!`);
+  showSortToast(`📥 [ ${card.rank}${card.suit} ] ገቢ ተደረገ!`);
 }
 
 if (gebiBtn) {
@@ -5690,7 +5690,7 @@ function bindTableMeldClicks() {
         });
         selectedCardsSet.clear();
         selectedCardId = null;
-        showSortToast(`📥 [ ${card.rank}${card.suit} ] ወደ ሜልዱ ገቢ ተደረገ!`);
+        showSortToast(`📥 [ ${card.rank}${card.suit} ] ገቢ ተደረገ!`);
         return;
       }
 

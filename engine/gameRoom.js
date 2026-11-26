@@ -833,7 +833,7 @@ class GameRoom {
     playerHand.splice(naturalCardIndex, 1);
     playerHand.push(stolenJoker);
 
-    this.log(`🔄 ${this.getPlayerName(playerId)} swapped a Joker from table meld with ${naturalCard.rank}${naturalCard.suit} (ጆከር ተካ)!`);
+    this.log(`🔄 ${this.getPlayerName(playerId)} swapped a Joker from table with ${naturalCard.rank}${naturalCard.suit} (ጆከር ተካ)!`);
     return { success: true, stolenJoker };
   }
 
