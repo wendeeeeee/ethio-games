@@ -3451,6 +3451,31 @@ function buildChainsFromCards(cards) {
     chains.push(currentChain);
   }
 
+  // Attach any remaining card that connects to an interior card of an existing chain (e.g. 10♥ to Q♥ inside [A♦, Q♦, Q♥, K♥])
+  for (const cand of Array.from(remaining.values())) {
+    let bestChain = null;
+    let bestIdx = -1;
+    let bestConn = 0;
+    for (const chain of chains) {
+      for (let i = 0; i < chain.length; i++) {
+        const s = getCardConnectionScore(cand, chain[i]);
+        if (s > bestConn) {
+          bestConn = s;
+          bestChain = chain;
+          bestIdx = i;
+        }
+      }
+    }
+    if (bestChain && bestConn > 0) {
+      if (bestIdx < bestChain.length / 2) {
+        bestChain.unshift(cand);
+      } else {
+        bestChain.push(cand);
+      }
+      remaining.delete(cand.id);
+    }
+  }
+
   const singles = Array.from(remaining.values());
   singles.sort((a, b) => (a.pointValue || 0) - (b.pointValue || 0));
 
