@@ -1067,6 +1067,40 @@ socket.on('rooms_updated', () => {
   refreshSekaRoomsList();
 });
 
+function renderRecentWinners(list) {
+  const arr = Array.isArray(list) ? list : [];
+  const sekaEl = document.getElementById('sekaRecentWinnersList');
+  const conquerEl = document.getElementById('conquerRecentWinnersList');
+
+  const formatRows = (items) => {
+    if (!items || items.length === 0) return '<div style="color: #64748b; font-size: 13px;">እስካሁን ያሸነፈ የለም</div>';
+    return items.slice(0, 8).map(w => `
+      <div style="display: flex; justify-content: space-between; align-items: center; padding: 7px 10px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; margin-bottom: 6px;">
+        <span style="font-weight: 700; color: #0f172a;">🏆 ${w.winnerName}</span>
+        <span style="font-weight: 800; color: #059669;">+${(Number(w.netWin) || 0).toLocaleString()} ETB</span>
+      </div>
+    `).join('');
+  };
+
+  if (sekaEl) sekaEl.innerHTML = formatRows(arr.filter(w => w.gameType === 'SEKA'));
+  if (conquerEl) conquerEl.innerHTML = formatRows(arr.filter(w => w.gameType === 'CONQUER'));
+}
+
+async function loadRecentWinners() {
+  try {
+    const res = await fetch('/api/recent-winners');
+    if (res.ok) {
+      const data = await res.json();
+      renderRecentWinners(data);
+    }
+  } catch (e) { }
+}
+loadRecentWinners();
+
+socket.on('recent_winners_updated', (list) => {
+  renderRecentWinners(list);
+});
+
 socket.on('player_timed_out', ({ winnerName, loserName, message }) => {
   hideActiveGameReturnBanner();
   if (loserName && playerName && loserName === playerName) {
@@ -4459,18 +4493,21 @@ function renderGame(state) {
           if (wp && wp.name) winnerName = wp.name;
         }
       }
+      const potVal = Number(state.pot) || 0;
+      const stakeVal = Number(state.stakeAmount) || 0;
+      const netWinVal = potVal - Math.floor(Math.max(0, potVal - stakeVal) * 0.10);
       if (state.winReason === 'TIMEOUT_FORFEIT') {
         turnIndicator.textContent = iWon
-          ? `🏆 አሸንፈሃል! ተጋጣሚ በ 60 ሰከንድ ውስጥ ካርታ ስላልጣለ አሸነፍክ! (ደራሽ: ${state.pot || 0} ETB)`
+          ? `🏆 አሸንፈሃል! +${netWinVal.toLocaleString()} ETB (ተጋጣሚ 60s አልጣለም)`
           : `❌ በ 60 ሰከንድ ውስጥ ካርታ ስላልጣልክ ተሸንፈሃል! (አሸናፊ፦ ${winnerName})`;
         turnIndicator.style.color = iWon ? '#4ade80' : '#ef4444';
       } else if (state.winReason === 'ABANDON_FORFEIT') {
         turnIndicator.textContent = iWon
-          ? `🏆 አሸንፈሃል! ተጋጣሚ ከጠረጴዛው ወጥቶ ስላልተመለሰ አሸነፍክ! (ደራሽ: ${state.pot || 0} ETB)`
+          ? `🏆 አሸንፈሃል! +${netWinVal.toLocaleString()} ETB (ተጋጣሚ አልተመለሰም)`
           : `❌ በ 60 ሰከንድ ውስጥ ስላልተመለስክ ተሸንፈሃል! (አሸናፊ፦ ${winnerName})`;
         turnIndicator.style.color = iWon ? '#4ade80' : '#ef4444';
       } else {
-        turnIndicator.textContent = iWon ? `🏆 አሸንፈሃል! (ደራሽ: ${state.pot || 0} ETB)` : `❌ ተሸንፈሃል! አሸናፊ፦ ${winnerName} (ደራሽ: ${state.pot || 0} ETB)`;
+        turnIndicator.textContent = iWon ? `🏆 አሸንፈሃል! +${netWinVal.toLocaleString()} ETB` : `❌ ተሸንፈሃል! አሸናፊ፦ ${winnerName}`;
         turnIndicator.style.color = iWon ? '#4ade80' : '#ef4444';
       }
     }

@@ -477,6 +477,39 @@ app.get('/api/seka/rooms', (req, res) => {
   res.json(list);
 });
 
+// Recent winners feed (shown below Create Game in lobbies)
+const recentWinners = [];
+function recordRecentWinner(room, gameType) {
+  if (!room || room.status !== 'FINISHED' || room._winnerRecorded) return;
+  room._winnerRecorded = true;
+  const winnerId = (room.winner && typeof room.winner === 'object') ? room.winner.id : room.winner;
+  if (!winnerId) return;
+  const players = room.players || [room.creator, room.joiner].filter(Boolean);
+  const wObj = players.find(p => p && p.id === winnerId);
+  const winnerName = (room.winner && typeof room.winner === 'object' && room.winner.name)
+    ? room.winner.name
+    : (wObj ? wObj.name : 'ተጫዋች');
+  const pot = Number(room.pot) || 0;
+  const stake = Number(room.stakeAmount) || 0;
+  const rake = Math.floor(Math.max(0, pot - stake) * 0.10);
+  const netWin = pot - rake;
+  recentWinners.unshift({
+    roomId: room.roomId,
+    gameType,
+    winnerName,
+    netWin,
+    pot,
+    stake,
+    wonAt: Date.now()
+  });
+  if (recentWinners.length > 15) recentWinners.pop();
+  io.emit('recent_winners_updated', recentWinners);
+}
+
+app.get('/api/recent-winners', (req, res) => {
+  res.json(recentWinners);
+});
+
 // Socket.io Events
 io.on('connection', (socket) => {
   // Join Lobby / Check Registered Player (never auto-creates unauthenticated users)
@@ -1105,6 +1138,7 @@ function broadcastRoomUpdate(room) {
     }
   }
   if (room.status === 'FINISHED') {
+    recordRecentWinner(room, 'CONQUER');
     for (const p of players) {
       if (p && p.id) broadcastWallet(p.id);
     }
@@ -1119,6 +1153,7 @@ function broadcastSekaRoomUpdate(room) {
     }
   }
   if (room.status === 'FINISHED') {
+    recordRecentWinner(room, 'SEKA');
     for (const p of players) {
       if (p && p.id) broadcastWallet(p.id);
     }
