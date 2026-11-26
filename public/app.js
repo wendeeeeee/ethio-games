@@ -5143,7 +5143,7 @@ function createCardHTML(card, isSelected = false, isBaseJoker = false, zIndex = 
   const delayStyle = animDelay ? `animation-delay: ${animDelay};` : '';
 
   const baseBadge = isBaseJoker ? `<div class="card-base-badge">BASE ⭐</div>` : '';
-  const assignedBadge = card.assignedCard ? `<div class="card-base-badge" style="background: #fef08a; color: #0f172a; font-size: 10px;">=${card.assignedCard.rank}${card.assignedCard.suit}</div>` : '';
+  const assignedBadge = card.assignedCard ? `<div class="card-assigned-badge">=${card.assignedCard.rank}${card.assignedCard.suit}</div>` : '';
   const tetayBadge = '';
 
   if (isPrintedWildJoker || isFalse) {

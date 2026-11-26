@@ -624,6 +624,7 @@ io.on('connection', (socket) => {
     const botResult = room.join({ id: botId, name: 'Abebe (AI Bot)', socketId: null });
     if (!botResult.success) return socket.emit('error_msg', botResult.message);
 
+    broadcastWallet(userId);
     // Bot is Joiner, so Bot automatically calls High/Low after 1.5 seconds
     broadcastRoomUpdate(room);
 
@@ -1132,6 +1133,11 @@ function handleSekaBotTurn(room) {
 function broadcastWallet(userId) {
   const wallet = walletManager.getWallet(userId);
   io.emit(`wallet_${userId}`, wallet);
+  socketPlayerMap.forEach((p, sId) => {
+    if (p.userId === userId) {
+      io.to(sId).emit('wallet_update', wallet);
+    }
+  });
 }
 
 // Simple AI Bot Logic to play Ethiopian Conquer turns

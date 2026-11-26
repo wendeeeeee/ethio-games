@@ -1590,6 +1590,22 @@ select:focus {
   border-radius: 4px;
 }
 
+.card-assigned-badge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  background: #fef08a;
+  color: #0f172a;
+  border: 1.5px solid #d97706;
+  font-size: 10px;
+  font-weight: 900;
+  padding: 1px 5px;
+  border-radius: 5px;
+  line-height: 1.1;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.45);
+  z-index: 8;
+}
+
 /* Authentic Ethiopian Joker Card */
 .card.card-joker-authentic {
   padding: 0 !important;
