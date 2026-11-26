@@ -60,8 +60,8 @@ app.get('/api/wallet/:userId', (req, res) => {
 app.post('/api/wallet/deposit', async (req, res) => {
   const { userId, amount, method, transactionId } = req.body;
   const num = Number(amount);
-  if (!userId || !num || num <= 0) {
-    return res.status(400).json({ success: false, message: 'እባክዎ ትክክለኛ የገንዘብ መጠን ያስገቡ (Invalid amount)' });
+  if (!userId || !Number.isFinite(num) || !Number.isInteger(num) || num < 10 || num > 100000) {
+    return res.status(400).json({ success: false, message: 'እባክዎ ትክክለኛ የገንዘብ መጠን ያስገቡ (10 - 100,000 ETB)' });
   }
   if (!transactionId || transactionId.trim().length < 4) {
     return res.status(400).json({ success: false, message: 'እባክዎ Transaction ID ያስገቡ (ቢያንስ 4 ፊደል)' });
@@ -72,7 +72,7 @@ app.post('/api/wallet/deposit', async (req, res) => {
 
   try {
     // Lookup user name & phone for admin visibility
-    const userWallet = walletManager.getWallet(userId);
+    const userWallet = await walletManager.getWalletAsync(userId);
     const userName = (userWallet && userWallet.name) ? userWallet.name : '';
     const userPhone = (userWallet && userWallet.phone) ? userWallet.phone : '';
 
@@ -279,10 +279,10 @@ const MIN_WITHDRAW_ETB = 100;
 app.post('/api/wallet/withdraw', async (req, res) => {
   const { userId, amount, method, accountNumber, accountName } = req.body;
   const num = Number(amount);
-  if (!userId || !Number.isFinite(num) || num < MIN_WITHDRAW_ETB || num > 50000) {
+  if (!userId || !Number.isFinite(num) || !Number.isInteger(num) || num < MIN_WITHDRAW_ETB || num > 50000) {
     return res.status(400).json({
       success: false,
-      message: `ዝቅተኛው የማውጫ መጠን ${MIN_WITHDRAW_ETB} ETB ነው (ከ ${MIN_WITHDRAW_ETB} እስከ 50,000 ETB)`
+      message: `ዝቅተኛው የማውጫ መጠን ${MIN_WITHDRAW_ETB} ETB ነው (ከ ${MIN_WITHDRAW_ETB} እስከ 50,000 ETB ሙሉ ቁጥር)`
     });
   }
   const cleanAcc = String(accountNumber || '').trim();
@@ -292,6 +292,13 @@ app.post('/api/wallet/withdraw', async (req, res) => {
   const cleanMethod = method === 'cbe' ? 'cbe' : 'telebirr';
 
   try {
+    // Sync wallet from DB first so balance is accurate even after server restart, and verify user is registered
+    const loadedWallet = await walletManager.getWalletAsync(userId);
+    if (!loadedWallet || !loadedWallet.phone || walletManager._isBot(userId)) {
+      return res.status(403).json({ success: false, message: '⚠️ ገንዘብ ለማውጣት የተመዘገበ አካውንት ያስፈልጋል!' });
+    }
+
+    // Re-check balance & lock synchronously after await to prevent concurrent double-withdraw race
     const lockRes = walletManager.lockForWithdraw(userId, num);
     if (!lockRes.success) {
       return res.status(400).json({ success: false, message: lockRes.message || 'በቂ ሂሳብ የለዎትም' });

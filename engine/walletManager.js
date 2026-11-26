@@ -617,8 +617,11 @@ class WalletManager {
   }
 
   lockForWithdraw(userId, amount) {
+    if (!userId || this._isBot(userId) || !Number.isInteger(amount) || amount <= 0) {
+      return { success: false, message: 'ትክክለኛ የማውጫ መጠን አይደለም' };
+    }
     const wallet = this.getWallet(userId);
-    if (wallet.balance < amount) {
+    if (!wallet || wallet.balance < amount) {
       return { success: false, message: 'በቂ ሂሳብ (Balance) የለዎትም' };
     }
     wallet.balance -= amount;
