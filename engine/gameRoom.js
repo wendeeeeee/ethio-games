@@ -322,30 +322,35 @@ class GameRoom {
     let targetRank = this.baseCard.rank;
     let targetSuits = [];
     let choiceName = '';
+    this.printedJokersAreWild = false;
 
-    const sameColorSuits = this.baseCard.color === 'black' ? ['♣', '♠'] : ['♥', '♦'];
-    const oppColorSuits = this.baseCard.color === 'black' ? ['♥', '♦'] : ['♣', '♠'];
-
-    if (choice === 'high') {
-      targetRank = getNextRank(this.baseCard.rank);
-      targetSuits = sameColorSuits;
-      choiceName = 'ከፍ (High)';
-    } else if (choice === 'low' || choice === 'tach') {
-      targetRank = getPrevRank(this.baseCard.rank);
-      targetSuits = sameColorSuits;
-      choiceName = 'ዝቅ / ታች (Low)';
-    } else if (choice === 'same' || choice === 'and_lay') {
-      targetRank = this.baseCard.rank;
-      targetSuits = sameColorSuits;
-      choiceName = 'አንድ ላይ (Same)';
-    } else if (choice === 'gon' || choice === 'opposite') {
-      targetRank = this.baseCard.rank;
-      targetSuits = oppColorSuits;
-      choiceName = 'ጎን (Opposite Color)';
+    if (this.baseCard.isFalseJoker) {
+      // If the flipped cut card itself is a False Joker, the Printed Jokers become the REAL Wild Jokers!
+      this.printedJokersAreWild = true;
+      targetRank = 'JOKER';
+      targetSuits = ['🃏'];
+      choiceName = choice === 'low' || choice === 'tach' ? 'ዝቅ / ታች (Low)' : (choice === 'gon' || choice === 'opposite' ? 'ጎን (Opposite)' : 'ከፍ (High)');
+      this.baseCard.isJoker = true;
+      this.baseCard.isMainJoker = true;
+      this.baseCard.isFalseJoker = false;
+      this.baseCard.rank = 'JOKER';
     } else {
-      targetRank = getNextRank(this.baseCard.rank);
-      targetSuits = sameColorSuits;
-      choiceName = 'ከፍ (High)';
+      const sameColorSuits = this.baseCard.color === 'black' ? ['♣', '♠'] : ['♥', '♦'];
+      const oppColorSuits = this.baseCard.color === 'black' ? ['♥', '♦'] : ['♣', '♠'];
+
+      if (choice === 'low' || choice === 'tach') {
+        targetRank = getPrevRank(this.baseCard.rank);
+        targetSuits = sameColorSuits;
+        choiceName = 'ዝቅ / ታች (Low)';
+      } else if (choice === 'gon' || choice === 'opposite') {
+        targetRank = this.baseCard.rank;
+        targetSuits = oppColorSuits;
+        choiceName = 'ጎን (Opposite Color)';
+      } else {
+        targetRank = getNextRank(this.baseCard.rank);
+        targetSuits = sameColorSuits;
+        choiceName = 'ከፍ (High)';
+      }
     }
 
     this.jokerRank = targetRank;
@@ -383,6 +388,19 @@ class GameRoom {
 
   applyJokerStatus() {
     const mark = (card) => {
+      if (this.printedJokersAreWild) {
+        if (card.isFalseJoker || card.rank === 'FALSE' || card.rank === 'JOKER') {
+          card.isJoker = true;
+          card.isMainJoker = true;
+          card.isFalseJoker = false;
+          card.rank = 'JOKER';
+        } else {
+          card.isJoker = false;
+          card.isMainJoker = false;
+        }
+        return;
+      }
+
       // 1. Designated main jokers: Same rank AND same color group (e.g. 6♣ and 6♠)
       if (card.rank === this.jokerRank && this.jokerSuits && this.jokerSuits.includes(card.suit)) {
         card.isJoker = true;

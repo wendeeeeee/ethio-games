@@ -628,8 +628,8 @@ io.on('connection', (socket) => {
     broadcastRoomUpdate(room);
 
     setTimeout(() => {
-      // Bot picks randomly among 'high', 'low', 'same', 'gon'
-      const botChoices = ['high', 'low', 'same', 'gon'];
+      // Bot picks randomly among 'high', 'low', 'gon'
+      const botChoices = ['high', 'low', 'gon'];
       const pick = botChoices[Math.floor(Math.random() * botChoices.length)];
       room.setJokerHighLow(botId, pick);
       broadcastRoomUpdate(room);
