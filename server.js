@@ -292,6 +292,20 @@ app.post('/api/admin/login', (req, res) => {
 });
 
 // Admin: List pending deposits
+// Admin: Get all registered users and their balances
+app.get('/api/admin/users', async (req, res) => {
+  const adminKey = req.query.adminKey || req.headers['x-admin-key'];
+  if (!isAdminAuthorized(adminKey)) {
+    return res.status(403).json({ success: false, message: 'Unauthorized' });
+  }
+  try {
+    const users = await walletManager.getAllUsersForAdmin();
+    res.json({ success: true, users });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 app.get('/api/admin/deposits/pending', (req, res) => {
   const adminKey = req.query.adminKey || req.headers['x-admin-key'];
   if (!isAdminAuthorized(adminKey)) {

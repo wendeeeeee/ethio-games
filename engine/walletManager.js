@@ -115,14 +115,25 @@ class WalletManager {
     };
     this.wallets.set(newId, wallet);
 
-    // Save to Supabase
+    // Save to Supabase (including password_hash; fallback without if column not yet added)
     supabase.from('users').insert({
       id: newId,
       name: cleanName,
       phone: cleanPhone,
+      password_hash: passHash,
       balance: 1000,
       locked: 0
-    }).then(() => { }).catch(() => { });
+    }).then(({ error }) => {
+      if (error && error.message && error.message.includes('password_hash')) {
+        supabase.from('users').insert({
+          id: newId,
+          name: cleanName,
+          phone: cleanPhone,
+          balance: 1000,
+          locked: 0
+        }).then(() => { }).catch(() => { });
+      }
+    }).catch(() => { });
 
     // Welcome bonus log
     supabase.from('transactions').insert({
@@ -199,6 +210,7 @@ class WalletManager {
     if (!user.passwordHash) {
       user.passwordHash = passHash;
       this._saveUsersToFile();
+      supabase.from('users').update({ password_hash: passHash }).eq('id', user.id).then(() => { }).catch(() => { });
     } else if (user.passwordHash !== passHash) {
       throw new Error('የተሳሳተ የይለፍ ቃል (Incorrect password)! እባክዎ እንደገና ይሞክሩ');
     }
@@ -641,6 +653,56 @@ class WalletManager {
     }
 
     this.escrows.delete(roomId);
+  }
+
+  async getAllUsersForAdmin() {
+    const byId = new Map();
+
+    // 1. Seed from local users.json and live wallets
+    for (const u of (this.usersList || [])) {
+      if (this._isBot(u.id)) continue;
+      const liveW = this.wallets.get(u.id);
+      byId.set(u.id, {
+        id: u.id,
+        name: (liveW && liveW.name) || u.name || 'Player',
+        phone: (liveW && liveW.phone) || u.phone || '',
+        balance: liveW ? liveW.balance : (u.balance ?? 0),
+        locked: liveW ? liveW.locked : (u.locked ?? 0),
+        hasPassword: !!(u.passwordHash),
+        createdAt: u.createdAt || null
+      });
+    }
+
+    // 2. Fetch from Supabase users table
+    try {
+      const { data: rows } = await supabase
+        .from('users')
+        .select('id, name, phone, balance, locked, created_at')
+        .order('created_at', { ascending: false })
+        .limit(500);
+      if (Array.isArray(rows)) {
+        for (const r of rows) {
+          if (this._isBot(r.id)) continue;
+          const liveW = this.wallets.get(r.id);
+          const existing = byId.get(r.id);
+          byId.set(r.id, {
+            id: r.id,
+            name: (liveW && liveW.name) || r.name || (existing && existing.name) || 'Player',
+            phone: (liveW && liveW.phone) || r.phone || (existing && existing.phone) || '',
+            balance: liveW ? liveW.balance : (r.balance ?? (existing ? existing.balance : 0)),
+            locked: liveW ? liveW.locked : (r.locked ?? (existing ? existing.locked : 0)),
+            hasPassword: existing ? existing.hasPassword : false,
+            createdAt: r.created_at || (existing && existing.createdAt) || null
+          });
+        }
+      }
+    } catch (e) { }
+
+    return Array.from(byId.values()).sort((a, b) => {
+      const ta = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const tb = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return tb - ta;
+    });
   }
 }
 

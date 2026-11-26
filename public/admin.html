@@ -434,6 +434,9 @@
       <button class="tab-btn" data-tab="sms" id="tabSmsBtn">
         📱 SMS Gateway <span class="tab-badge" id="smsBadge" style="display:none; background: #3b82f6;">0</span>
       </button>
+      <button class="tab-btn" data-tab="users" id="tabUsersBtn">
+        👥 ተጫዋቾች (Users) <span class="tab-badge" id="usersBadge" style="display:none; background: #10b981;">0</span>
+      </button>
     </div>
 
     <!-- Deposit List (Pending & History) -->
@@ -496,6 +499,26 @@
         </div>
       </div>
     </div>
+
+    <!-- Users & Balances Panel -->
+    <div id="usersPanel" style="display: none; flex-direction: column; gap: 14px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; background: #1e293b; border: 1px solid #334155; border-radius: 14px; padding: 14px 16px;">
+        <div>
+          <div style="font-weight: 800; font-size: 15px; color: #f8fafc;">👥 የተመዘገቡ ተጫዋቾች እና ሂሳብ (Users & Balances)</div>
+          <div id="usersSummaryText" style="font-size: 12px; color: #94a3b8; margin-top: 2px;">ጠቅላላ ተጫዋቾች: 0 | ጠቅላላ Balance: 0 ETB</div>
+        </div>
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <input type="text" id="usersSearchInput" placeholder="በስም ወይም በስልክ ፈልግ..." style="padding: 8px 12px; background: #0f172a; border: 1px solid #334155; border-radius: 8px; color: #fff; font-size: 13px; min-width: 190px;">
+          <button id="refreshUsersBtn" style="background: #334155; border: none; color: #cbd5e1; padding: 8px 12px; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer;">🔄 Refresh</button>
+        </div>
+      </div>
+      <div class="deposit-list" id="usersListContainer">
+        <div class="empty-state">
+          <div class="empty-icon">👥</div>
+          <div class="empty-text">ተጫዋቾችን በማምጣት ላይ...</div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <div id="toast"></div>
@@ -523,9 +546,17 @@
     const tabPendingBtn = document.getElementById('tabPendingBtn');
     const tabAllBtn = document.getElementById('tabAllBtn');
     const tabSmsBtn = document.getElementById('tabSmsBtn');
+    const tabUsersBtn = document.getElementById('tabUsersBtn');
     const pendingBadge = document.getElementById('pendingBadge');
     const smsBadge = document.getElementById('smsBadge');
+    const usersBadge = document.getElementById('usersBadge');
     const smsGatewayPanel = document.getElementById('smsGatewayPanel');
+    const usersPanel = document.getElementById('usersPanel');
+    const usersListContainer = document.getElementById('usersListContainer');
+    const usersSummaryText = document.getElementById('usersSummaryText');
+    const usersSearchInput = document.getElementById('usersSearchInput');
+    const refreshUsersBtn = document.getElementById('refreshUsersBtn');
+    let usersData = [];
     const smsPaymentsList = document.getElementById('smsPaymentsList');
     const webhookUrlDisplay = document.getElementById('webhookUrlDisplay');
     const simAmtInput = document.getElementById('simAmtInput');
@@ -576,6 +607,7 @@
           localStorage.setItem('conquer_admin_user', username);
           authOverlay.style.display = 'none';
           loadDeposits();
+          loadUsers();
         } else {
           authErr.textContent = 'የተሳሳተ Username ወይም Password ነው!';
           authErr.style.display = 'block';
@@ -604,6 +636,7 @@
           localStorage.setItem('conquer_admin_key', adminKey);
           authOverlay.style.display = 'none';
           loadDeposits();
+          loadUsers();
         } else {
           authErr.style.display = 'block';
           localStorage.removeItem('conquer_admin_key');
@@ -625,8 +658,10 @@
       tabPendingBtn.classList.add('active');
       tabAllBtn.classList.remove('active');
       if (tabSmsBtn) tabSmsBtn.classList.remove('active');
+      if (tabUsersBtn) tabUsersBtn.classList.remove('active');
       depositList.style.display = 'flex';
       if (smsGatewayPanel) smsGatewayPanel.style.display = 'none';
+      if (usersPanel) usersPanel.style.display = 'none';
       renderDeposits();
     });
 
@@ -635,8 +670,10 @@
       tabAllBtn.classList.add('active');
       tabPendingBtn.classList.remove('active');
       if (tabSmsBtn) tabSmsBtn.classList.remove('active');
+      if (tabUsersBtn) tabUsersBtn.classList.remove('active');
       depositList.style.display = 'flex';
       if (smsGatewayPanel) smsGatewayPanel.style.display = 'none';
+      if (usersPanel) usersPanel.style.display = 'none';
       renderDeposits();
     });
 
@@ -646,10 +683,89 @@
         tabSmsBtn.classList.add('active');
         tabPendingBtn.classList.remove('active');
         tabAllBtn.classList.remove('active');
+        if (tabUsersBtn) tabUsersBtn.classList.remove('active');
         depositList.style.display = 'none';
         if (smsGatewayPanel) smsGatewayPanel.style.display = 'flex';
+        if (usersPanel) usersPanel.style.display = 'none';
         loadSmsPayments();
       });
+    }
+
+    if (tabUsersBtn) {
+      tabUsersBtn.addEventListener('click', () => {
+        currentTab = 'users';
+        tabUsersBtn.classList.add('active');
+        tabPendingBtn.classList.remove('active');
+        tabAllBtn.classList.remove('active');
+        if (tabSmsBtn) tabSmsBtn.classList.remove('active');
+        depositList.style.display = 'none';
+        if (smsGatewayPanel) smsGatewayPanel.style.display = 'none';
+        if (usersPanel) usersPanel.style.display = 'flex';
+        loadUsers();
+      });
+    }
+
+    if (refreshUsersBtn) {
+      refreshUsersBtn.addEventListener('click', loadUsers);
+    }
+    if (usersSearchInput) {
+      usersSearchInput.addEventListener('input', renderUsers);
+    }
+
+    async function loadUsers() {
+      if (!adminKey) return;
+      try {
+        const res = await fetch(`/api/admin/users?adminKey=${encodeURIComponent(adminKey)}`);
+        const data = await res.json();
+        if (data.success && Array.isArray(data.users)) {
+          usersData = data.users;
+          if (usersBadge) {
+            usersBadge.textContent = usersData.length;
+            usersBadge.style.display = usersData.length > 0 ? 'inline-block' : 'none';
+          }
+          renderUsers();
+        }
+      } catch (e) { }
+    }
+
+    function renderUsers() {
+      if (!usersListContainer) return;
+      const q = (usersSearchInput ? usersSearchInput.value : '').trim().toLowerCase();
+      const filtered = q
+        ? usersData.filter(u => (u.name || '').toLowerCase().includes(q) || (u.phone || '').toLowerCase().includes(q))
+        : usersData;
+
+      const totalBalance = usersData.reduce((sum, u) => sum + (Number(u.balance) || 0), 0);
+      if (usersSummaryText) {
+        usersSummaryText.textContent = `ጠቅላላ ተጫዋቾች: ${usersData.length} | ጠቅላላ Balance: ${totalBalance.toLocaleString()} ETB`;
+      }
+
+      if (filtered.length === 0) {
+        usersListContainer.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-icon">👥</div>
+            <div class="empty-text">ተጫዋች አልተገኘም</div>
+          </div>`;
+        return;
+      }
+
+      usersListContainer.innerHTML = filtered.map(u => {
+        const dateStr = u.createdAt ? new Date(u.createdAt).toLocaleString() : '—';
+        return `
+          <div class="deposit-card">
+            <div class="deposit-info">
+              <div class="deposit-top">
+                <span class="deposit-user">👤 ${u.name || 'Player'}</span>
+                <span class="deposit-amount" style="color: #4ade80;">💰 ${(Number(u.balance) || 0).toLocaleString()} ETB</span>
+              </div>
+              <div class="deposit-meta">
+                <span>📱 ${u.phone || 'ስልክ የለም'}</span>
+                <span>🔒 Locked: ${(Number(u.locked) || 0).toLocaleString()} ETB</span>
+                <span>🕒 ${dateStr}</span>
+              </div>
+            </div>
+          </div>`;
+      }).join('');
     }
 
     if (refreshSmsBtn) {
