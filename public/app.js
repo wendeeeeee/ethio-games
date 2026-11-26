@@ -3281,7 +3281,12 @@ function isCardGebiToMeld(card, meld, jokerRank, jokerSuits) {
   if (isSet && meld.length === 3) {
     const setRank = naturals[0].isFalseJoker ? jokerRank : naturals[0].rank;
     const cardRank = card.isFalseJoker ? jokerRank : card.rank;
-    if (cardRank === setRank && meld.every(c => c.suit !== card.suit)) {
+    const usedSuits = new Set(
+      meld
+        .map(c => (isJk(c) ? (c.assignedCard && c.assignedCard.suit ? c.assignedCard.suit : null) : c.suit))
+        .filter(Boolean)
+    );
+    if (cardRank === setRank && !usedSuits.has(card.suit)) {
       return true;
     }
   }
