@@ -1028,20 +1028,11 @@ io.on('connection', (socket) => {
     broadcastSekaRoomUpdate(room);
   });
 
-  // Play Seka against AI Bot
-  socket.on('play_seka_bot', ({ userId, name, stakeAmount }) => {
-    const stake = Math.floor(Number(stakeAmount) || 0);
-    if (stake < 5) {
-      return socket.emit('error_msg', '⚠️ ዝቅተኛው የውርርድ መጠን 5 ብር ነው!');
-    }
-    const userWallet = walletManager.getWallet(userId);
-    if (!userWallet || userWallet.balance < stake) {
-      const bal = userWallet ? userWallet.balance : 0;
-      return socket.emit('error_msg', `⚠️ በቂ balance የለዎትም! ያለዎት ሂሳብ ${bal.toLocaleString()} ETB ሲሆን የውርርድ መጠኑ ${stake.toLocaleString()} ETB ነው። እባክዎ መጀመሪያ Deposit ያድርጉ ወይም አነስ ያለ ውርርድ ይምረጡ።`);
-    }
-
+  // Play Seka against AI Bot (Free Practice - no balance deducted or added)
+  socket.on('play_seka_bot', ({ userId, name }) => {
     const roomId = `seka_bot_${Math.floor(1000 + Math.random() * 9000)}`;
-    const room = new SekaGameRoom(roomId, { id: userId, name, socketId: socket.id }, stake);
+    const room = new SekaGameRoom(roomId, { id: userId, name, socketId: socket.id }, 0);
+    room.isFreeBot = true;
     attachSekaRoomCallbacks(room);
     sekaRooms.set(roomId, room);
     socketPlayerMap.set(socket.id, { userId, name, roomId, gameType: 'SEKA' });
@@ -1052,7 +1043,6 @@ io.on('connection', (socket) => {
     if (!botResult.success) return socket.emit('error_msg', botResult.message);
 
     socket.emit('seka_room_created', { roomId, isBot: true });
-    broadcastWallet(room.creator.id);
     broadcastSekaRoomUpdate(room);
 
     // If bot has the first turn (e.g. if bot were creator), trigger bot
@@ -1284,7 +1274,9 @@ function broadcastSekaRoomUpdate(room) {
     }
   }
   if (room.status === 'FINISHED') {
-    recordRecentWinner(room, 'SEKA');
+    if (!room.isFreeBot && room.stakeAmount > 0) {
+      recordRecentWinner(room, 'SEKA');
+    }
     for (const p of players) {
       if (p && p.id) broadcastWallet(p.id);
     }

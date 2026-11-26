@@ -1446,30 +1446,15 @@ if (createSekaRoomBtn) {
   });
 }
 
-// Play Seka vs Bot
+// Play Seka vs Bot (Free Practice - no balance deducted or added)
 if (playSekaBotBtn) {
   playSekaBotBtn.addEventListener('click', () => {
     if (!requireAuth('⚠️ ከቦት ጋር ለመጫወት እባክዎ መጀመሪያ ይግቡ ወይም ይመዝገቡ!')) {
       return;
     }
-    const stakeAmount = getSekaStakeAmount();
-    if (stakeAmount < 5) {
-      showSortToast('⚠️ ዝቅተኛው የውርርድ መጠን 5 ብር ነው!');
-      const inputEl = document.getElementById('sekaStakeInput');
-      if (inputEl) inputEl.focus();
-      return;
-    }
-
-    // Check balance
-    if (currentUserBalance < stakeAmount) {
-      showSortToast(`⚠️ በቂ balance የለዎትም! ያለዎት ሂሳብ ${currentUserBalance.toLocaleString()} ETB ሲሆን የውርርድ መጠኑ ${stakeAmount.toLocaleString()} ETB ነው። እባክዎ መጀመሪያ Deposit ያድርጉ ወይም አነስ ያለ ውርርድ ይምረጡ።`);
-      openDepositModal();
-      return;
-    }
-
     const sName = playerName || 'ተጫዋች';
     playCardSound();
-    socket.emit('play_seka_bot', { userId, name: sName, stakeAmount });
+    socket.emit('play_seka_bot', { userId, name: sName, stakeAmount: 0 });
   });
 }
 
