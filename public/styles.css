@@ -1934,10 +1934,10 @@ select:focus {
 /* Table Melds Area */
 .table-melds-area {
   margin: 2px 8px;
-  padding: 4px 6px;
-  background: rgba(0, 0, 0, 0.14);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 10px;
+  padding: 2px 4px;
+  background: transparent;
+  border: none;
+  border-radius: 0;
   max-height: 220px;
   overflow-y: auto;
   flex-shrink: 0;
