@@ -5415,7 +5415,12 @@ function createCardHTML(card, isSelected = false, isBaseJoker = false, zIndex = 
   const isFalse = card.isFalseJoker || card.rank === 'FALSE' || card.rank === 'JK';
   const isPrintedWildJoker = (card.rank === 'JOKER' || card.suit === '🃏' || card.suitName === 'joker') && !isFalse;
   const isDesignatedJoker = !isPrintedWildJoker && !isFalse && (card.isMainJoker || card.isJoker);
-  const isRed = card.suit === '♥' || card.suit === '♦' || card.color === 'red' || (isFalse && card.color === 'red');
+  const falseIsRedByJoker = (typeof currentGameState !== 'undefined' && currentGameState && Array.isArray(currentGameState.jokerSuits) && currentGameState.jokerSuits.length > 0)
+    ? currentGameState.jokerSuits.some(s => s === '♥' || s === '♦')
+    : (card.color === 'red');
+  const isRed = isFalse
+    ? falseIsRedByJoker
+    : (card.suit === '♥' || card.suit === '♦' || card.color === 'red');
   const colorClass = isRed ? 'red' : 'black';
   const selectedClass = isSelected ? 'selected' : '';
   const groupStartClass = card.isGroupStart ? 'group-start' : '';
