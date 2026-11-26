@@ -1070,9 +1070,19 @@ select:focus {
 }
 
 @keyframes deckShuffleAnim {
-  0%, 100% { transform: translateX(0) rotate(0deg); }
-  25% { transform: translateX(-12px) rotate(-8deg); }
-  75% { transform: translateX(12px) rotate(8deg); }
+
+  0%,
+  100% {
+    transform: translateX(0) rotate(0deg);
+  }
+
+  25% {
+    transform: translateX(-12px) rotate(-8deg);
+  }
+
+  75% {
+    transform: translateX(12px) rotate(8deg);
+  }
 }
 
 .deck-slot:hover .stock-deck-top {
@@ -2330,376 +2340,376 @@ select:focus {
     flex-wrap: nowrap;
   }
 
-.wallet-badge {
-  padding: 4px 10px;
-  gap: 6px;
-  font-size: 12px;
-  border-radius: 20px;
-}
-
-.deposit-btn {
-  padding: 3px 8px;
-  font-size: 10px;
-}
-
-.lobby-container {
-  padding: 0 10px !important;
-  margin: 6px auto 20px auto !important;
-}
-
-.game-selector-bar {
-  gap: 8px;
-  margin: 8px auto 10px auto;
-}
-
-.game-tab-btn {
-  padding: 10px 14px;
-  font-size: 13px;
-  gap: 6px;
-}
-
-.game-tab-icon {
-  font-size: 16px;
-}
-
-.game-selection-title {
-  font-size: 17px;
-}
-
-.game-selection-subtitle {
-  font-size: 12px;
-}
-
-.game-mode-boxes {
-  grid-template-columns: 1fr;
-  gap: 14px;
-  margin-bottom: 16px;
-}
-
-.game-mode-card {
-  padding: 16px 14px;
-  border-radius: 16px;
-}
-
-.game-mode-icon-wrap {
-  font-size: 36px;
-  margin: 2px 0 6px 0;
-}
-
-.game-mode-title {
-  font-size: 19px;
-}
-
-.game-mode-sub {
-  font-size: 12px;
-  margin-bottom: 10px;
-}
-
-.game-mode-tags {
-  margin-bottom: 12px;
-}
-
-.mode-tag {
-  font-size: 10px;
-  padding: 2px 7px;
-}
-
-.game-mode-select-btn {
-  padding: 9px 12px;
-  font-size: 12px;
-}
-
-.lobby-card {
-  padding: 16px;
-}
-
-.card-title {
-  font-size: 15px;
-}
-
-/* Game Table */
-.game-table {
-  padding: 4px 6px;
-  height: 100% !important;
-  max-height: 100% !important;
-  min-height: 0;
-}
-
-.table-top-bar {
-  padding: 5px 10px;
-  border-radius: 16px;
-  flex-wrap: wrap;
-  gap: 6px;
-  justify-content: center;
-}
-
-.pot-badge {
-  font-size: 14px;
-  padding: 4px 10px;
-}
-
-.poke-btn {
-  padding: 5px 12px;
-  font-size: 12px;
-  gap: 4px;
-}
-
-#gameModeBadge {
-  font-size: 11px !important;
-  padding: 3px 7px !important;
-}
-
-/* Opponent */
-.opponent-area {
-  margin-bottom: 8px;
-}
-
-.opponent-badge {
-  font-size: 11px;
-  padding: 3px 10px;
-  margin-bottom: 4px;
-}
-
-.card-back {
-  width: 36px;
-  height: 52px;
-  margin-left: -16px;
-  border-radius: 4px;
-}
-
-/* Center Field */
-.center-field {
-  gap: 16px;
-  flex: 0 1 auto;
-}
-
-.deck-stack-wrapper {
-  width: 72px;
-  height: 85px;
-}
-
-.stock-deck-top {
-  width: 56px !important;
-  height: 80px !important;
-}
-
-.base-joker-underneath {
-  transform: rotate(-14deg) translateX(-10px);
-}
-
-.base-joker-underneath .card {
-  width: 56px !important;
-  height: 80px !important;
-}
-
-.slot-label {
-  font-size: 10px;
-  margin-top: 3px;
-}
-
-.draw-action-btn {
-  font-size: 10px;
-  padding: 4px 8px;
-}
-
-.deck-joker-call-badge {
-  font-size: 9px;
-  padding: 2px 5px;
-}
-
-#groundCardContainer .card {
-  width: 56px !important;
-  height: 80px !important;
-  padding: 3px 4px;
-}
-
-/* Cards in hand */
-.card {
-  width: 56px;
-  height: 80px;
-  padding: 3px 4px;
-  border-radius: 6px;
-}
-
-.card-center-suit {
-  font-size: 22px;
-}
-
-.corner-rank {
-  font-size: 13px;
-}
-
-.corner-suit {
-  font-size: 11px;
-  margin-top: 1px;
-}
-
-.card-corner {
-  width: 14px;
-}
-
-.card-joker-star {
-  font-size: 12px;
-  top: 2px;
-  right: 2px;
-}
-
-.card-false-badge {
-  font-size: 6px;
-  padding: 1px 3px;
-}
-
-.card-tetay-badge {
-  font-size: 8px;
-  padding: 1px 5px;
-  top: -10px;
-  right: -3px;
-}
-
-/* Fan */
-.fan-container {
-  height: 155px;
-  margin: 0 0 30px 0;
-}
-
-.fan {
-  bottom: 65px;
-}
-
-.fan .card {
-  width: 48px !important;
-  height: 70px !important;
-  left: -24px !important;
-  padding: 2px 3px;
-  transform-origin: center 130px !important;
-}
-
-.fan .card .corner-rank {
-  font-size: 11px;
-}
-
-.fan .card .corner-suit {
-  font-size: 10px;
-}
-
-.fan .card .card-center-suit {
-  font-size: 18px;
-}
-
-/* Controls */
-.hand-controls {
-  margin-top: 8px;
-  margin-bottom: max(16px, env(safe-area-inset-bottom, 16px));
-  gap: 4px;
-  flex-wrap: wrap;
-  justify-content: center;
-}
-
-.ctrl-btn {
-  padding: 6px 10px;
-  font-size: 11px;
-  border-radius: 6px;
-  min-width: auto !important;
-}
-
-.hand-status-bar {
-  margin-bottom: 10px;
-  padding: 3px 14px;
-  font-size: 12px;
-}
-
-/* Ground Meld Bar */
-.ground-meld-bar {
-  padding: 8px 10px;
-  max-width: 100%;
-}
-
-.ground-meld-title {
-  font-size: 12px;
-}
-
-.ground-meld-card-badge {
-  font-size: 11px;
-}
-
-.ground-meld-body {
-  flex-direction: column;
-  align-items: flex-start;
-}
-
-.ground-meld-points-info {
-  font-size: 12px;
-}
-
-.ground-meld-actions {
-  width: 100%;
-}
-
-.ground-meld-actions .btn-primary {
-  padding: 6px 10px !important;
-  font-size: 11px !important;
-}
-
-/* Table Melds */
-.table-melds-area {
-  margin: 4px 8px;
-  padding: 6px 10px;
-}
-
-.table-melds-row {
-  gap: 10px;
-}
-
-.table-melds-player {
-  min-width: 150px;
-}
-
-.mini-card {
-  width: 28px;
-  height: 40px;
-  font-size: 9px;
-}
-
-/* Meld Groups */
-.meld-groups-container {
-  gap: 8px;
-}
-
-.meld-group-box {
-  padding: 4px 6px;
-  min-height: 75px;
-}
-
-.meld-group-label {
-  font-size: 9px;
-}
-
-/* Modals */
-.modal-content {
-  padding: 20px;
-  margin: 10px;
-  max-width: calc(100vw - 24px) !important;
-  border-radius: 16px;
-}
-
-.modal-title {
-  font-size: 17px;
-}
-
-/* Sort toast */
-.sort-toast {
-  bottom: 60px;
-  font-size: 11px;
-  padding: 6px 14px;
-}
-
-/* Poke timer */
-.poke-timer-bar {
-  top: auto;
-  bottom: 50%;
-  font-size: 13px;
-  padding: 5px 14px;
-}
+  .wallet-badge {
+    padding: 4px 10px;
+    gap: 6px;
+    font-size: 12px;
+    border-radius: 20px;
+  }
+
+  .deposit-btn {
+    padding: 3px 8px;
+    font-size: 10px;
+  }
+
+  .lobby-container {
+    padding: 0 10px !important;
+    margin: 6px auto 20px auto !important;
+  }
+
+  .game-selector-bar {
+    gap: 8px;
+    margin: 8px auto 10px auto;
+  }
+
+  .game-tab-btn {
+    padding: 10px 14px;
+    font-size: 13px;
+    gap: 6px;
+  }
+
+  .game-tab-icon {
+    font-size: 16px;
+  }
+
+  .game-selection-title {
+    font-size: 17px;
+  }
+
+  .game-selection-subtitle {
+    font-size: 12px;
+  }
+
+  .game-mode-boxes {
+    grid-template-columns: 1fr;
+    gap: 14px;
+    margin-bottom: 16px;
+  }
+
+  .game-mode-card {
+    padding: 16px 14px;
+    border-radius: 16px;
+  }
+
+  .game-mode-icon-wrap {
+    font-size: 36px;
+    margin: 2px 0 6px 0;
+  }
+
+  .game-mode-title {
+    font-size: 19px;
+  }
+
+  .game-mode-sub {
+    font-size: 12px;
+    margin-bottom: 10px;
+  }
+
+  .game-mode-tags {
+    margin-bottom: 12px;
+  }
+
+  .mode-tag {
+    font-size: 10px;
+    padding: 2px 7px;
+  }
+
+  .game-mode-select-btn {
+    padding: 9px 12px;
+    font-size: 12px;
+  }
+
+  .lobby-card {
+    padding: 16px;
+  }
+
+  .card-title {
+    font-size: 15px;
+  }
+
+  /* Game Table */
+  .game-table {
+    padding: 4px 6px;
+    height: 100% !important;
+    max-height: 100% !important;
+    min-height: 0;
+  }
+
+  .table-top-bar {
+    padding: 5px 10px;
+    border-radius: 16px;
+    flex-wrap: wrap;
+    gap: 6px;
+    justify-content: center;
+  }
+
+  .pot-badge {
+    font-size: 14px;
+    padding: 4px 10px;
+  }
+
+  .poke-btn {
+    padding: 5px 12px;
+    font-size: 12px;
+    gap: 4px;
+  }
+
+  #gameModeBadge {
+    font-size: 11px !important;
+    padding: 3px 7px !important;
+  }
+
+  /* Opponent */
+  .opponent-area {
+    margin-bottom: 8px;
+  }
+
+  .opponent-badge {
+    font-size: 11px;
+    padding: 3px 10px;
+    margin-bottom: 4px;
+  }
+
+  .card-back {
+    width: 36px;
+    height: 52px;
+    margin-left: -16px;
+    border-radius: 4px;
+  }
+
+  /* Center Field */
+  .center-field {
+    gap: 16px;
+    flex: 0 1 auto;
+  }
+
+  .deck-stack-wrapper {
+    width: 72px;
+    height: 85px;
+  }
+
+  .stock-deck-top {
+    width: 56px !important;
+    height: 80px !important;
+  }
+
+  .base-joker-underneath {
+    transform: rotate(-14deg) translateX(-10px);
+  }
+
+  .base-joker-underneath .card {
+    width: 56px !important;
+    height: 80px !important;
+  }
+
+  .slot-label {
+    font-size: 10px;
+    margin-top: 3px;
+  }
+
+  .draw-action-btn {
+    font-size: 10px;
+    padding: 4px 8px;
+  }
+
+  .deck-joker-call-badge {
+    font-size: 9px;
+    padding: 2px 5px;
+  }
+
+  #groundCardContainer .card {
+    width: 56px !important;
+    height: 80px !important;
+    padding: 3px 4px;
+  }
+
+  /* Cards in hand */
+  .card {
+    width: 56px;
+    height: 80px;
+    padding: 3px 4px;
+    border-radius: 6px;
+  }
+
+  .card-center-suit {
+    font-size: 22px;
+  }
+
+  .corner-rank {
+    font-size: 13px;
+  }
+
+  .corner-suit {
+    font-size: 11px;
+    margin-top: 1px;
+  }
+
+  .card-corner {
+    width: 14px;
+  }
+
+  .card-joker-star {
+    font-size: 12px;
+    top: 2px;
+    right: 2px;
+  }
+
+  .card-false-badge {
+    font-size: 6px;
+    padding: 1px 3px;
+  }
+
+  .card-tetay-badge {
+    font-size: 8px;
+    padding: 1px 5px;
+    top: -10px;
+    right: -3px;
+  }
+
+  /* Fan */
+  .fan-container {
+    height: 155px;
+    margin: 0 0 30px 0;
+  }
+
+  .fan {
+    bottom: 65px;
+  }
+
+  .fan .card {
+    width: 48px !important;
+    height: 70px !important;
+    left: -24px !important;
+    padding: 2px 3px;
+    transform-origin: center 130px !important;
+  }
+
+  .fan .card .corner-rank {
+    font-size: 11px;
+  }
+
+  .fan .card .corner-suit {
+    font-size: 10px;
+  }
+
+  .fan .card .card-center-suit {
+    font-size: 18px;
+  }
+
+  /* Controls */
+  .hand-controls {
+    margin-top: 8px;
+    margin-bottom: max(16px, env(safe-area-inset-bottom, 16px));
+    gap: 4px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .ctrl-btn {
+    padding: 6px 10px;
+    font-size: 11px;
+    border-radius: 6px;
+    min-width: auto !important;
+  }
+
+  .hand-status-bar {
+    margin-bottom: 10px;
+    padding: 3px 14px;
+    font-size: 12px;
+  }
+
+  /* Ground Meld Bar */
+  .ground-meld-bar {
+    padding: 8px 10px;
+    max-width: 100%;
+  }
+
+  .ground-meld-title {
+    font-size: 12px;
+  }
+
+  .ground-meld-card-badge {
+    font-size: 11px;
+  }
+
+  .ground-meld-body {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .ground-meld-points-info {
+    font-size: 12px;
+  }
+
+  .ground-meld-actions {
+    width: 100%;
+  }
+
+  .ground-meld-actions .btn-primary {
+    padding: 6px 10px !important;
+    font-size: 11px !important;
+  }
+
+  /* Table Melds */
+  .table-melds-area {
+    margin: 4px 8px;
+    padding: 6px 10px;
+  }
+
+  .table-melds-row {
+    gap: 10px;
+  }
+
+  .table-melds-player {
+    min-width: 150px;
+  }
+
+  .mini-card {
+    width: 28px;
+    height: 40px;
+    font-size: 9px;
+  }
+
+  /* Meld Groups */
+  .meld-groups-container {
+    gap: 8px;
+  }
+
+  .meld-group-box {
+    padding: 4px 6px;
+    min-height: 75px;
+  }
+
+  .meld-group-label {
+    font-size: 9px;
+  }
+
+  /* Modals */
+  .modal-content {
+    padding: 20px;
+    margin: 10px;
+    max-width: calc(100vw - 24px) !important;
+    border-radius: 16px;
+  }
+
+  .modal-title {
+    font-size: 17px;
+  }
+
+  /* Sort toast */
+  .sort-toast {
+    bottom: 60px;
+    font-size: 11px;
+    padding: 6px 14px;
+  }
+
+  /* Poke timer */
+  .poke-timer-bar {
+    top: auto;
+    bottom: 50%;
+    font-size: 13px;
+    padding: 5px 14px;
+  }
 }
 
 /* --- All Mobile Phones (iPhone Mini, SE, Pro, Android: max-width: 480px) --- */
@@ -3222,7 +3232,7 @@ select:focus {
     justify-content: center !important;
   }
 
-.hand-meld-clusters {
+  .hand-meld-clusters {
     gap: 12px !important;
   }
 
