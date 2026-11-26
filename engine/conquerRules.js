@@ -370,10 +370,12 @@ function isCardGebiToMeld(card, meld, jokerRank, jokerSuits) {
     }
   }
 
-  // 2. Same-suit sequence (can extend on either end, including assigned/placed Joker positions)
-  const isSeq = naturals.every(c => c.suit === naturals[0].suit);
+  // 2. Same-suit sequence (can extend on either end, including assigned/placed Joker positions and False Joker)
+  const nonFalseNaturals = naturals.filter(c => !c.isFalseJoker);
+  const suit = nonFalseNaturals.length > 0 ? nonFalseNaturals[0].suit : naturals[0].suit;
+  const isSeq = nonFalseNaturals.every(c => c.suit === suit) &&
+    (!naturals.some(c => c.isFalseJoker) || !jokerSuits || jokerSuits.includes(suit));
   if (isSeq) {
-    const suit = naturals[0].suit;
     if (card.suit !== suit && !(card.isFalseJoker && (!jokerSuits || jokerSuits.includes(suit)))) return false;
 
     const cardRankEff = card.isFalseJoker ? jokerRank : card.rank;
