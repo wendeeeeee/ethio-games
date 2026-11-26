@@ -538,6 +538,7 @@ io.on('connection', (socket) => {
 
     socket.join(roomId);
     socket.emit('room_created', { roomId, expiresAt: room.expiresAt });
+    io.emit('rooms_updated');
     broadcastRoomUpdate(room);
   });
 
@@ -647,6 +648,11 @@ io.on('connection', (socket) => {
     const res = room.drawCard(userId, source);
     if (!res.success) return socket.emit('error_msg', res.message);
 
+    if (res.reshuffled) {
+      io.to(roomId).emit('deck_reshuffled', {
+        message: '🔄 ዴኩ አልቋል! መሬት ላይ ያሉት ካርታዎች እየተበወዙ ነው...'
+      });
+    }
     broadcastRoomUpdate(room);
   });
 

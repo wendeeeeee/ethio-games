@@ -398,13 +398,22 @@ if (returnToGameBtn) {
 function updateTurnDisplay(state) {
   const s = state || currentGameState;
   if (!s || !turnIndicator) return;
+  if (s.status === 'WAITING') {
+    const joined = Array.isArray(s.players) ? s.players.length : 1;
+    const maxP = s.maxPlayers || 2;
+    turnIndicator.textContent = `⏳ ${joined}/${maxP} ተጫዋቾች — ተጫዋች በመጠበቅ ላይ...`;
+    turnIndicator.style.color = '#fef08a';
+    if (turnTimerBadge) turnTimerBadge.style.display = 'none';
+    return;
+  }
   if (s.status !== 'PLAYING') {
     turnIndicator.textContent = s.status === 'FINISHED' ? 'የጨዋታ ውጤት' : 'ተራ...';
     if (turnTimerBadge) turnTimerBadge.style.display = 'none';
     return;
   }
   const isMyTurn = s.isMyTurn !== undefined ? s.isMyTurn : (s.currentTurnPlayerId === userId);
-  const oppName = s.opponentName || (s.creator && s.creator.id !== userId ? s.creator.name : (s.joiner && s.joiner.id !== userId ? s.joiner.name : 'Opponent'));
+  const turnPlayerObj = Array.isArray(s.players) ? s.players.find(p => p.id === s.currentTurnPlayerId) : null;
+  const oppName = (turnPlayerObj && turnPlayerObj.name) || s.opponentName || (s.creator && s.creator.id !== userId ? s.creator.name : (s.joiner && s.joiner.id !== userId ? s.joiner.name : 'Opponent'));
 
   // Real-time second calculation immune to device clock skew (strictly capped at 60s)
   if (!s._clientReceivedAt || s._lastTurnPlayerId !== s.currentTurnPlayerId || s._lastTurnState !== s.turnState) {
@@ -421,10 +430,10 @@ function updateTurnDisplay(state) {
 
   if (isMyTurn) {
     const actionHint = s.turnState === 'AWAITING_DISCARD' ? '— 1 ካርታ ጣል' : '— ካርታ ሳብ / አንሳ';
-    turnIndicator.innerHTML = `🔥 YOUR TURN <span style="font-size: 13px; font-weight: 800; color: #fef08a;">${actionHint}</span> <span style="font-size: 15px; font-weight: 900; color: ${sec <= 15 ? '#ef4444' : '#fef08a'}; margin-left: 6px;">(⏳ ${sec}s)</span>`;
+    turnIndicator.innerHTML = `🔥 የአንተ ተራ <span style="font-size: 13px; font-weight: 800; color: #fef08a;">${actionHint}</span> <span style="font-size: 15px; font-weight: 900; color: ${sec <= 15 ? '#ef4444' : '#fef08a'}; margin-left: 6px;">(⏳ ${sec}s)</span>`;
     turnIndicator.style.color = '#4ade80';
   } else {
-    turnIndicator.innerHTML = `👤 ${oppName}'s Turn <span style="font-size: 14px; font-weight: 800; color: ${sec <= 15 ? '#ef4444' : '#cbd5e1'}; margin-left: 6px;">(⏳ ${sec}s)</span>`;
+    turnIndicator.innerHTML = `👤 የ${oppName} ተራ <span style="font-size: 14px; font-weight: 800; color: ${sec <= 15 ? '#ef4444' : '#cbd5e1'}; margin-left: 6px;">(⏳ ${sec}s)</span>`;
     turnIndicator.style.color = '#f5b041';
   }
 
@@ -1062,6 +1071,18 @@ socket.on('player_abandoned', ({ winnerName, loserName, message }) => {
     showSortToast(`🏆 አሸንፈሃል! ${loserName || 'ተጋጣሚ'} በ 60 ሰከንድ ውስጥ ስላልተመለሰ አሸነፍክ!`);
   } else {
     showSortToast(message || '❌ ተጫዋች በ 1 ደቂቃ ውስጥ ስላልተመለሰ ተሸንፏል!');
+  }
+});
+
+socket.on('deck_reshuffled', ({ message }) => {
+  showSortToast(message || '🔄 ዴኩ አልቋል! መሬት ላይ ያሉት ካርታዎች እየተበወዙ ነው...');
+  playDrawSound();
+  const stockTop = document.getElementById('stockDeckTopCard');
+  if (stockTop) {
+    stockTop.classList.remove('reshuffling');
+    void stockTop.offsetWidth;
+    stockTop.classList.add('reshuffling');
+    setTimeout(() => stockTop.classList.remove('reshuffling'), 1600);
   }
 });
 
@@ -4152,10 +4173,15 @@ function renderGame(state) {
   // Opponent display (supports 2, 3, or 4 players)
   let oppCount = state.opponentCardCount !== undefined ? state.opponentCardCount : (state.opponentHandCount || 10);
   if (state.opponents && state.opponents.length > 1) {
-    opponentNameDisplay.innerHTML = state.opponents.map(o =>
-      `<span style="margin-right: 8px; ${o.eliminated ? 'text-decoration: line-through; color: #f87171;' : ''}">${o.name} (${o.eliminated ? '❌ ተሸንፏል' : o.handCount + ' ካርታ'})</span>`
-    ).join(' • ');
-    const activeOpp = state.opponents.find(o => !o.eliminated) || state.opponents[0];
+    opponentNameDisplay.innerHTML = state.opponents.map(o => {
+      const isTurn = !o.eliminated && state.status === 'PLAYING' && state.currentTurnPlayerId === o.id;
+      const style = o.eliminated
+        ? 'text-decoration: line-through; color: #f87171;'
+        : (isTurn ? 'color: #fef08a; font-weight: 900; background: rgba(245, 158, 11, 0.2); padding: 2px 6px; border-radius: 6px;' : '');
+      const statusText = o.eliminated ? '❌ ተሸንፏል' : `${isTurn ? '🔥 ተራ • ' : ''}${o.handCount} ካርታ`;
+      return `<span style="margin-right: 8px; ${style}">${o.name} (${statusText})</span>`;
+    }).join(' • ');
+    const activeOpp = state.opponents.find(o => o.id === state.currentTurnPlayerId) || state.opponents.find(o => !o.eliminated) || state.opponents[0];
     oppCount = activeOpp ? activeOpp.handCount : 0;
   } else {
     const oppName = state.opponentName || (state.creator && state.creator.id !== userId ? state.creator.name : (state.joiner && state.joiner.id !== userId ? state.joiner.name : 'Opponent'));

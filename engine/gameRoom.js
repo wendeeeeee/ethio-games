@@ -422,14 +422,14 @@ class GameRoom {
     let drawnCard = null;
 
     if (source === 'deck') {
-      this.checkAndReshuffleIfNeeded();
+      const reshuffled = this.checkAndReshuffleIfNeeded();
       drawnCard = this.deck.pop();
       hand.push(drawnCard);
       this.turnState = 'AWAITING_DISCARD';
       this.resetPoke();
       this.resetTurnTimer();
       this.log(`${this.getPlayerName(playerId)} drew a card from the deck.`);
-      return { success: true, card: drawnCard, from: 'deck' };
+      return { success: true, card: drawnCard, from: 'deck', reshuffled };
     }
 
     if (source === 'ground') {
@@ -713,12 +713,14 @@ class GameRoom {
   // Rule 7: Reshuffle when deck empties (No Draw/Tie)
   checkAndReshuffleIfNeeded() {
     if (this.deck.length === 0) {
-      if (this.discardPile.length <= 1) return;
+      if (this.discardPile.length <= 1) return false;
       const topGround = this.discardPile.pop();
       this.deck = shuffleDeck(this.discardPile);
       this.discardPile = [topGround];
       this.log('🔄 Rule 7: Stock deck ran out! Reshuffled the ground cards to continue the game.');
+      return true;
     }
+    return false;
   }
 
   // Rule 8: Poke & 30-Second Forfeit
