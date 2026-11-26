@@ -737,21 +737,16 @@ io.on('connection', (socket) => {
       return socket.emit('error_msg', `⚠️ በቂ balance የለዎትም! ያለዎት ሂሳብ ${bal.toLocaleString()} ETB ሲሆን የውርርድ መጠኑ ${stake.toLocaleString()} ETB ነው።`);
     }
 
-    // 1. Clean up any existing waiting room created by this user
-    rooms.forEach((r, rId) => {
-      if (r.status === 'WAITING' && r.creator && r.creator.id === userId) {
-        if (r.expireTimeout) clearTimeout(r.expireTimeout);
-        walletManager.refundEscrow(r.roomId);
-        rooms.delete(rId);
-      }
-    });
-    sekaRooms.forEach((r, rId) => {
-      if (r.status === 'WAITING' && r.creator && r.creator.id === userId) {
-        if (r.expireTimeout) clearTimeout(r.expireTimeout);
-        walletManager.refundEscrow(r.roomId);
-        sekaRooms.delete(rId);
-      }
-    });
+    // Block creating a second room while user already has an active waiting room
+    const hasWaitingConquer = Array.from(rooms.values()).some(
+      r => r.status === 'WAITING' && r.creator && r.creator.id === userId && (!r.expiresAt || Date.now() < r.expiresAt)
+    );
+    const hasWaitingSeka = Array.from(sekaRooms.values()).some(
+      r => r.status === 'WAITING' && r.creator && r.creator.id === userId && (!r.expiresAt || Date.now() < r.expiresAt)
+    );
+    if (hasWaitingConquer || hasWaitingSeka) {
+      return socket.emit('error_msg', '⏳ ቀድሞ የፈጠሩት ጨዋታ አለ! ጊዜው እስኪያልቅ (Expire እስኪያደርግ) ድረስ ሌላ ጨዋታ መፍጠር አይችሉም።');
+    }
 
     const roomId = `room_${Math.floor(1000 + Math.random() * 9000)}`;
     const room = new GameRoom(roomId, { id: userId, name, socketId: socket.id }, stake, numPlayers);
@@ -1001,21 +996,16 @@ io.on('connection', (socket) => {
       return socket.emit('error_msg', `⚠️ በቂ balance የለዎትም! ያለዎት ሂሳብ ${bal.toLocaleString()} ETB ሲሆን የውርርድ መጠኑ ${stake.toLocaleString()} ETB ነው። እባክዎ መጀመሪያ Deposit ያድርጉ ወይም አነስ ያለ ውርርድ ይምረጡ።`);
     }
 
-    // 1. Clean up any existing waiting room created by this user
-    sekaRooms.forEach((r, rId) => {
-      if (r.status === 'WAITING' && r.creator && r.creator.id === userId) {
-        if (r.expireTimeout) clearTimeout(r.expireTimeout);
-        walletManager.refundEscrow(r.roomId);
-        sekaRooms.delete(rId);
-      }
-    });
-    rooms.forEach((r, rId) => {
-      if (r.status === 'WAITING' && r.creator && r.creator.id === userId) {
-        if (r.expireTimeout) clearTimeout(r.expireTimeout);
-        walletManager.refundEscrow(r.roomId);
-        rooms.delete(rId);
-      }
-    });
+    // Block creating a second room while user already has an active waiting room
+    const hasWaitingSeka = Array.from(sekaRooms.values()).some(
+      r => r.status === 'WAITING' && r.creator && r.creator.id === userId && (!r.expiresAt || Date.now() < r.expiresAt)
+    );
+    const hasWaitingConquer = Array.from(rooms.values()).some(
+      r => r.status === 'WAITING' && r.creator && r.creator.id === userId && (!r.expiresAt || Date.now() < r.expiresAt)
+    );
+    if (hasWaitingSeka || hasWaitingConquer) {
+      return socket.emit('error_msg', '⏳ ቀድሞ የፈጠሩት ጨዋታ አለ! ጊዜው እስኪያልቅ (Expire እስኪያደርግ) ድረስ ሌላ ጨዋታ መፍጠር አይችሉም።');
+    }
 
     const roomId = `seka_${Math.floor(1000 + Math.random() * 9000)}`;
     const numPlayers = Number(maxPlayers) === 3 ? 3 : 2;
