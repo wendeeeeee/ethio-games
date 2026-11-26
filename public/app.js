@@ -1272,7 +1272,7 @@ socket.on('seka_room_created', ({ roomId, expiresAt, isBot, stakeAmount }) => {
   } else {
     currentWaitingRoomId = roomId;
     playCardSound();
-    showWaitingForOpponentModal(roomId, expiresAt, stakeAmount);
+    showSortToast('⏳ ጨዋታ ተፈጥሯል! ተጋጣሚ እየተጠበቀ ነው...');
     refreshSekaRoomsList();
   }
 });
