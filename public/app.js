@@ -1964,29 +1964,25 @@ cutHighBtn.addEventListener('click', () => {
   }
 });
 
-cutLowBtn.addEventListener('click', () => {
-  if (currentRoomId) {
-    playCardSound();
-    socket.emit('set_joker_high_low', { roomId: currentRoomId, userId, choice: 'low' });
-    cutJokerModal.style.display = 'none';
-  }
-});
+if (cutLowBtn) {
+  cutLowBtn.addEventListener('click', () => {
+    if (currentRoomId) {
+      playCardSound();
+      socket.emit('set_joker_high_low', { roomId: currentRoomId, userId, choice: 'low' });
+      cutJokerModal.style.display = 'none';
+    }
+  });
+}
 
-cutSameBtn.addEventListener('click', () => {
-  if (currentRoomId) {
-    playCardSound();
-    socket.emit('set_joker_high_low', { roomId: currentRoomId, userId, choice: 'same' });
-    cutJokerModal.style.display = 'none';
-  }
-});
-
-cutGonBtn.addEventListener('click', () => {
-  if (currentRoomId) {
-    playCardSound();
-    socket.emit('set_joker_high_low', { roomId: currentRoomId, userId, choice: 'gon' });
-    cutJokerModal.style.display = 'none';
-  }
-});
+if (cutGonBtn) {
+  cutGonBtn.addEventListener('click', () => {
+    if (currentRoomId) {
+      playCardSound();
+      socket.emit('set_joker_high_low', { roomId: currentRoomId, userId, choice: 'gon' });
+      cutJokerModal.style.display = 'none';
+    }
+  });
+}
 
 function handleDrawAction(source) {
   if (!currentGameState || currentGameState.status !== 'PLAYING') return;
