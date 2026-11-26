@@ -4761,12 +4761,11 @@ function renderGame(state) {
         }
       }
       if (opponentCardsContainer) {
-        // Keep opponent's remaining hand cards hidden (face-down backs) when Conquer finishes
-        opponentCardsContainer.innerHTML = Array.from({ length: Math.max(0, oppCount) }, () => '<div class="card back mini-card"></div>').join('');
+        // Keep opponent's remaining hand cards hidden (proper .card-back elements, never white .card!)
+        opponentCardsContainer.innerHTML = Array.from({ length: Math.max(0, oppCount) }, () => '<div class="card-back"></div>').join('');
         opponentCardsContainer.style.display = 'flex';
         opponentCardsContainer.style.justifyContent = 'center';
-        opponentCardsContainer.style.gap = '4px';
-        opponentCardsContainer.style.flexWrap = 'wrap';
+        opponentCardsContainer.style.flexWrap = 'nowrap';
       }
     } else {
       let winMelds = state.winningMelds;
@@ -5534,7 +5533,10 @@ function renderTableMelds(state) {
   if (myMeldsBox) {
     if (myMelds.length > 0) {
       myMeldsBox.style.display = 'block';
-      myMeldsLabel.textContent = `የወረዱ ካርታዎችህ (${myMelds.length} ግሩፕ)`;
+      if (myMeldsLabel) {
+        myMeldsLabel.style.display = 'block';
+        myMeldsLabel.innerHTML = `<span style="color: #6ee7b7; font-weight: 800;">👤 የአንተ (${myMelds.length})</span>`;
+      }
       myMeldsContainer.innerHTML = myMelds.map((group, mIdx) => `
         <div class="table-meld-group" data-owner="${myId}" data-meld-idx="${mIdx}" title="ካርታ ምረጥና እዚህ ላይ ገቢ አድርግ">
           ${group.map(c => createCardHTML(c, false, false)).join('')}
@@ -5548,7 +5550,13 @@ function renderTableMelds(state) {
   if (opponentMeldsBox) {
     if (oppEntries.length > 0) {
       opponentMeldsBox.style.display = 'block';
-      opponentMeldsLabel.textContent = `${state.opponent ? state.opponent.name : 'ተቃራኒ'} የወረዱ (${oppEntries.length} ግሩፕ)`;
+      if (opponentMeldsLabel) {
+        opponentMeldsLabel.style.display = 'block';
+        const oppDisplayName = (state.opponents && state.opponents.length > 1)
+          ? 'ተቃራኒዎች'
+          : (state.opponent ? state.opponent.name : 'ተቃራኒ');
+        opponentMeldsLabel.innerHTML = `<span style="color: #fde68a; font-weight: 800;">👤 ${oppDisplayName} (${oppEntries.length})</span>`;
+      }
       opponentMeldsContainer.innerHTML = oppEntries.map(({ ownerId, meldIdx, group }) => `
         <div class="table-meld-group" data-owner="${ownerId}" data-meld-idx="${meldIdx}" title="ካርታ ምረጥና እዚህ ላይ ገቢ አድርግ">
           ${group.map(c => createCardHTML(c, false, false)).join('')}

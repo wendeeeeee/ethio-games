@@ -8,7 +8,7 @@
   <title>CONQUER - Ethiopian Card Betting Game</title>
   <!-- Telegram Web App SDK (Enables seamless Telegram Mini App mode) -->
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <link rel="stylesheet" href="styles.css?v=54">
+  <link rel="stylesheet" href="styles.css?v=55">
 </head>
 
 <body>
@@ -17,8 +17,6 @@
   <header class="app-header">
     <div class="logo-area">
       <div class="logo-icon">👑</div>
-      <div class="logo-title">CONQUER <span style="font-size: 13px; color: #cbd5e1; font-weight: normal;">(ኮንከር)</span>
-      </div>
     </div>
     <div class="wallet-badge">
       <button class="sound-toggle-btn" id="soundToggleBtn" title="Toggle Sound (ድምፅ)">🔊</button>
@@ -328,11 +326,11 @@
       <div class="table-melds-area" id="tableMeldsArea" style="display: none;">
         <div class="table-melds-row">
           <div class="table-melds-player" id="opponentMeldsBox" style="display: none;">
-            <div class="melds-player-name" id="opponentMeldsLabel" style="display: none;"></div>
+            <div class="melds-player-name" id="opponentMeldsLabel"></div>
             <div class="melds-cards-row" id="opponentMeldsContainer"></div>
           </div>
           <div class="table-melds-player" id="myMeldsBox" style="display: none;">
-            <div class="melds-player-name" id="myMeldsLabel" style="display: none;"></div>
+            <div class="melds-player-name" id="myMeldsLabel"></div>
             <div class="melds-cards-row" id="myMeldsContainer"></div>
           </div>
         </div>
@@ -833,7 +831,7 @@
 
   <!-- Socket.io & App Script -->
   <script src="/socket.io/socket.io.js"></script>
-  <script src="app.js?v=57"></script>
+  <script src="app.js?v=58"></script>
 </body>
 
 </html>
