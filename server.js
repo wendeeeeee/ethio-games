@@ -16,15 +16,59 @@ const smsGatewayManager = require('./engine/smsGatewayManager');
 const { supabase, SUPABASE_URL, SUPABASE_ANON_KEY } = require('./engine/supabaseClient');
 
 const app = express();
+app.disable('x-powered-by');
+app.set('trust proxy', 1);
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: { origin: '*' }
 });
 
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  next();
+});
 app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '100kb' }));
+app.use(express.urlencoded({ extended: true, limit: '100kb' }));
 app.use(express.static(path.join(__dirname, 'public')));
+
+// Simple in-memory rate limiter for auth & financial endpoints
+const _rateBuckets = new Map();
+function rateLimit(maxReq = 20, windowMs = 60000) {
+  return (req, res, next) => {
+    const ip = req.ip || req.connection?.remoteAddress || 'unknown';
+    const key = `${req.path}:${ip}`;
+    const now = Date.now();
+    let bucket = _rateBuckets.get(key);
+    if (!bucket || now - bucket.start > windowMs) {
+      bucket = { count: 1, start: now };
+      _rateBuckets.set(key, bucket);
+      return next();
+    }
+    bucket.count += 1;
+    if (bucket.count > maxReq) {
+      return res.status(429).json({ success: false, message: '⏳ በጣም ብዙ ሙከራዎች ተደርገዋል፤ እባክዎ ትንሽ ቆይተው ይሞክሩ።' });
+    }
+    next();
+  };
+}
+setInterval(() => {
+  const now = Date.now();
+  _rateBuckets.forEach((b, k) => {
+    if (now - b.start > 120000) _rateBuckets.delete(k);
+  });
+}, 120000);
+
+function isSocketOwner(socket, room, userId) {
+  if (!room || !userId) return false;
+  const pInfo = socketPlayerMap.get(socket.id);
+  if (pInfo && pInfo.userId && pInfo.userId !== userId) return false;
+  const p = room.players && room.players.find(pl => pl && pl.id === userId);
+  if (!p) return false;
+  if (p.socketId && p.socketId !== socket.id) return false;
+  return true;
+}
 
 // In-memory rooms: { roomId: GameRoom }
 const rooms = new Map();
@@ -57,7 +101,7 @@ app.get('/api/wallet/:userId', (req, res) => {
   res.json(wallet);
 });
 
-app.post('/api/wallet/deposit', async (req, res) => {
+app.post('/api/wallet/deposit', rateLimit(15, 60000), async (req, res) => {
   const { userId, amount, method, transactionId } = req.body;
   const num = Number(amount);
   if (!userId || !Number.isFinite(num) || !Number.isInteger(num) || num < 10 || num > 100000) {
@@ -276,7 +320,7 @@ app.get('/api/wallet/deposits/:userId', (req, res) => {
 
 // Submit a Withdraw Request (locks balance immediately until admin approves/rejects)
 const MIN_WITHDRAW_ETB = 100;
-app.post('/api/wallet/withdraw', async (req, res) => {
+app.post('/api/wallet/withdraw', rateLimit(10, 60000), async (req, res) => {
   const { userId, amount, method, accountNumber, accountName } = req.body;
   const num = Number(amount);
   if (!userId || !Number.isFinite(num) || !Number.isInteger(num) || num < MIN_WITHDRAW_ETB || num > 50000) {
@@ -353,7 +397,7 @@ function isAdminAuthorized(key) {
 }
 
 // Admin: Login endpoint (validates username & password)
-app.post('/api/admin/login', (req, res) => {
+app.post('/api/admin/login', rateLimit(10, 60000), (req, res) => {
   const { username, password } = req.body;
   const u = (username || '').trim();
   const p = (password || '').trim();
@@ -523,7 +567,7 @@ app.post('/api/admin/withdraw/reject', async (req, res) => {
 app.get('/favicon.ico', (req, res) => res.status(204).end());
 
 // REST API for User Registration & Profile
-app.post('/api/user/register', async (req, res) => {
+app.post('/api/user/register', rateLimit(10, 60000), async (req, res) => {
   const { userId, name, phone, password } = req.body;
   try {
     const wallet = await walletManager.registerUser({
@@ -540,7 +584,7 @@ app.post('/api/user/register', async (req, res) => {
 });
 
 // REST API for User Login (also supports Admin username/password redirect)
-app.post('/api/user/login', async (req, res) => {
+app.post('/api/user/login', rateLimit(15, 60000), async (req, res) => {
   const { phone, password } = req.body;
   const u = (phone || '').trim();
   const p = (password || '').trim();
@@ -841,7 +885,7 @@ io.on('connection', (socket) => {
   // Draw Card (from 'deck' or 'ground')
   socket.on('draw_card', ({ roomId, userId, source }) => {
     const room = rooms.get(roomId);
-    if (!room) return;
+    if (!room || !isSocketOwner(socket, room, userId)) return;
     const res = room.drawCard(userId, source);
     if (!res.success) return socket.emit('error_msg', res.message);
 
@@ -856,7 +900,7 @@ io.on('connection', (socket) => {
   // Rule 4: Draw ground with table melds
   socket.on('draw_ground_with_melds', ({ roomId, userId, melds }) => {
     const room = rooms.get(roomId);
-    if (!room) return;
+    if (!room || !isSocketOwner(socket, room, userId)) return;
     const res = room.drawCardFromGroundWithMelds(userId, melds);
     broadcastRoomUpdate(room);
     if (room.status === 'FINISHED') {
@@ -868,7 +912,7 @@ io.on('connection', (socket) => {
   // Lay down melds onto the table ("ውረድ")
   socket.on('lay_down_melds', ({ roomId, userId, melds }) => {
     const room = rooms.get(roomId);
-    if (!room) return;
+    if (!room || !isSocketOwner(socket, room, userId)) return;
     const res = room.layDownMelds(userId, melds);
     if (!res.success) return socket.emit('error_msg', res.message);
     broadcastRoomUpdate(room);
@@ -877,7 +921,7 @@ io.on('connection', (socket) => {
   // Penalty: Player committed to ground but could not reach 41 -> FORFEIT!
   socket.on('forfeit_ground_fail', ({ roomId, userId }) => {
     const room = rooms.get(roomId);
-    if (!room) return;
+    if (!room || !isSocketOwner(socket, room, userId)) return;
     room.forfeitFromFailedGround(userId);
     broadcastRoomUpdate(room);
     if (room.creator) broadcastWallet(room.creator.id);
@@ -887,7 +931,7 @@ io.on('connection', (socket) => {
   // Discard Card (to ground or to Gebi)
   socket.on('discard_card', ({ roomId, userId, cardId, toGebi, melds }) => {
     const room = rooms.get(roomId);
-    if (!room) return;
+    if (!room || !isSocketOwner(socket, room, userId)) return;
     const res = room.discardCard(userId, cardId, toGebi, melds);
     if (!res.success) return socket.emit('error_msg', res.message);
 
@@ -1062,7 +1106,7 @@ io.on('connection', (socket) => {
   // Draw Card in Seka (free draw from deck or ground)
   socket.on('draw_seka_card', ({ roomId, userId, source }) => {
     const room = sekaRooms.get(roomId);
-    if (!room) return;
+    if (!room || !isSocketOwner(socket, room, userId)) return;
     const res = room.drawCard(userId, source);
     if (!res.success) return socket.emit('error_msg', res.message);
     broadcastSekaRoomUpdate(room);
@@ -1071,7 +1115,7 @@ io.on('connection', (socket) => {
   // Discard Card in Seka
   socket.on('discard_seka_card', ({ roomId, userId, cardId, melds }) => {
     const room = sekaRooms.get(roomId);
-    if (!room) return;
+    if (!room || !isSocketOwner(socket, room, userId)) return;
     const res = room.discardCard(userId, cardId, melds);
     if (!res.success) return socket.emit('error_msg', res.message);
     broadcastSekaRoomUpdate(room);
@@ -1084,7 +1128,7 @@ io.on('connection', (socket) => {
   // Claim Seka Win (2 Tris + 1 Quatris + 1 Discard)
   socket.on('claim_seka_win', ({ roomId, userId, discardCardId }) => {
     const room = sekaRooms.get(roomId);
-    if (!room) return;
+    if (!room || !isSocketOwner(socket, room, userId)) return;
     const res = room.claimWin(userId, discardCardId);
     if (!res.success) return socket.emit('error_msg', res.message);
     broadcastSekaRoomUpdate(room);
