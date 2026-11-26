@@ -97,7 +97,7 @@ class WalletManager {
       name: cleanName,
       phone: cleanPhone,
       passwordHash: passHash,
-      balance: 1000,
+      balance: 20,
       locked: 0,
       createdAt: new Date().toISOString()
     };
@@ -109,7 +109,7 @@ class WalletManager {
       id: newId,
       name: cleanName,
       phone: cleanPhone,
-      balance: 1000,
+      balance: 20,
       locked: 0,
       transactions: []
     };
@@ -121,7 +121,7 @@ class WalletManager {
       name: cleanName,
       phone: cleanPhone,
       password_hash: passHash,
-      balance: 1000,
+      balance: 20,
       locked: 0,
       updated_at: new Date().toISOString()
     }, { onConflict: 'id' });
@@ -130,7 +130,7 @@ class WalletManager {
         id: newId,
         name: cleanName,
         phone: cleanPhone,
-        balance: 1000,
+        balance: 20,
         locked: 0,
         updated_at: new Date().toISOString()
       }, { onConflict: 'id' });
@@ -140,7 +140,7 @@ class WalletManager {
     supabase.from('transactions').insert({
       user_id: newId,
       type: 'WELCOME_BONUS',
-      amount: 1000,
+      amount: 20,
       description: 'የአዲስ ተጫዋች ቦነስ (Welcome bonus)'
     }).then(() => { }).catch(() => { });
 
@@ -416,7 +416,7 @@ class WalletManager {
       id: userId,
       name: resolvedName,
       phone: phone || '',
-      balance: 1000,
+      balance: 20,
       locked: 0,
       transactions: []
     };
@@ -426,7 +426,7 @@ class WalletManager {
         id: userId,
         name: newWallet.name,
         phone: newWallet.phone,
-        balance: 1000,
+        balance: 20,
         locked: 0
       });
 
@@ -434,7 +434,7 @@ class WalletManager {
       await supabase.from('transactions').insert({
         user_id: userId,
         type: 'WELCOME_BONUS',
-        amount: 1000,
+        amount: 20,
         description: 'የአዲስ ተጫዋች ቦነስ (Welcome bonus)'
       });
     }
@@ -466,7 +466,7 @@ class WalletManager {
         id: userId,
         name: resolvedName,
         phone: phone || '',
-        balance: 1000,
+        balance: 20,
         locked: 0,
         transactions: []
       });
@@ -512,13 +512,13 @@ class WalletManager {
           id: userId,
           name: (name && !this._isGenericName(name)) ? name : '',
           phone: phone || '',
-          balance: 1000,
+          balance: 20,
           locked: 0
         });
         await supabase.from('transactions').insert({
           user_id: userId,
           type: 'WELCOME_BONUS',
-          amount: 1000,
+          amount: 20,
           description: 'የአዲስ ተጫዋች ቦነስ (Welcome bonus)'
         });
       }
@@ -531,6 +531,15 @@ class WalletManager {
     if (this._isBot(userId)) return;
     const wallet = this.wallets.get(userId);
     if (!wallet) return;
+
+    // Keep local usersList & data/users.json in sync with live wallet balance
+    const uRec = (this.usersList || []).find(u => u.id === userId);
+    if (uRec) {
+      uRec.balance = wallet.balance;
+      uRec.locked = wallet.locked;
+      this._saveUsersToFile();
+    }
+
     try {
       await supabase.from('users').update({
         balance: wallet.balance,
