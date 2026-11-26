@@ -1048,6 +1048,19 @@ socket.on(`deposit_rejected_${userId}`, (data) => {
   loadPendingDeposits();
 });
 
+// Withdraw approved notification
+socket.on(`withdraw_approved_${userId}`, (data) => {
+  showSortToast(`💸 ${Number(data.amount).toLocaleString()} ETB Withdraw ተልኳል! (${data.method === 'cbe' ? 'CBE' : 'Telebirr'}: ${data.accountNumber})`);
+  playWinSound();
+  loadPendingWithdrawals();
+});
+
+// Withdraw rejected notification (refunded)
+socket.on(`withdraw_rejected_${userId}`, (data) => {
+  showSortToast(`❌ Withdraw ውድቅ ተደርጓል (${Number(data.amount).toLocaleString()} ETB ወደ balance ተመልሷል): ${data.reason || ''}`);
+  loadPendingWithdrawals();
+});
+
 socket.on('error_msg', (msg) => {
   showSortToast(`⚠️ ${msg}`);
 });
@@ -1724,6 +1737,191 @@ if (confirmDepositBtn) {
     } finally {
       confirmDepositBtn.disabled = false;
       updateDepositUI();
+    }
+  });
+}
+
+// ============================================================
+// WITHDRAW MODAL & LOGIC (0% Fee, Min 100 ETB)
+// ============================================================
+const withdrawBtn = document.getElementById('withdrawBtn');
+const withdrawModal = document.getElementById('withdrawModal');
+const closeWithdrawModalBtn = document.getElementById('closeWithdrawModalBtn');
+const withdrawModalBalanceDisplay = document.getElementById('withdrawModalBalanceDisplay');
+const wdMethodTelebirr = document.getElementById('wdMethodTelebirr');
+const wdMethodCbe = document.getElementById('wdMethodCbe');
+const withdrawAmountInput = document.getElementById('withdrawAmountInput');
+const withdrawAccountInput = document.getElementById('withdrawAccountInput');
+const withdrawAccountNameInput = document.getElementById('withdrawAccountNameInput');
+const withdrawErrorMsg = document.getElementById('withdrawErrorMsg');
+const withdrawPendingList = document.getElementById('withdrawPendingList');
+const withdrawPendingItems = document.getElementById('withdrawPendingItems');
+const confirmWithdrawBtn = document.getElementById('confirmWithdrawBtn');
+const withdrawBtnText = document.getElementById('withdrawBtnText');
+let selectedWithdrawMethod = 'telebirr';
+
+function updateWithdrawUI() {
+  const amt = Math.max(0, Number(withdrawAmountInput ? withdrawAmountInput.value : 100) || 0);
+  if (withdrawBtnText) {
+    withdrawBtnText.textContent = `${amt.toLocaleString()} ETB አውጣ`;
+  }
+  if (withdrawAccountInput) {
+    withdrawAccountInput.placeholder = selectedWithdrawMethod === 'cbe'
+      ? 'የCBE አካውንት ቁጥር (1000...)'
+      : 'የቴሌብር ስልክ ቁጥር (09...)';
+  }
+}
+
+async function loadPendingWithdrawals() {
+  if (!withdrawPendingList || !withdrawPendingItems) return;
+  try {
+    const res = await fetch(`/api/wallet/withdrawals/${userId}`);
+    const data = await res.json();
+    if (data.withdrawals && data.withdrawals.length > 0) {
+      withdrawPendingItems.innerHTML = data.withdrawals.map(w => {
+        const statusColors = { PENDING: '#f59e0b', APPROVED: '#10b981', REJECTED: '#ef4444' };
+        const statusText = { PENDING: '⏳ በመጠባበቅ', APPROVED: '✅ ተልኳል', REJECTED: '❌ ተመልሷል' };
+        const statusColor = statusColors[w.status] || '#64748b';
+        const statusLabel = statusText[w.status] || w.status;
+        const date = new Date(w.createdAt || w.created_at).toLocaleDateString('am-ET', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+        return `<div class="deposit-pending-item" style="border-left: 3px solid ${statusColor};">
+          <div class="pending-item-top">
+            <span class="pending-amount">${Number(w.amount).toLocaleString()} ETB</span>
+            <span class="pending-status" style="color: ${statusColor};">${statusLabel}</span>
+          </div>
+          <div class="pending-item-bottom">
+            <span class="pending-method">${w.method === 'cbe' ? '🏦 CBE' : '📱 Telebirr'}</span>
+            <span class="pending-txn">${w.accountNumber || ''}</span>
+            <span class="pending-date">${date}</span>
+          </div>
+        </div>`;
+      }).join('');
+      withdrawPendingList.style.display = 'block';
+    } else {
+      withdrawPendingList.style.display = 'none';
+    }
+  } catch (e) {
+    withdrawPendingList.style.display = 'none';
+  }
+}
+
+function openWithdrawModal() {
+  if (!withdrawModal) return;
+  if (!requireAuth('⚠️ ገንዘብ ለማውጣት እባክዎ መጀመሪያ ይግቡ ወይም ይመዝገቡ!')) {
+    return;
+  }
+  if (withdrawModalBalanceDisplay && walletBalanceDisplay) {
+    withdrawModalBalanceDisplay.textContent = walletBalanceDisplay.textContent;
+  }
+  if (withdrawErrorMsg) {
+    withdrawErrorMsg.style.display = 'none';
+    withdrawErrorMsg.textContent = '';
+  }
+  updateWithdrawUI();
+  loadPendingWithdrawals();
+  withdrawModal.style.display = 'flex';
+}
+
+if (withdrawBtn) {
+  withdrawBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    openWithdrawModal();
+  });
+}
+
+if (closeWithdrawModalBtn) {
+  closeWithdrawModalBtn.addEventListener('click', () => {
+    if (withdrawModal) withdrawModal.style.display = 'none';
+  });
+}
+
+[wdMethodTelebirr, wdMethodCbe].forEach(btn => {
+  if (!btn) return;
+  btn.addEventListener('click', () => {
+    selectedWithdrawMethod = btn.dataset.wdMethod || 'telebirr';
+    if (wdMethodTelebirr) wdMethodTelebirr.classList.toggle('active', selectedWithdrawMethod === 'telebirr');
+    if (wdMethodCbe) wdMethodCbe.classList.toggle('active', selectedWithdrawMethod === 'cbe');
+    updateWithdrawUI();
+  });
+});
+
+document.querySelectorAll('#withdrawAmountPresets [data-wd-amount]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#withdrawAmountPresets [data-wd-amount]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    if (withdrawAmountInput) withdrawAmountInput.value = btn.dataset.wdAmount;
+    updateWithdrawUI();
+  });
+});
+
+if (withdrawAmountInput) {
+  withdrawAmountInput.addEventListener('input', updateWithdrawUI);
+}
+
+if (confirmWithdrawBtn) {
+  confirmWithdrawBtn.addEventListener('click', async () => {
+    const amt = Math.floor(Number(withdrawAmountInput ? withdrawAmountInput.value : 0) || 0);
+    const acc = withdrawAccountInput ? withdrawAccountInput.value.trim() : '';
+    const accName = withdrawAccountNameInput ? withdrawAccountNameInput.value.trim() : '';
+
+    if (withdrawErrorMsg) withdrawErrorMsg.style.display = 'none';
+
+    if (amt < 100 || amt > 50000) {
+      if (withdrawErrorMsg) {
+        withdrawErrorMsg.textContent = '⚠️ ዝቅተኛው የማውጫ መጠን 100 ETB ነው (ከ 100 እስከ 50,000 ETB)';
+        withdrawErrorMsg.style.display = 'block';
+      }
+      return;
+    }
+
+    if (acc.length < 6) {
+      if (withdrawErrorMsg) {
+        withdrawErrorMsg.textContent = '⚠️ እባክዎ ትክክለኛ ስልክ ቁጥር ወይም የባንክ አካውንት ያስገቡ';
+        withdrawErrorMsg.style.display = 'block';
+      }
+      if (withdrawAccountInput) withdrawAccountInput.focus();
+      return;
+    }
+
+    confirmWithdrawBtn.disabled = true;
+    if (withdrawBtnText) withdrawBtnText.textContent = '⏳ በመላክ ላይ...';
+
+    try {
+      const res = await fetch('/api/wallet/withdraw', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId,
+          amount: amt,
+          method: selectedWithdrawMethod,
+          accountNumber: acc,
+          accountName: accName
+        })
+      });
+      const data = await res.json();
+      if (data && data.success) {
+        if (data.wallet) {
+          applyWalletUpdate(data.wallet);
+        }
+        if (withdrawModalBalanceDisplay && walletBalanceDisplay) {
+          withdrawModalBalanceDisplay.textContent = walletBalanceDisplay.textContent;
+        }
+        showSortToast(data.message || `✅ የ ${amt.toLocaleString()} ETB Withdraw ጥያቄ ተልኳል!`);
+        loadPendingWithdrawals();
+      } else {
+        if (withdrawErrorMsg) {
+          withdrawErrorMsg.textContent = (data && data.message) || 'ስህተት ተከስቷል';
+          withdrawErrorMsg.style.display = 'block';
+        }
+      }
+    } catch (e) {
+      if (withdrawErrorMsg) {
+        withdrawErrorMsg.textContent = 'የኔትወርክ ስህተት ተከስቷል';
+        withdrawErrorMsg.style.display = 'block';
+      }
+    } finally {
+      confirmWithdrawBtn.disabled = false;
+      updateWithdrawUI();
     }
   });
 }

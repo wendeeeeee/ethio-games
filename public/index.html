@@ -44,6 +44,7 @@
           <span id="walletBalanceDisplay">1,000 ETB</span>
         </div>
         <button class="deposit-btn" id="depositBtn" title="ገንዘብ አስገባ (Deposit)">+ Deposit</button>
+        <button class="deposit-btn" id="withdrawBtn" style="background: linear-gradient(135deg, #f59e0b, #d97706); color: #0f172a;" title="ገንዘብ አውጣ (Withdraw)">- Withdraw</button>
         <button class="header-logout-btn" id="headerLogoutBtn" title="ውጣ (Logout)">
           🚪 Logout
         </button>
@@ -672,6 +673,57 @@
       <!-- Submit Button -->
       <button class="btn-primary deposit-submit-btn" id="confirmDepositBtn">
         💰 <span id="depositBtnText">100 ETB አስገባ</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- WITHDRAW MODAL -->
+  <div id="withdrawModal" class="modal-overlay" style="display: none;">
+    <div class="modal-content deposit-modal-content">
+      <button class="modal-close-btn" id="closeWithdrawModalBtn" title="ዝጋ (Close)">✕</button>
+
+      <div class="simple-deposit-header">
+        <h3 class="simple-deposit-title">💸 ገንዘብ ማውጫ (Withdraw)</h3>
+        <span class="simple-deposit-balance">ቀሪ ሂሳብ: <strong id="withdrawModalBalanceDisplay">0 ETB</strong></span>
+      </div>
+
+      <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+        <button type="button" class="amount-preset-btn active" id="wdMethodTelebirr" data-wd-method="telebirr" style="flex: 1;">📱 Telebirr</button>
+        <button type="button" class="amount-preset-btn" id="wdMethodCbe" data-wd-method="cbe" style="flex: 1;">🏦 CBE</button>
+      </div>
+
+      <div class="simple-amount-section">
+        <div class="deposit-amount-presets" id="withdrawAmountPresets">
+          <button type="button" class="amount-preset-btn active" data-wd-amount="100">100</button>
+          <button type="button" class="amount-preset-btn" data-wd-amount="200">200</button>
+          <button type="button" class="amount-preset-btn" data-wd-amount="500">500</button>
+          <button type="button" class="amount-preset-btn" data-wd-amount="1000">1,000</button>
+        </div>
+
+        <div class="deposit-custom-amount-wrap">
+          <span class="currency-prefix">ETB</span>
+          <input type="number" id="withdrawAmountInput" placeholder="የብር መጠን (Min 100)" value="100" min="100" max="50000" step="10">
+        </div>
+        <div style="font-size: 11px; color: #10b981; margin-top: 6px; font-weight: 600;">
+          ✅ ያለ ተጨማሪ ክፍያ (0% Fee) — ዝቅተኛው 100 ETB
+        </div>
+      </div>
+
+      <div class="simple-txn-section" style="display: flex; flex-direction: column; gap: 8px;">
+        <input type="text" id="withdrawAccountInput" placeholder="የቴሌብር ስልክ ቁጥር (09...)" autocomplete="off" maxlength="30" style="width: 100%; padding: 10px 12px; border: 1.5px solid #cbd5e1; border-radius: 10px; font-size: 14px;">
+        <input type="text" id="withdrawAccountNameInput" placeholder="የአካውንት ባለቤት ሙሉ ስም (Full Name)" autocomplete="off" maxlength="60" style="width: 100%; padding: 10px 12px; border: 1.5px solid #cbd5e1; border-radius: 10px; font-size: 14px;">
+      </div>
+
+      <div id="withdrawErrorMsg" style="display: none; color: #dc2626; font-size: 12px; margin-bottom: 10px; padding: 6px 10px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; text-align: left;">
+      </div>
+
+      <div id="withdrawPendingList" class="deposit-pending-list" style="display: none;">
+        <label class="deposit-label" style="font-size: 11px;">📋 የWithdraw ጥያቄዎች</label>
+        <div id="withdrawPendingItems"></div>
+      </div>
+
+      <button class="btn-primary deposit-submit-btn" id="confirmWithdrawBtn" style="background: linear-gradient(135deg, #f59e0b, #d97706); color: #0f172a; font-weight: 800;">
+        💸 <span id="withdrawBtnText">100 ETB አውጣ</span>
       </button>
     </div>
   </div>

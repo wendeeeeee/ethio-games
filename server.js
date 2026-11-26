@@ -10,6 +10,7 @@ const GameRoom = require('./engine/gameRoom');
 const { SekaGameRoom, SekaBotPlayer } = require('./engine/sekaGameRoom');
 const walletManager = require('./engine/walletManager');
 const depositManager = require('./engine/depositManager');
+const withdrawManager = require('./engine/withdrawManager');
 const smsGatewayManager = require('./engine/smsGatewayManager');
 const { supabase, SUPABASE_URL, SUPABASE_ANON_KEY } = require('./engine/supabaseClient');
 
@@ -272,6 +273,72 @@ app.get('/api/wallet/deposits/:userId', (req, res) => {
   }
 });
 
+// Submit a Withdraw Request (locks balance immediately until admin approves/rejects)
+const MIN_WITHDRAW_ETB = 100;
+app.post('/api/wallet/withdraw', async (req, res) => {
+  const { userId, amount, method, accountNumber, accountName } = req.body;
+  const num = Number(amount);
+  if (!userId || !Number.isFinite(num) || num < MIN_WITHDRAW_ETB || num > 50000) {
+    return res.status(400).json({
+      success: false,
+      message: `ዝቅተኛው የማውጫ መጠን ${MIN_WITHDRAW_ETB} ETB ነው (ከ ${MIN_WITHDRAW_ETB} እስከ 50,000 ETB)`
+    });
+  }
+  const cleanAcc = String(accountNumber || '').trim();
+  if (cleanAcc.length < 6) {
+    return res.status(400).json({ success: false, message: 'እባክዎ ትክክለኛ ስልክ ቁጥር ወይም የባንክ አካውንት ያስገቡ' });
+  }
+  const cleanMethod = method === 'cbe' ? 'cbe' : 'telebirr';
+
+  try {
+    const lockRes = walletManager.lockForWithdraw(userId, num);
+    if (!lockRes.success) {
+      return res.status(400).json({ success: false, message: lockRes.message || 'በቂ ሂሳብ የለዎትም' });
+    }
+
+    const userWallet = lockRes.wallet;
+    let withdraw;
+    try {
+      withdraw = await withdrawManager.createWithdraw({
+        userId,
+        userName: (userWallet && userWallet.name) ? userWallet.name : '',
+        userPhone: (userWallet && userWallet.phone) ? userWallet.phone : '',
+        amount: num,
+        method: cleanMethod,
+        accountNumber: cleanAcc,
+        accountName: String(accountName || '').trim()
+      });
+    } catch (createErr) {
+      // Refund if creating the withdraw record fails
+      walletManager.refundWithdraw(userId, num);
+      throw createErr;
+    }
+
+    io.emit(`wallet_${userId}`, userWallet);
+    io.emit('new_withdraw_request', withdraw);
+
+    res.json({
+      success: true,
+      withdraw,
+      wallet: userWallet,
+      message: `✅ የ ${num.toLocaleString()} ETB Withdraw ጥያቄዎ ተልኳል! Admin ካረጋገጠ በኋላ ብርዎ ይላክልዎታል።`
+    });
+  } catch (err) {
+    console.error('[Withdraw] Error:', err.message);
+    res.status(400).json({ success: false, message: err.message });
+  }
+});
+
+// Get user's withdraw history
+app.get('/api/wallet/withdrawals/:userId', (req, res) => {
+  try {
+    const list = withdrawManager.getUserWithdrawals(req.params.userId);
+    res.json({ success: true, withdrawals: list });
+  } catch (err) {
+    res.json({ success: true, withdrawals: [] });
+  }
+});
+
 // Helper: check admin auth
 function isAdminAuthorized(key) {
   return key === 'wende3428@D' || key === 'wende3428' || key === 'ethio-games-admin-2024';
@@ -376,6 +443,70 @@ app.post('/api/admin/deposit/reject', async (req, res) => {
     res.json({ success: true, deposit });
   } catch (err) {
     console.error('[Admin Reject] Error:', err.message);
+    res.status(400).json({ success: false, message: err.message });
+  }
+});
+
+// Admin: List all withdrawals
+app.get('/api/admin/withdrawals/all', (req, res) => {
+  const adminKey = req.query.adminKey || req.headers['x-admin-key'];
+  if (!isAdminAuthorized(adminKey)) {
+    return res.status(403).json({ success: false, message: 'Unauthorized. Invalid admin key.' });
+  }
+  const all = withdrawManager.getAllWithdrawals(150);
+  res.json({ success: true, withdrawals: all });
+});
+
+// Admin: Approve a withdraw (finalizes locked balance after payout)
+app.post('/api/admin/withdraw/approve', async (req, res) => {
+  const { withdrawId, adminKey, payoutTxnId, note } = req.body;
+  if (!isAdminAuthorized(adminKey)) {
+    return res.status(403).json({ success: false, message: 'Unauthorized. Invalid admin key.' });
+  }
+
+  try {
+    const w = await withdrawManager.approveWithdraw(withdrawId, payoutTxnId, note);
+    const wallet = walletManager.completeWithdraw(w.userId, w.amount, w.method, w.accountNumber);
+
+    io.emit(`wallet_${w.userId}`, wallet);
+    io.emit(`withdraw_approved_${w.userId}`, {
+      withdrawId: w.id,
+      amount: w.amount,
+      method: w.method,
+      accountNumber: w.accountNumber,
+      payoutTxnId: w.payoutTxnId
+    });
+    io.emit('withdraw_status_changed', { id: w.id, status: 'APPROVED' });
+
+    res.json({ success: true, withdraw: w, wallet });
+  } catch (err) {
+    console.error('[Admin Withdraw Approve] Error:', err.message);
+    res.status(400).json({ success: false, message: err.message });
+  }
+});
+
+// Admin: Reject a withdraw (refunds locked amount back to user balance)
+app.post('/api/admin/withdraw/reject', async (req, res) => {
+  const { withdrawId, adminKey, reason } = req.body;
+  if (!isAdminAuthorized(adminKey)) {
+    return res.status(403).json({ success: false, message: 'Unauthorized. Invalid admin key.' });
+  }
+
+  try {
+    const w = await withdrawManager.rejectWithdraw(withdrawId, reason || 'የተሰጠው መረጃ ትክክል አይደለም / አልተሳካም');
+    const wallet = walletManager.refundWithdraw(w.userId, w.amount);
+
+    io.emit(`wallet_${w.userId}`, wallet);
+    io.emit(`withdraw_rejected_${w.userId}`, {
+      withdrawId: w.id,
+      amount: w.amount,
+      reason: w.adminNote
+    });
+    io.emit('withdraw_status_changed', { id: w.id, status: 'REJECTED' });
+
+    res.json({ success: true, withdraw: w, wallet });
+  } catch (err) {
+    console.error('[Admin Withdraw Reject] Error:', err.message);
     res.status(400).json({ success: false, message: err.message });
   }
 });

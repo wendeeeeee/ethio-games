@@ -61,3 +61,28 @@ ALTER TABLE deposits ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Service role full access on deposits" ON deposits
   FOR ALL USING (true) WITH CHECK (true);
+
+-- 6. Withdrawals table (stores Telebirr/CBE withdraw requests & approvals)
+CREATE TABLE IF NOT EXISTS withdrawals (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  user_name TEXT DEFAULT '',
+  user_phone TEXT DEFAULT '',
+  amount INTEGER NOT NULL DEFAULT 0,
+  method TEXT DEFAULT 'telebirr',
+  account_number TEXT NOT NULL,
+  account_name TEXT DEFAULT '',
+  status TEXT NOT NULL DEFAULT 'PENDING',
+  payout_txn_id TEXT DEFAULT '',
+  admin_note TEXT DEFAULT '',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  reviewed_at TIMESTAMPTZ DEFAULT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_withdrawals_status ON withdrawals(status);
+CREATE INDEX IF NOT EXISTS idx_withdrawals_user_id ON withdrawals(user_id);
+
+ALTER TABLE withdrawals ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Service role full access on withdrawals" ON withdrawals
+  FOR ALL USING (true) WITH CHECK (true);

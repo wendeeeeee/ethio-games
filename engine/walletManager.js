@@ -616,6 +616,54 @@ class WalletManager {
     return { success: true, wallet };
   }
 
+  lockForWithdraw(userId, amount) {
+    const wallet = this.getWallet(userId);
+    if (wallet.balance < amount) {
+      return { success: false, message: 'በቂ ሂሳብ (Balance) የለዎትም' };
+    }
+    wallet.balance -= amount;
+    wallet.locked = (wallet.locked || 0) + amount;
+    this._saveBalanceToDb(userId);
+    return { success: true, wallet };
+  }
+
+  completeWithdraw(userId, amount, method = 'telebirr', accountNumber = '') {
+    const wallet = this.getWallet(userId);
+    wallet.locked = Math.max(0, (wallet.locked || 0) - amount);
+    wallet.transactions.push({
+      type: 'WITHDRAW',
+      amount,
+      date: new Date().toISOString()
+    });
+    this._saveBalanceToDb(userId);
+    supabase.from('transactions').insert({
+      user_id: userId,
+      type: 'WITHDRAW',
+      amount: -amount,
+      description: `Withdraw ${amount} ETB (${method}: ${accountNumber})`
+    }).then(() => { }).catch(() => { });
+    return wallet;
+  }
+
+  refundWithdraw(userId, amount) {
+    const wallet = this.getWallet(userId);
+    wallet.locked = Math.max(0, (wallet.locked || 0) - amount);
+    wallet.balance += amount;
+    wallet.transactions.push({
+      type: 'WITHDRAW_REFUND',
+      amount,
+      date: new Date().toISOString()
+    });
+    this._saveBalanceToDb(userId);
+    supabase.from('transactions').insert({
+      user_id: userId,
+      type: 'WITHDRAW_REFUND',
+      amount,
+      description: `Withdraw Refund ${amount} ETB`
+    }).then(() => { }).catch(() => { });
+    return wallet;
+  }
+
   lockEscrow(roomId, player1Id, player2Id, stakeAmount) {
     let playerIds = [];
     let stake = stakeAmount;
