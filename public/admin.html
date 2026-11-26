@@ -749,23 +749,35 @@
         return;
       }
 
-      usersListContainer.innerHTML = filtered.map(u => {
-        const dateStr = u.createdAt ? new Date(u.createdAt).toLocaleString() : '—';
-        return `
-          <div class="deposit-card">
-            <div class="deposit-info">
-              <div class="deposit-top">
-                <span class="deposit-user">👤 ${u.name || 'Player'}</span>
-                <span class="deposit-amount" style="color: #4ade80;">💰 ${(Number(u.balance) || 0).toLocaleString()} ETB</span>
-              </div>
-              <div class="deposit-meta">
-                <span>📱 ${u.phone || 'ስልክ የለም'}</span>
-                <span>🔒 Locked: ${(Number(u.locked) || 0).toLocaleString()} ETB</span>
-                <span>🕒 ${dateStr}</span>
-              </div>
-            </div>
-          </div>`;
-      }).join('');
+      usersListContainer.innerHTML = `
+        <div style="overflow-x: auto; background: #1e293b; border: 1px solid #334155; border-radius: 14px;">
+          <table style="width: 100%; border-collapse: collapse; font-size: 13px; text-align: left;">
+            <thead>
+              <tr style="background: #0f172a; color: #94a3b8; border-bottom: 1px solid #334155;">
+                <th style="padding: 12px 14px;">#</th>
+                <th style="padding: 12px 14px;">ስም (Name)</th>
+                <th style="padding: 12px 14px;">ስልክ (Phone)</th>
+                <th style="padding: 12px 14px;">Balance</th>
+                <th style="padding: 12px 14px;">Locked</th>
+                <th style="padding: 12px 14px;">የተመዘገበበት ቀን</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${filtered.map((u, idx) => {
+                const dateStr = u.createdAt ? new Date(u.createdAt).toLocaleString() : '—';
+                return `
+                  <tr style="border-bottom: 1px solid #334155;">
+                    <td style="padding: 10px 14px; color: #64748b; font-weight: 700;">${idx + 1}</td>
+                    <td style="padding: 10px 14px; color: #f8fafc; font-weight: 700;">👤 ${u.name || 'Player'}</td>
+                    <td style="padding: 10px 14px; color: #cbd5e1;">${u.phone || '—'}</td>
+                    <td style="padding: 10px 14px; color: #4ade80; font-weight: 800;">${(Number(u.balance) || 0).toLocaleString()} ETB</td>
+                    <td style="padding: 10px 14px; color: #fbbf24; font-weight: 700;">${(Number(u.locked) || 0).toLocaleString()} ETB</td>
+                    <td style="padding: 10px 14px; color: #94a3b8; font-size: 12px;">${dateStr}</td>
+                  </tr>`;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>`;
     }
 
     if (refreshSmsBtn) {
