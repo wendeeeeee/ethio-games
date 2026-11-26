@@ -4296,10 +4296,12 @@ function renderGame(state) {
       const isPrintedWildMode = state.jokerRank === 'JOKER';
       const isRed = !isPrintedWildMode && (state.jokerSuits.includes('♥') || state.jokerSuits.includes('♦'));
       const suitColor = isRed ? '#dc2626' : '#0f172a';
-      const jokersText = isPrintedWildMode ? '🃏 ፕሪንትድ ጆከር' : `${state.jokerRank}${state.jokerSuits[0]} ${state.jokerRank}${state.jokerSuits[1]}`;
+      const jokersText = isPrintedWildMode ? '🃏 እራሱ' : `${state.jokerRank}${state.jokerSuits[0]} ${state.jokerRank}${state.jokerSuits[1]}`;
 
       deckJokerCallBadge.style.display = 'block';
-      deckJokerCallBadge.innerHTML = `⭐ <strong>ጆከር:</strong> <span style="color: ${suitColor}; font-weight: 900; background: #ffffff; padding: 1px 6px; border-radius: 6px; margin: 0 3px;">${jokersText}</span> <span style="color: #fef08a; font-weight: 700;">(${choiceLabel})</span>`;
+      deckJokerCallBadge.innerHTML = isPrintedWildMode
+        ? `⭐ <strong>ጆከር:</strong> <span style="color: #0f172a; font-weight: 900; background: #ffffff; padding: 1px 6px; border-radius: 6px; margin: 0 3px;">${jokersText}</span>`
+        : `⭐ <strong>ጆከር:</strong> <span style="color: ${suitColor}; font-weight: 900; background: #ffffff; padding: 1px 6px; border-radius: 6px; margin: 0 3px;">${jokersText}</span> <span style="color: #fef08a; font-weight: 700;">(${choiceLabel})</span>`;
     } else {
       deckJokerCallBadge.style.display = 'none';
       deckJokerCallBadge.innerHTML = '';
