@@ -4368,16 +4368,9 @@ function renderGame(state) {
     if (weredBtn) weredBtn.style.display = 'inline-block';
     if (gebiBtn) gebiBtn.style.display = 'inline-block';
     if (jokerTekaBtn) jokerTekaBtn.style.display = 'inline-block';
-    if (pokeBtn) pokeBtn.style.display = 'inline-block';
+    if (pokeBtn) pokeBtn.style.display = 'none';
 
-    if (state.pokeState && state.pokeState.active) {
-      pokeTimerBanner.style.display = 'block';
-      pokeSecondsDisplay.textContent = state.pokeState.secondsLeft;
-      pokeBtn.disabled = true;
-    } else {
-      pokeTimerBanner.style.display = 'none';
-      if (pokeBtn) pokeBtn.disabled = isMyTurn || state.status !== 'PLAYING';
-    }
+    if (pokeTimerBanner) pokeTimerBanner.style.display = 'none';
   }
 
   // Hand Points Display (Removed from table per authentic game rules)
