@@ -1913,11 +1913,40 @@ select:focus {
   padding: 4px 5px;
 }
 
+.table-melds-area .card .corner-rank {
+  font-size: 13px;
+  line-height: 1;
+}
+
+.table-melds-area .card .corner-suit {
+  font-size: 11px;
+  margin-top: 1px;
+  line-height: 1;
+}
+
+.table-melds-area .card .card-center-suit {
+  font-size: 22px;
+  top: 56%;
+}
+
 @media (max-width: 768px) {
   .table-melds-area .card {
     width: 46px;
     height: 66px;
     padding: 3px 4px;
+  }
+
+  .table-melds-area .card .corner-rank {
+    font-size: 11px;
+  }
+
+  .table-melds-area .card .corner-suit {
+    font-size: 10px;
+  }
+
+  .table-melds-area .card .card-center-suit {
+    font-size: 17px;
+    top: 58%;
   }
 }
 
