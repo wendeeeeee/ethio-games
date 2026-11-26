@@ -1,7 +1,7 @@
 // engine/conquerBot.js
 // Smart AI Bot logic for Ethiopian Conquer
 
-const { getCardPointValue, RANK_VALUES } = require('./cardTypes');
+const { getCardPointValue, RANK_ORDER } = require('./cardTypes');
 const {
   isValidTris,
   isValidQuatris,
@@ -40,7 +40,7 @@ function findDisjointMelds(hand, jokerRank, jokerSuits) {
   }
 
   for (const suit of Object.keys(bySuit)) {
-    const cards = bySuit[suit].sort((a, b) => (RANK_VALUES[a.rank] || 0) - (RANK_VALUES[b.rank] || 0));
+    const cards = bySuit[suit].sort((a, b) => (RANK_ORDER[a.rank] || 0) - (RANK_ORDER[b.rank] || 0));
     // Deduplicate ranks for sequence building
     const unique = [];
     const seenRank = new Set();
@@ -54,7 +54,7 @@ function findDisjointMelds(hand, jokerRank, jokerSuits) {
     while (i < unique.length) {
       const seq = [unique[i]];
       let j = i + 1;
-      while (j < unique.length && (RANK_VALUES[unique[j].rank] - RANK_VALUES[seq[seq.length - 1].rank]) === 1) {
+      while (j < unique.length && (RANK_ORDER[unique[j].rank] - RANK_ORDER[seq[seq.length - 1].rank]) === 1) {
         seq.push(unique[j]);
         j++;
       }
@@ -128,10 +128,10 @@ function findDisjointMelds(hand, jokerRank, jokerSuits) {
       }
       for (const suit of Object.keys(remBySuit)) {
         if (jokers.length === 0) break;
-        const sc = remBySuit[suit].sort((a, b) => (RANK_VALUES[a.rank] || 0) - (RANK_VALUES[b.rank] || 0));
+        const sc = remBySuit[suit].sort((a, b) => (RANK_ORDER[a.rank] || 0) - (RANK_ORDER[b.rank] || 0));
         for (let i = 0; i < sc.length - 1 && jokers.length > 0; i++) {
           if (usedIds.has(sc[i].id) || usedIds.has(sc[i + 1].id)) continue;
-          const diff = (RANK_VALUES[sc[i + 1].rank] || 0) - (RANK_VALUES[sc[i].rank] || 0);
+          const diff = (RANK_ORDER[sc[i + 1].rank] || 0) - (RANK_ORDER[sc[i].rank] || 0);
           if (diff === 1 || diff === 2) {
             const candidate = [sc[i], sc[i + 1], jokers[0]];
             if (isValidQuatris(candidate, jokerRank, jokerSuits)) {
@@ -159,20 +159,20 @@ function chooseSmartDiscard(hand, room) {
 
   for (const card of nonJokers) {
     let score = 0;
-    const rankVal = RANK_VALUES[card.rank] || 0;
+    const rankVal = RANK_ORDER[card.rank] || 0;
     for (const other of hand) {
       if (other.id === card.id) continue;
       if (other.rank === card.rank && other.suit !== card.suit) {
         score += 14; // Pair / Tris potential
       } else if (other.suit === card.suit) {
-        const diff = Math.abs((RANK_VALUES[other.rank] || 0) - rankVal);
+        const diff = Math.abs((RANK_ORDER[other.rank] || 0) - rankVal);
         if (diff === 1) score += 14;
         else if (diff === 2) score += 6;
         else if (diff === 0) score -= 5; // Duplicate dead card
       }
     }
     // Slightly prefer shedding high-point deadwood
-    score -= getCardPointValue(card) * 0.15;
+    score -= (getCardPointValue(card.rank) || 0) * 0.15;
 
     if (score < lowestScore) {
       lowestScore = score;
