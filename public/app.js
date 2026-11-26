@@ -4008,21 +4008,24 @@ function findSingleBestArrangement(hand, state) {
         cards.push(...ordered);
       }
     } else {
+      const getEffRank = (c) => (c.isFalseJoker && jokerRank) ? jokerRank : c.rank;
       const naturals = cards.filter(c => !isCardJoker(c, state));
       const jokers = cards.filter(c => isCardJoker(c, state));
-      const isSeq = naturals.length > 0 && naturals.every(c => c.suit === naturals[0].suit);
-      const isSet = naturals.length > 0 && naturals.every(c => c.rank === naturals[0].rank);
+      const nonFalse = naturals.filter(c => !c.isFalseJoker);
+      const seqSuit = nonFalse.length > 0 ? nonFalse[0].suit : (naturals[0] ? naturals[0].suit : '');
+      const isSeq = nonFalse.length > 0 && nonFalse.every(c => c.suit === seqSuit);
+      const isSet = naturals.length > 0 && naturals.every(c => getEffRank(c) === getEffRank(naturals[0]));
 
       if (isSeq) {
-        const hasA = cards.some(c => c.rank === 'A');
-        const hasHighFace = naturals.some(c => ['10', 'J', 'Q', 'K'].includes(c.rank));
-        const has2 = naturals.some(c => c.rank === '2');
+        const hasA = cards.some(c => getEffRank(c) === 'A');
+        const hasHighFace = naturals.some(c => ['10', 'J', 'Q', 'K'].includes(getEffRank(c)));
+        const has2 = naturals.some(c => getEffRank(c) === '2');
         const aceHigh = hasA && hasHighFace && !has2;
-        naturals.sort((a, b) => getRankNum(a.rank, aceHigh) - getRankNum(b.rank, aceHigh));
+        naturals.sort((a, b) => getRankNum(getEffRank(a), aceHigh) - getRankNum(getEffRank(b), aceHigh));
 
         if (jokers.length === 1 && naturals.length >= 2) {
           // Find if there is any inside gap between adjacent natural cards (e.g. 9 and J -> missing 10!):
-          const natNums = naturals.map(c => getRankNum(c.rank, aceHigh));
+          const natNums = naturals.map(c => getRankNum(getEffRank(c), aceHigh));
           let insertIdx = -1;
           for (let i = 0; i < natNums.length - 1; i++) {
             if (natNums[i + 1] === natNums[i] + 2) {
@@ -5133,7 +5136,7 @@ function createCardHTML(card, isSelected = false, isBaseJoker = false, zIndex = 
   const tetayBadge = '';
 
   if (isPrintedWildJoker || isFalse) {
-    const starHTML = isFalse ? '' : `<div class="card-joker-star">⭐</div>`;
+    const starHTML = `<div class="card-joker-star">⭐</div>`;
     const effRank = card.effectiveRank || (currentGameState && currentGameState.jokerRank) || '';
     const falseLabel = effRank ? `FALSE • ${effRank}` : 'FALSE';
     const falseHTML = isFalse ? `<div class="card-false-badge ${isRed ? 'red' : 'black'}">${falseLabel}</div>` : '';
