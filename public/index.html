@@ -8,7 +8,7 @@
   <title>CONQUER - Ethiopian Card Betting Game</title>
   <!-- Telegram Web App SDK (Enables seamless Telegram Mini App mode) -->
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <link rel="stylesheet" href="styles.css?v=65">
+  <link rel="stylesheet" href="styles.css?v=66">
 </head>
 
 <body>
@@ -683,12 +683,6 @@
       <div id="depositErrorMsg" style="display: none; color: #dc2626; font-size: 12px; margin-bottom: 10px; padding: 6px 10px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; text-align: left;">
       </div>
 
-      <!-- Pending Deposits List -->
-      <div id="depositPendingList" class="deposit-pending-list" style="display: none;">
-        <label class="deposit-label" style="font-size: 11px;">📋 በመጠባበቅ ላይ ያሉ ጥያቄዎች</label>
-        <div id="depositPendingItems"></div>
-      </div>
-
       <!-- Submit Button -->
       <button class="btn-primary deposit-submit-btn" id="confirmDepositBtn">
         💰 <span id="depositBtnText">100 ETB አስገባ</span>
@@ -740,11 +734,6 @@
       </div>
 
       <div id="withdrawErrorMsg" style="display: none; color: #dc2626; font-size: 12px; margin-bottom: 10px; padding: 6px 10px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; text-align: left;">
-      </div>
-
-      <div id="withdrawPendingList" class="deposit-pending-list" style="display: none;">
-        <label class="deposit-label" style="font-size: 11px;">📋 የWithdraw ጥያቄዎች</label>
-        <div id="withdrawPendingItems"></div>
       </div>
 
       <button class="btn-primary deposit-submit-btn" id="confirmWithdrawBtn">
