@@ -889,6 +889,7 @@
                 <th style="padding: 12px 14px;">Balance</th>
                 <th style="padding: 12px 14px;">Locked</th>
                 <th style="padding: 12px 14px;">የተመዘገበበት ቀን</th>
+                <th style="padding: 12px 14px;">ብር ጨምር</th>
               </tr>
             </thead>
             <tbody>
@@ -897,11 +898,14 @@
                 return `
                   <tr style="border-bottom: 1px solid #334155;">
                     <td style="padding: 10px 14px; color: #64748b; font-weight: 700;">${startIdx + idx + 1}</td>
-                    <td style="padding: 10px 14px; color: #f8fafc; font-weight: 700;">👤 ${u.name || 'Player'}</td>
-                    <td style="padding: 10px 14px; color: #cbd5e1;">${u.phone || '—'}</td>
+                    <td style="padding: 10px 14px; color: #f8fafc; font-weight: 700;">👤 ${escapeHtml(u.name || 'Player')}</td>
+                    <td style="padding: 10px 14px; color: #cbd5e1;">${escapeHtml(u.phone || '—')}</td>
                     <td style="padding: 10px 14px; color: #4ade80; font-weight: 800;">${(Number(u.balance) || 0).toLocaleString()} ETB</td>
                     <td style="padding: 10px 14px; color: #fbbf24; font-weight: 700;">${(Number(u.locked) || 0).toLocaleString()} ETB</td>
                     <td style="padding: 10px 14px; color: #94a3b8; font-size: 12px;">${dateStr}</td>
+                    <td style="padding: 10px 14px;">
+                      <button type="button" onclick="creditUser('${u.id}', '${escapeHtml(u.name || 'Player')}')" style="background: #10b981; color: #fff; border: none; padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: 800; cursor: pointer; white-space: nowrap;">+ ብር ጨምር</button>
+                    </td>
                   </tr>`;
               }).join('')}
             </tbody>
@@ -1241,6 +1245,35 @@
       navigator.clipboard.writeText(text).then(() => {
         showToast(`📋 ${text} ተኮርጅቷል!`);
       }).catch(() => {});
+    };
+
+    window.creditUser = async function(userId, userName) {
+      const amtStr = prompt(`ለ ${userName} ስንት ETB ማስገባት ይፈልጋሉ?`, '100');
+      if (amtStr === null) return;
+      const amt = Math.floor(Number(amtStr));
+      if (!Number.isFinite(amt) || amt < 1 || amt > 100000) {
+        alert('እባክዎ ትክክለኛ የብር መጠን ያስገቡ (1 - 100,000 ETB)');
+        return;
+      }
+      if (!confirm(`ለ ${userName} ${amt.toLocaleString()} ETB በቀጥታ ወደ balance ይጨመር?`)) return;
+
+      try {
+        const res = await fetch('/api/admin/user/credit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId, amount: amt, adminKey })
+        });
+        const data = await res.json();
+        if (data && data.success) {
+          showToast(`💰 ለ ${userName} ${amt.toLocaleString()} ETB ተጨምሯል!`);
+          loadUsers();
+          loadDeposits();
+        } else {
+          alert(`ስህተት፡ ${(data && data.message) || 'Error'}`);
+        }
+      } catch (e) {
+        alert('የኔትወርክ ስህተት ተከስቷል');
+      }
     };
 
     window.approveDeposit = async function(id) {

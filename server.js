@@ -410,6 +410,47 @@ app.post('/api/admin/login', rateLimit(10, 60000), (req, res) => {
   return res.status(401).json({ success: false, message: 'Invalid admin username or password' });
 });
 
+// Admin: Direct Credit / Deposit to a user without pending request
+app.post('/api/admin/user/credit', async (req, res) => {
+  const { userId, amount, adminKey, note } = req.body;
+  if (!isAdminAuthorized(adminKey)) {
+    return res.status(403).json({ success: false, message: 'Unauthorized. Invalid admin key.' });
+  }
+  const num = Number(amount);
+  if (!userId || !Number.isFinite(num) || !Number.isInteger(num) || num < 1 || num > 100000) {
+    return res.status(400).json({ success: false, message: 'እባክዎ ትክክለኛ የብር መጠን ያስገቡ (1 - 100,000 ETB ሙሉ ቁጥር)' });
+  }
+
+  try {
+    const loaded = await walletManager.getWalletAsync(userId);
+    if (!loaded || walletManager._isBot(userId)) {
+      return res.status(404).json({ success: false, message: 'ተጫዋቹ አልተገኘም' });
+    }
+
+    const wallet = walletManager.deposit(userId, num);
+    const txnId = 'ADMIN_' + Date.now().toString().slice(-6);
+    const deposit = await depositManager.createDeposit({
+      userId,
+      userName: loaded.name || '',
+      userPhone: loaded.phone || '',
+      amount: num,
+      method: 'admin',
+      transactionId: txnId
+    });
+    await depositManager.approveDeposit(deposit.id, (note || '').trim() || 'Direct credit by Admin');
+
+    io.emit(`wallet_${userId}`, wallet);
+    broadcastWallet(userId);
+    io.emit(`deposit_approved_${userId}`, { amount: num, transactionId: txnId, depositId: deposit.id });
+    io.emit('deposit_status_changed', { id: deposit.id, status: 'APPROVED' });
+
+    res.json({ success: true, wallet, deposit });
+  } catch (err) {
+    console.error('[Admin Credit] Error:', err.message);
+    res.status(400).json({ success: false, message: err.message });
+  }
+});
+
 // Admin: List pending deposits
 // Admin: Get all registered users and their balances
 app.get('/api/admin/users', async (req, res) => {
