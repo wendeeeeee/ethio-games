@@ -2048,12 +2048,23 @@ if (confirmWithdrawBtn) {
       return;
     }
 
-    if (acc.length < 6) {
+    if (selectedWithdrawMethod === 'telebirr' ? acc.length < 9 : acc.length < 6) {
       if (withdrawErrorMsg) {
-        withdrawErrorMsg.textContent = '⚠️ እባክዎ ትክክለኛ ስልክ ቁጥር ወይም የባንክ አካውንት ያስገቡ';
+        withdrawErrorMsg.textContent = selectedWithdrawMethod === 'cbe'
+          ? '⚠️ እባክዎ ትክክለኛ የCBE አካውንት ቁጥር ያስገቡ'
+          : '⚠️ እባክዎ ትክክለኛ የቴሌብር ስልክ ቁጥር ያስገቡ';
         withdrawErrorMsg.style.display = 'block';
       }
       if (withdrawAccountInput) withdrawAccountInput.focus();
+      return;
+    }
+
+    if (accName.length < 2) {
+      if (withdrawErrorMsg) {
+        withdrawErrorMsg.textContent = '⚠️ እባክዎ የአካውንት/ስልክ ባለቤት ሙሉ ስም ያስገቡ (ግድ ነው)';
+        withdrawErrorMsg.style.display = 'block';
+      }
+      if (withdrawAccountNameInput) withdrawAccountNameInput.focus();
       return;
     }
 

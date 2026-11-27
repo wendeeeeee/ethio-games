@@ -165,11 +165,18 @@ app.post('/api/wallet/withdraw', rateLimit(10, 60000), async (req, res) => {
       message: `ዝቅተኛው የማውጫ መጠን ${MIN_WITHDRAW_ETB} ETB ነው (ከ ${MIN_WITHDRAW_ETB} እስከ 50,000 ETB ሙሉ ቁጥር)`
     });
   }
-  const cleanAcc = String(accountNumber || '').trim();
-  if (cleanAcc.length < 6) {
-    return res.status(400).json({ success: false, message: 'እባክዎ ትክክለኛ ስልክ ቁጥር ወይም የባንክ አካውንት ያስገቡ' });
-  }
   const cleanMethod = method === 'cbe' ? 'cbe' : 'telebirr';
+  const cleanAcc = String(accountNumber || '').trim();
+  const cleanAccName = String(accountName || '').trim();
+  if (cleanMethod === 'telebirr' && cleanAcc.length < 9) {
+    return res.status(400).json({ success: false, message: 'እባክዎ ትክክለኛ የቴሌብር ስልክ ቁጥር ያስገቡ' });
+  }
+  if (cleanAcc.length < 6) {
+    return res.status(400).json({ success: false, message: 'እባክዎ ትክክለኛ ስልክ ቁጥር ወይም የCBE አካውንት ቁጥር ያስገቡ' });
+  }
+  if (cleanAccName.length < 2) {
+    return res.status(400).json({ success: false, message: 'እባክዎ የአካውንት/ስልክ ባለቤት ሙሉ ስም ያስገቡ (ግድ ነው)' });
+  }
 
   try {
     // Sync wallet from DB first so balance is accurate even after server restart, and verify user is registered
@@ -194,7 +201,7 @@ app.post('/api/wallet/withdraw', rateLimit(10, 60000), async (req, res) => {
         amount: num,
         method: cleanMethod,
         accountNumber: cleanAcc,
-        accountName: String(accountName || '').trim()
+        accountName: cleanAccName
       });
     } catch (createErr) {
       // Refund if creating the withdraw record fails
