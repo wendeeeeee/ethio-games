@@ -531,8 +531,10 @@ class GameRoom {
     // Conquer Win Condition: All 13 cards melded onto table (via ወረድ + ገቢ) and final 14th card discarded -> WIN!
     if (hand.length === 0) {
       const discardedIsJoker = Boolean(
-        discardedCard.isJoker ||
-        (this.jokerRank && discardedCard.rank === this.jokerRank && (!this.jokerSuits || this.jokerSuits.includes(discardedCard.suit)))
+        !discardedCard.isFalseJoker && (
+          discardedCard.isJoker ||
+          (this.jokerRank && discardedCard.rank === this.jokerRank && (!this.jokerSuits || this.jokerSuits.includes(discardedCard.suit)))
+        )
       );
       const hasDubeMelds = (this.tableMelds[playerId] || []).some(m => Array.isArray(m) && m.length === 2);
       const isDouble = (this.jokerDouble && discardedIsJoker) || (this.dubeDouble && hasDubeMelds);
@@ -579,8 +581,10 @@ class GameRoom {
       }
 
       const discardedIsJoker = Boolean(
-        discardedCard.isJoker ||
-        (this.jokerRank && discardedCard.rank === this.jokerRank && (!this.jokerSuits || this.jokerSuits.includes(discardedCard.suit)))
+        !discardedCard.isFalseJoker && (
+          discardedCard.isJoker ||
+          (this.jokerRank && discardedCard.rank === this.jokerRank && (!this.jokerSuits || this.jokerSuits.includes(discardedCard.suit)))
+        )
       );
       const isDouble = (this.jokerDouble && discardedIsJoker) || (this.dubeDouble && !!dubeResult);
       this.doubleWin = isDouble;
