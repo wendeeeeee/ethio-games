@@ -5286,15 +5286,12 @@ function getResponsiveFanGeometry(totalCards) {
   let spacing = 28;
 
   if (w <= 375) {
-    // iPhone Mini & SE (width <= 375px):
-    // 10 card gaps * 20px = 200px + 46px card width = 246px.
-    // Leaves > 64px safety margin inside 375px! 100% visible, zero clipping!
-    maxAngle = 16;
-    spacing = Math.min(21, Math.max(15, Math.floor(220 / count)));
+    maxAngle = 14;
+    spacing = Math.min(22, Math.max(16, Math.floor(245 / count)));
   } else if (w <= 480) {
     // Standard Mobile (376px - 480px)
-    maxAngle = 22;
-    spacing = Math.min(25, Math.max(17, Math.floor(260 / count)));
+    maxAngle = 18;
+    spacing = Math.min(26, Math.max(18, Math.floor(285 / count)));
   } else if (w <= 768) {
     // Tablets / Large Phones (481px - 768px)
     maxAngle = 28;

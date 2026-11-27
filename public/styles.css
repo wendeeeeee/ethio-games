@@ -2829,23 +2829,24 @@ select:focus {
   }
 
   .fan .card {
-    width: 48px !important;
-    height: 70px !important;
-    left: -24px !important;
-    padding: 2px 3px;
-    transform-origin: center 130px !important;
+    width: 58px !important;
+    height: 84px !important;
+    left: -29px !important;
+    padding: 3px 4px;
+    transform-origin: center 135px !important;
   }
 
   .fan .card .corner-rank {
-    font-size: 11px;
+    font-size: 15px !important;
+    font-weight: 900 !important;
   }
 
   .fan .card .corner-suit {
-    font-size: 10px;
+    font-size: 13px !important;
   }
 
   .fan .card .card-center-suit {
-    font-size: 18px;
+    font-size: 24px !important;
   }
 
   /* Controls */
@@ -3215,9 +3216,9 @@ select:focus {
     min-width: 140px;
   }
 
-  /* Cards in Hand Fan - Elevated comfortably up from bottom for phone screens */
+  /* Cards in Hand Fan - Larger, bolder, and elevated comfortably for phone screens */
   .fan-container {
-    height: 128px;
+    height: 142px;
     margin: 0;
     padding: 0;
     position: relative;
@@ -3228,36 +3229,37 @@ select:focus {
   .fan {
     position: absolute;
     left: 50%;
-    bottom: 28px;
+    bottom: 24px;
   }
 
   .fan .card {
-    width: 48px !important;
-    height: 70px !important;
-    left: -24px !important;
-    border-radius: 6px !important;
-    padding: 3px 4px !important;
-    transform-origin: center 130px !important;
-    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.45) !important;
+    width: 56px !important;
+    height: 82px !important;
+    left: -28px !important;
+    border-radius: 7px !important;
+    padding: 3px 5px !important;
+    border: 1.5px solid rgba(15, 23, 42, 0.25) !important;
+    transform-origin: center 135px !important;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5) !important;
   }
 
   .fan .card .corner-rank {
-    font-size: 13px !important;
+    font-size: 15px !important;
     font-weight: 900 !important;
     line-height: 1 !important;
   }
 
   .fan .card .corner-suit {
-    font-size: 11px !important;
+    font-size: 13px !important;
     margin-top: 1px !important;
   }
 
   .fan .card .card-center-suit {
-    font-size: 20px !important;
+    font-size: 23px !important;
   }
 
   .fan .card .card-corner {
-    width: 14px !important;
+    width: 17px !important;
   }
 
   .fan .card .card-joker-star {
