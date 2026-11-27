@@ -2134,15 +2134,19 @@ select:focus {
 
 @media (max-width: 768px) {
   .table-melds-area {
-    max-height: none;
-    overflow: visible;
+    max-height: 22vh;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    flex-shrink: 0;
     margin: 2px 4px;
     padding: 2px 4px;
   }
 
   .table-melds-area.multi-player-melds {
-    max-height: none;
-    overflow: visible;
+    max-height: 22vh;
+    overflow-y: auto;
+    overflow-x: hidden;
   }
 
   .table-melds-area.multi-player-melds .card {
@@ -3215,7 +3219,7 @@ select:focus {
   /* Center Field: Stock & Discard */
   .center-field {
     flex: 1 1 auto;
-    min-height: 0;
+    min-height: 95px;
     gap: 16px;
     margin: 0;
     align-items: center;

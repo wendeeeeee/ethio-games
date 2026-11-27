@@ -675,7 +675,7 @@ io.on('connection', (socket) => {
     socketPlayerMap.set(socket.id, { userId, name, roomId });
 
     socket.join(roomId);
-    socket.emit('room_created', { roomId, expiresAt: room.expiresAt });
+    socket.emit('room_created', { roomId, expiresAt: room.expiresAt, expiresIn: 60 });
     io.emit('rooms_updated');
     broadcastRoomUpdate(room);
   });
@@ -695,10 +695,46 @@ io.on('connection', (socket) => {
     }
   });
 
+  // Helper: cancel any WAITING room created by userId before they join another room, and block if already PLAYING
+  function prepareUserToJoinRoom(userId, targetRoomId) {
+    for (const [rId, r] of rooms.entries()) {
+      if (rId === targetRoomId) continue;
+      if (r.status === 'PLAYING' && r.players && r.players.some(p => p.id === userId) && !r.eliminatedPlayers?.has(userId)) {
+        return { blocked: true, message: '⚠️ መጀመሪያ የጀመርከውን Conquer ጨዋታ ጨርስ!' };
+      }
+      if (r.status === 'WAITING' && r.creator && r.creator.id === userId) {
+        if (r.expireTimeout) clearTimeout(r.expireTimeout);
+        r.status = 'EXPIRED';
+        walletManager.refundEscrow(r.roomId);
+        io.to(rId).emit('room_expired', { roomId: rId, message: 'ℹ️ ሌላ ጨዋታ ስለገባህ የፈጠርከው ጨዋታ ተሰርዟል።' });
+        rooms.delete(rId);
+        io.emit('rooms_updated');
+      }
+    }
+    for (const [rId, r] of sekaRooms.entries()) {
+      if (rId === targetRoomId) continue;
+      if (r.status === 'PLAYING' && r.players && r.players.some(p => p.id === userId)) {
+        return { blocked: true, message: '⚠️ መጀመሪያ የጀመርከውን Seka ጨዋታ ጨርስ!' };
+      }
+      if (r.status === 'WAITING' && r.creator && r.creator.id === userId) {
+        if (r.expireTimeout) clearTimeout(r.expireTimeout);
+        r.status = 'EXPIRED';
+        walletManager.refundEscrow(r.roomId);
+        io.to(rId).emit('room_expired', { roomId: rId, message: 'ℹ️ ሌላ ጨዋታ ስለገባህ የፈጠርከው ጨዋታ ተሰርዟል።' });
+        sekaRooms.delete(rId);
+        io.emit('rooms_updated');
+      }
+    }
+    return { blocked: false };
+  }
+
   // Join Table
   socket.on('join_room', ({ roomId, userId, name }) => {
     const room = rooms.get(roomId);
     if (!room || room.status === 'EXPIRED') return socket.emit('error_msg', 'Room expired or not found');
+
+    const prep = prepareUserToJoinRoom(userId, roomId);
+    if (prep.blocked) return socket.emit('error_msg', prep.message);
 
     const userWallet = walletManager.getWallet(userId);
     const requiredBalance = room.doubleEnabled ? room.stakeAmount * 2 : room.stakeAmount;
@@ -945,7 +981,7 @@ io.on('connection', (socket) => {
     socketPlayerMap.set(socket.id, { userId, name, roomId, gameType: 'SEKA' });
 
     socket.join(roomId);
-    socket.emit('seka_room_created', { roomId, expiresAt: room.expiresAt, stakeAmount: room.stakeAmount });
+    socket.emit('seka_room_created', { roomId, expiresAt: room.expiresAt, expiresIn: 60, stakeAmount: room.stakeAmount });
     broadcastSekaRoomUpdate(room);
     io.emit('rooms_updated');
   });
@@ -954,6 +990,9 @@ io.on('connection', (socket) => {
   socket.on('join_seka_room', ({ roomId, userId, name }) => {
     const room = sekaRooms.get(roomId);
     if (!room || room.status === 'EXPIRED') return socket.emit('error_msg', 'Seka room expired or not found');
+
+    const prep = prepareUserToJoinRoom(userId, roomId);
+    if (prep.blocked) return socket.emit('error_msg', prep.message);
 
     const stake = room.stakeAmount || 100;
     const requiredBalance = room.doubleEnabled ? stake * 2 : stake;

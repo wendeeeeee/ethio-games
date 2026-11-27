@@ -1364,7 +1364,7 @@ socket.on('game_state', (state) => {
 let waitingCountdownTimer = null;
 let currentWaitingRoomId = null;
 
-function showWaitingForOpponentModal(roomId, expiresAt, stakeAmount) {
+function showWaitingForOpponentModal(roomId, expiresAt, stakeAmount, expiresIn) {
   currentWaitingRoomId = roomId;
   localStorage.setItem('conquer_active_room_id', roomId);
   const modal = document.getElementById('waitingForOpponentModal');
@@ -1377,7 +1377,8 @@ function showWaitingForOpponentModal(roomId, expiresAt, stakeAmount) {
   if (modal) modal.style.display = 'flex';
 
   if (waitingCountdownTimer) clearInterval(waitingCountdownTimer);
-  const targetEnd = expiresAt || (Date.now() + 60 * 1000);
+  const durationMs = typeof expiresIn === 'number' && expiresIn > 0 ? expiresIn * 1000 : 60 * 1000;
+  const targetEnd = Date.now() + durationMs;
 
   function updateTimer() {
     const remaining = Math.max(0, Math.round((targetEnd - Date.now()) / 1000));

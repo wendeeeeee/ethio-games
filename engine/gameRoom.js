@@ -767,6 +767,8 @@ class GameRoom {
       this.mustMeld41PlayerId = playerId;
     }
 
+    this.resetPoke();
+    this.resetTurnTimer();
     this.log(`📥 ${this.getPlayerName(playerId)} ወረደ (ወደ ጠረጴዛ አወረደ): ${meldPoints} ነጥብ!`);
     return { success: true, meldPoints, melds: meldsToLayDown };
   }
