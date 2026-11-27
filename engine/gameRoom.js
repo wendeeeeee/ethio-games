@@ -448,9 +448,14 @@ class GameRoom {
     let drawnCard = null;
 
     if (source === 'deck') {
-      const reshuffled = this.checkAndReshuffleIfNeeded();
+      const reshuffledBefore = this.checkAndReshuffleIfNeeded();
       drawnCard = this.deck.pop();
+      if (!drawnCard) {
+        return { success: false, message: 'ዴኩም መሬቱም ባዶ ነው!' };
+      }
       hand.push(drawnCard);
+      const reshuffledAfter = this.checkAndReshuffleIfNeeded();
+      const reshuffled = reshuffledBefore || reshuffledAfter;
       this.turnState = 'AWAITING_DISCARD';
       this.resetPoke();
       this.resetTurnTimer();
