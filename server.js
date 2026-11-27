@@ -723,7 +723,7 @@ function recordRecentWinner(room, gameType) {
   if (!room || room.status !== 'FINISHED' || room._winnerRecorded) return;
   room._winnerRecorded = true;
   const winnerId = (room.winner && typeof room.winner === 'object') ? room.winner.id : room.winner;
-  if (!winnerId) return;
+  if (!winnerId || winnerId === 'MONTE') return;
   const players = room.players || [room.creator, room.joiner].filter(Boolean);
   const wObj = players.find(p => p && p.id === winnerId);
   const winnerName = (room.winner && typeof room.winner === 'object' && room.winner.name)

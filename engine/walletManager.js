@@ -839,6 +839,43 @@ class WalletManager {
     this.escrows.delete(roomId);
   }
 
+  // Monte settlement: 5% platform fee deducted from each player's base stake, 95% (+ any 2x double lock) refunded
+  settleMonte(roomId, feeRate = 0.05) {
+    const escrow = this.escrows.get(roomId);
+    if (!escrow) return null;
+
+    const lockPerPlayer = escrow.lockPerPlayer || escrow.stakeAmount;
+    const feePerPlayer = Math.floor(escrow.stakeAmount * feeRate);
+    const refundPerPlayer = Math.max(0, lockPerPlayer - feePerPlayer);
+    const playerIds = escrow.playerIds || [escrow.player1Id, escrow.player2Id].filter(Boolean);
+
+    for (const pid of playerIds) {
+      const pWallet = this.getWallet(pid);
+      pWallet.balance += refundPerPlayer;
+      pWallet.locked = Math.max(0, pWallet.locked - lockPerPlayer);
+      pWallet.transactions.push({
+        type: 'MONTE_REFUND',
+        amount: refundPerPlayer,
+        fee: feePerPlayer,
+        roomId,
+        date: new Date().toISOString()
+      });
+      if (!this._isBot(pid)) {
+        this._saveBalanceToDb(pid);
+        supabase.from('transactions').insert({
+          user_id: pid,
+          type: 'MONTE_REFUND',
+          amount: refundPerPlayer,
+          room_id: roomId,
+          description: `Monte settlement: refunded ${refundPerPlayer} ETB (5% fee: ${feePerPlayer} ETB) for game ${roomId}`
+        }).then(() => { }).catch(() => { });
+      }
+    }
+
+    this.escrows.delete(roomId);
+    return { feePerPlayer, refundPerPlayer, stakeAmount: escrow.stakeAmount };
+  }
+
   async getAllUsersForAdmin() {
     const byId = new Map();
 

@@ -26,6 +26,7 @@ class SekaGameRoom {
 
     this.deck = [];
     this.discardPile = [];
+    this.reshuffleCount = 0;
 
     this.hands = { [creator.id]: [] };
     this.creatorHand = [];
@@ -257,22 +258,47 @@ class SekaGameRoom {
       // Free ground draw in Seka (no 41 restriction)
       drawnCard = this.discardPile.pop();
     } else {
-      // Draw from deck
+      // Draw from deck (1 reshuffle allowed; 2nd time deck empties -> MONTE with 5% fee)
       if (this.deck.length === 0) {
-        if (this.discardPile.length <= 1) {
-          return { success: false, message: 'በቂ ካርታ የለም!' };
+        if (this.reshuffleCount >= 1 || this.discardPile.length <= 1) {
+          this.status = 'FINISHED';
+          this.winner = 'MONTE';
+          this.winReason = 'MONTE';
+          const monteRes = walletManager.settleMonte(this.roomId, 0.05);
+          this.clearAllTimers();
+          this.log(
+            monteRes
+              ? `🃏 ሞንቴ (MONTE)! ካርታው ለ2ኛ ጊዜ ስላለቀ ጨዋታው ሞንቴ ሆኗል — 5% (${monteRes.feePerPlayer} ETB) ተቀንሶ ${monteRes.refundPerPlayer} ETB ተመልሷል።`
+              : '🃏 ሞንቴ (MONTE)! ካርታው ለ2ኛ ጊዜ ስላለቀ ጨዋታው ሞንቴ ሆኗል።'
+          );
+          return { success: true, isMonte: true };
         }
-        // Reshuffle discard pile keeping top card
+        // Reshuffle discard pile once keeping top card
         const topDiscard = this.discardPile.pop();
         this.deck = shuffleDeck([...this.discardPile]);
         this.discardPile = [topDiscard];
-        this.log('🔄 የካርታ መደብ አልቆ ከመሬት ተደባልቆ አዲስ መደብ ተሰራ።');
+        this.reshuffleCount += 1;
+        this.log('🔄 የካርታ መደብ አልቆ ከመሬት ተደባልቆ 1 ጊዜ ተመቷል።');
       }
       drawnCard = this.deck.pop();
     }
 
     const hand = this.getHand(playerId);
     hand.push(drawnCard);
+
+    if (source === 'deck' && this.deck.length === 0 && (this.reshuffleCount >= 1 || this.discardPile.length <= 1)) {
+      this.status = 'FINISHED';
+      this.winner = 'MONTE';
+      this.winReason = 'MONTE';
+      const monteRes = walletManager.settleMonte(this.roomId, 0.05);
+      this.clearAllTimers();
+      this.log(
+        monteRes
+          ? `🃏 ሞንቴ (MONTE)! ካርታው ለ2ኛ ጊዜ ስላለቀ ጨዋታው ሞንቴ ሆኗል — 5% (${monteRes.feePerPlayer} ETB) ተቀንሶ ${monteRes.refundPerPlayer} ETB ተመልሷል።`
+          : '🃏 ሞንቴ (MONTE)! ካርታው ለ2ኛ ጊዜ ስላለቀ ጨዋታው ሞንቴ ሆኗል።'
+      );
+      return { success: true, card: drawnCard, from: source, isMonte: true };
+    }
 
     this.turnState = 'AWAITING_DISCARD';
     const playerObj = this.players.find(p => p.id === playerId);

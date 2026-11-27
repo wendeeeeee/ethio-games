@@ -3641,10 +3641,21 @@ function buildChainsFromCards(cards) {
       }
     }
     if (bestChain && bestConn > 0) {
-      if (bestIdx < bestChain.length / 2) {
+      if (bestIdx === 0) {
         bestChain.unshift(cand);
-      } else {
+      } else if (bestIdx === bestChain.length - 1) {
         bestChain.push(cand);
+      } else {
+        // Target card is interior in a same-rank set: move it to the edge so cand (e.g. False Joker) sits right beside it!
+        const allSameRank = bestChain.every(c => c.rank === bestChain[0].rank);
+        if (allSameRank) {
+          const [targetCard] = bestChain.splice(bestIdx, 1);
+          bestChain.push(targetCard, cand);
+        } else if (bestIdx < bestChain.length / 2) {
+          bestChain.unshift(cand);
+        } else {
+          bestChain.push(cand);
+        }
       }
       remaining.delete(cand.id);
     }
@@ -4929,7 +4940,10 @@ function renderGame(state) {
       const potVal = Number(state.pot) || 0;
       const stakeVal = Number(state.stakeAmount) || 0;
       const netWinVal = potVal - Math.floor(Math.max(0, potVal - stakeVal) * 0.10);
-      if (state.winReason === 'TIMEOUT_FORFEIT') {
+      if (state.winReason === 'MONTE' || state.winner === 'MONTE') {
+        turnIndicator.textContent = `🃏 ሞንቴ (MONTE)! ካርታው ለ2ኛ ጊዜ ስላለቀ ጨዋታው አልቋል (5% ተቀንሶ 95% ተመልሷል)`;
+        turnIndicator.style.color = '#fbbf24';
+      } else if (state.winReason === 'TIMEOUT_FORFEIT') {
         turnIndicator.textContent = iWon
           ? `🏆 አሸንፈሃል! +${netWinVal.toLocaleString()} ETB (ተጋጣሚ 60s አልጣለም)`
           : `❌ በ 60 ሰከንድ ውስጥ ካርታ ስላልጣልክ ተሸንፈሃል! (አሸናፊ፦ ${winnerName})`;

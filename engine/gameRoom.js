@@ -36,6 +36,7 @@ class GameRoom {
 
     this.deck = [];
     this.discardPile = [];
+    this.reshuffleCount = 0;
     this.jokerCard = null;
     this.jokerRank = null;
 
@@ -455,12 +456,18 @@ class GameRoom {
 
     if (source === 'deck') {
       const reshuffledBefore = this.checkAndReshuffleIfNeeded();
+      if (reshuffledBefore === 'MONTE') {
+        return { success: true, isMonte: true };
+      }
       drawnCard = this.deck.pop();
       if (!drawnCard) {
         return { success: false, message: 'ዴኩም መሬቱም ባዶ ነው!' };
       }
       hand.push(drawnCard);
       const reshuffledAfter = this.checkAndReshuffleIfNeeded();
+      if (reshuffledAfter === 'MONTE') {
+        return { success: true, card: drawnCard, from: 'deck', isMonte: true };
+      }
       const reshuffled = reshuffledBefore || reshuffledAfter;
       this.turnState = 'AWAITING_DISCARD';
       this.resetPoke();
@@ -778,14 +785,28 @@ class GameRoom {
     return elimRes;
   }
 
-  // Rule 7: Reshuffle when deck empties (No Draw/Tie)
+  // Rule 7: Reshuffle ONCE when deck empties; 2nd time deck empties -> MONTE (5% fee deducted, 95% refunded)
   checkAndReshuffleIfNeeded() {
     if (this.deck.length === 0) {
-      if (this.discardPile.length <= 1) return false;
+      if (this.reshuffleCount >= 1 || this.discardPile.length <= 1) {
+        this.status = 'FINISHED';
+        this.winner = 'MONTE';
+        this.winReason = 'MONTE';
+        const monteRes = walletManager.settleMonte(this.roomId, 0.05);
+        this.resetPoke();
+        this.clearAllTimers();
+        this.log(
+          monteRes
+            ? `🃏 ሞንቴ (MONTE)! ካርታው ለ2ኛ ጊዜ ስላለቀ ጨዋታው ሞንቴ ሆኗል — 5% (${monteRes.feePerPlayer} ETB) ተቀንሶ ${monteRes.refundPerPlayer} ETB ተመልሷል።`
+            : '🃏 ሞንቴ (MONTE)! ካርታው ለ2ኛ ጊዜ ስላለቀ ጨዋታው ሞንቴ ሆኗል።'
+        );
+        return 'MONTE';
+      }
       const topGround = this.discardPile.pop();
       this.deck = shuffleDeck(this.discardPile);
       this.discardPile = [topGround];
-      this.log('🔄 Rule 7: Stock deck ran out! Reshuffled the ground cards to continue the game.');
+      this.reshuffleCount += 1;
+      this.log('🔄 Rule 7: Stock deck ran out! Reshuffled the ground cards once to continue the game.');
       return true;
     }
     return false;
