@@ -840,9 +840,10 @@ io.on('connection', (socket) => {
   // Leave Conquer Waiting Room
   socket.on('leave_room', ({ roomId, userId }) => {
     const room = rooms.get(roomId);
-    if (room && room.status === 'WAITING') {
+    if (room && room.status === 'WAITING' && (!room.creator || !userId || room.creator.id === userId)) {
       if (room.expireTimeout) clearTimeout(room.expireTimeout);
       walletManager.refundEscrow(room.roomId);
+      io.to(roomId).emit('room_expired', { roomId, message: '❌ ጨዋታው በፈጣሪው ተሰርዟል።' });
       rooms.delete(roomId);
       io.emit('rooms_updated');
       if (userId) broadcastWallet(userId);
@@ -1194,9 +1195,10 @@ io.on('connection', (socket) => {
 
   socket.on('leave_seka_room', ({ roomId, userId }) => {
     const room = sekaRooms.get(roomId);
-    if (room && room.status === 'WAITING') {
+    if (room && room.status === 'WAITING' && (!room.creator || !userId || room.creator.id === userId)) {
       if (room.expireTimeout) clearTimeout(room.expireTimeout);
       walletManager.refundEscrow(room.roomId);
+      io.to(roomId).emit('room_expired', { roomId, message: '❌ ጨዋታው በፈጣሪው ተሰርዟል።' });
       sekaRooms.delete(roomId);
       io.emit('rooms_updated');
       if (userId) broadcastWallet(userId);

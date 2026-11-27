@@ -2081,7 +2081,10 @@ async function refreshRoomsList() {
                 ${r.stakeAmount} ETB • ${r.playersCount || 1}/${r.maxPlayers || 2} ተጫዋች
               </div>
             </div>
-            <span class="waiting-countdown-badge" data-expires-at="${expAt}" style="font-size: 12px; color: #059669; font-weight: 700; background: #ffffff; padding: 4px 10px; border-radius: 16px; border: 1px solid #a7f3d0;">⏳ ${expSec}s</span>
+            <div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0;">
+              <span class="waiting-countdown-badge" data-expires-at="${expAt}" style="font-size: 12px; color: #059669; font-weight: 700; background: #ffffff; padding: 4px 10px; border-radius: 16px; border: 1px solid #a7f3d0;">⏳ ${expSec}s</span>
+              ${(r.playersCount || 1) <= 1 ? `<button type="button" style="width: auto; padding: 5px 10px; font-size: 12px; background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; border-radius: 10px; font-weight: 700; cursor: pointer;" onclick="cancelCreatedRoom('${r.roomId}')">❌ ሰርዝ</button>` : ''}
+            </div>
           </div>
         `;
       }
@@ -2122,7 +2125,10 @@ async function refreshSekaRoomsList() {
                 ${r.stakeAmount} ETB • ${r.playersCount || 1}/${r.maxPlayers || 2} ተጫዋች
               </div>
             </div>
-            <span class="waiting-countdown-badge" data-expires-at="${expAt}" style="font-size: 12px; color: #059669; font-weight: 700; background: #ffffff; padding: 4px 10px; border-radius: 16px; border: 1px solid #a7f3d0;">⏳ ${expSec}s</span>
+            <div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0;">
+              <span class="waiting-countdown-badge" data-expires-at="${expAt}" style="font-size: 12px; color: #059669; font-weight: 700; background: #ffffff; padding: 4px 10px; border-radius: 16px; border: 1px solid #a7f3d0;">⏳ ${expSec}s</span>
+              ${(r.playersCount || 1) <= 1 ? `<button type="button" style="width: auto; padding: 5px 10px; font-size: 12px; background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; border-radius: 10px; font-weight: 700; cursor: pointer;" onclick="cancelCreatedRoom('${r.roomId}')">❌ ሰርዝ</button>` : ''}
+            </div>
           </div>
         `;
       } else {
