@@ -378,6 +378,85 @@
       display: none;
       z-index: 200;
     }
+
+    @media (max-width: 640px) {
+      header {
+        padding: 10px 12px;
+        gap: 8px;
+      }
+      .header-logo {
+        font-size: 15px;
+      }
+      .header-actions {
+        gap: 6px;
+      }
+      .btn-secondary {
+        padding: 6px 10px;
+        font-size: 11px;
+      }
+      .container {
+        padding: 12px 10px;
+      }
+      .stats-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+        margin-bottom: 14px;
+      }
+      .stat-card {
+        padding: 10px 8px;
+        border-radius: 12px;
+      }
+      .stat-label {
+        font-size: 10px;
+      }
+      .stat-val {
+        font-size: 16px;
+      }
+      .tabs-bar {
+        display: flex;
+        overflow-x: auto;
+        flex-wrap: nowrap;
+        gap: 6px;
+        padding-bottom: 4px;
+        -webkit-overflow-scrolling: touch;
+      }
+      .tab-btn {
+        white-space: nowrap;
+        flex-shrink: 0;
+        padding: 8px 12px;
+        font-size: 12px;
+      }
+      .deposit-card {
+        padding: 14px 12px;
+        gap: 10px;
+      }
+      .user-name {
+        font-size: 15px;
+      }
+      .amount-badge {
+        font-size: 15px;
+        padding: 5px 10px;
+      }
+      .card-txn-row {
+        padding: 8px 10px;
+        flex-wrap: wrap;
+      }
+      .txn-text {
+        font-size: 12px;
+      }
+      .card-actions {
+        flex-direction: column;
+        gap: 8px;
+      }
+      .btn-approve, .btn-reject {
+        width: 100%;
+        padding: 10px;
+        font-size: 13px;
+      }
+      .auth-card {
+        padding: 22px 16px;
+      }
+    }
   </style>
 </head>
 <body>

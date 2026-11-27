@@ -2945,12 +2945,14 @@ select:focus {
   }
 
   .deposit-btn,
-  .withdraw-btn {
-    padding: 3px 6px !important;
-    font-size: 9.5px !important;
+  .withdraw-btn,
+  .header-login-btn,
+  .header-signup-btn {
+    padding: 4px 9px !important;
+    font-size: 10.5px !important;
     font-weight: 700 !important;
     white-space: nowrap !important;
-    border-radius: 12px !important;
+    border-radius: 14px !important;
     flex-shrink: 0 !important;
   }
 
@@ -3651,14 +3653,33 @@ body.in-game .user-profile-badge {
   color: #fcd34d;
 }
 
-/* Header Sign Up Button */
+/* Header Login & Sign Up Buttons */
+.header-login-btn {
+  background: #f1f5f9;
+  color: #0f172a;
+  border: 1px solid #cbd5e1;
+  border-radius: 20px;
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.2s;
+}
+
+.header-login-btn:hover {
+  background: #e2e8f0;
+}
+
 .header-signup-btn {
   background: linear-gradient(135deg, #10b981, #059669);
   color: #ffffff;
-  border: 1.5px solid #34d399;
+  border: 1px solid #34d399;
   border-radius: 20px;
-  padding: 6px 14px;
-  font-size: 13px;
+  padding: 5px 12px;
+  font-size: 12px;
   font-weight: 800;
   cursor: pointer;
   display: inline-flex;
