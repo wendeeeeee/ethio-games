@@ -12,6 +12,7 @@ const {
   isCardGebiToMeld,
   getJokerReplacementOptions,
   sortMeldCards,
+  isValidDubePair,
   findDubeWin,
   getMeldPoints
 } = require('./conquerRules');
@@ -533,7 +534,8 @@ class GameRoom {
         discardedCard.isJoker ||
         (this.jokerRank && discardedCard.rank === this.jokerRank && (!this.jokerSuits || this.jokerSuits.includes(discardedCard.suit)))
       );
-      const isDouble = this.jokerDouble && discardedIsJoker;
+      const hasDubeMelds = (this.tableMelds[playerId] || []).some(m => Array.isArray(m) && m.length === 2);
+      const isDouble = (this.jokerDouble && discardedIsJoker) || (this.dubeDouble && hasDubeMelds);
       this.doubleWin = isDouble;
 
       this.mustMeld41PlayerId = null;
@@ -704,8 +706,9 @@ class GameRoom {
 
     let meldPoints = 0;
     for (const group of meldsToLayDown) {
-      if (!isValidConquerMeld(group, this.jokerRank, this.jokerSuits)) {
-        return { success: false, message: 'ያልተሟላ ወይም የተሳሳተ ትሪስ ነው!' };
+      const isDubePair = Array.isArray(group) && group.length === 2 && isValidDubePair(group[0], group[1], this.jokerRank, this.jokerSuits);
+      if (!isDubePair && !isValidConquerMeld(group, this.jokerRank, this.jokerSuits)) {
+        return { success: false, message: 'ያልተሟላ ወይም የተሳሳተ ትሪስ / ጥንድ ነው!' };
       }
       meldPoints += getMeldPoints(group, this.jokerRank, this.jokerSuits);
     }
@@ -738,7 +741,9 @@ class GameRoom {
         }
       }
       if (!this.tableMelds[playerId]) this.tableMelds[playerId] = [];
-      this.tableMelds[playerId].push(sortMeldCards(laidGroup, this.jokerRank, this.jokerSuits));
+      this.tableMelds[playerId].push(
+        laidGroup.length === 2 ? laidGroup : sortMeldCards(laidGroup, this.jokerRank, this.jokerSuits)
+      );
     }
 
     // Combined table melds + Gebi points toward 41 opening threshold

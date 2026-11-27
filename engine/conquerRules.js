@@ -684,6 +684,7 @@ module.exports = {
   isCardGebiToTable,
   getJokerReplacementOptions,
   sortMeldCards,
+  isValidDubePair,
   findDubeWin,
   getMeldPoints
 };

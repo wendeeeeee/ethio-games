@@ -2059,6 +2059,7 @@ if (playBotBtn) {
 
 // Fetch Active Rooms
 async function refreshRoomsList() {
+  refreshSekaRoomsList();
   try {
     const res = await fetch('/api/rooms');
     const rooms = await res.json();
@@ -2095,7 +2096,6 @@ async function refreshRoomsList() {
       `;
     }).join('');
   } catch (e) { }
-  refreshSekaRoomsList();
 }
 
 async function refreshSekaRoomsList() {
@@ -2421,13 +2421,36 @@ function handleWeredAction() {
     selectedCardsSet.has(String(c.id)) || selectedCardsSet.has(c.id)
   );
 
+  // Allow laying down a 2-card Dube pair (ጥንድ)
+  if (selectedCards.length === 2) {
+    const [c1, c2] = selectedCards;
+    const jk1 = isWildJoker(c1, currentGameState.jokerRank, currentGameState.jokerSuits);
+    const jk2 = isWildJoker(c2, currentGameState.jokerRank, currentGameState.jokerSuits);
+    const r1 = c1.isFalseJoker ? currentGameState.jokerRank : c1.rank;
+    const r2 = c2.isFalseJoker ? currentGameState.jokerRank : c2.rank;
+    const validPair = jk1 || jk2 || (r1 === r2 && c1.suit === c2.suit);
+    if (!validPair) {
+      showSortToast('⚠️ የተመረጠው ጥንድ (ዱቤ) ትክክል አይደለም! ተመሳሳይ ቁጥር እና ተመሳሳይ ምልክት መሆን አለበት (ወይም ጆከር)።');
+      return;
+    }
+    const pts = getMeldPointsClient(selectedCards, currentGameState.jokerRank, currentGameState.jokerSuits);
+    executeMeldDown([selectedCards], pts);
+    return;
+  }
+
   // If cards are already selected, try to meld them directly
   if (selectedCards.length >= 3) {
-    const validPartition = partitionIntoValidMelds(
+    let validPartition = partitionIntoValidMelds(
       selectedCards,
       currentGameState.jokerRank,
       currentGameState.jokerSuits
     );
+    if (!validPartition && selectedCards.length === 13) {
+      const dube = findDubeWinClient(selectedCards, currentGameState.jokerRank, currentGameState.jokerSuits);
+      if (dube) {
+        validPartition = [dube.tris, ...dube.pairs];
+      }
+    }
     if (!validPartition) {
       showSortToast('⚠️ የተመረጠው ትሪስ ትክክል አይደለም!');
       return;
@@ -2441,7 +2464,7 @@ function handleWeredAction() {
     return;
   }
 
-  showSortToast('👉 ለማውረድ ቢያንስ 1 ትሪስ (3 ካርታ) መርጠህ "ውረድ" ን ተጫን!');
+  showSortToast('👉 ለማውረድ ትሪስ (3+ ካርታ) ወይም የዱቤ ጥንድ (2 ተመሳሳይ ካርታ) መርጠህ "ውረድ" ን ተጫን!');
 }
 
 function getRankPointClient(rank) {
@@ -4641,8 +4664,14 @@ function renderGame(state) {
   tableIdDisplay.textContent = '';
   if (potDisplay) {
     const potVal = Number(state.pot) || 0;
-    if (potVal > 0) {
-      potDisplay.textContent = `💰 ደራሽ: ${potVal.toLocaleString()} ETB`;
+    const ruleTags = [];
+    if (state.jokerDouble) ruleTags.push('🃏 ጆከር 2×');
+    if (state.dubeDouble) ruleTags.push('👑 ዱቤ 2×');
+    const ruleSuffix = ruleTags.length > 0 ? ` • ${ruleTags.join(' • ')}` : '';
+    if (potVal > 0 || ruleTags.length > 0) {
+      potDisplay.textContent = potVal > 0
+        ? `💰 ደራሽ: ${potVal.toLocaleString()} ETB${ruleSuffix}`
+        : ruleTags.join(' • ');
       potDisplay.style.display = 'inline-flex';
     } else {
       potDisplay.textContent = '';
