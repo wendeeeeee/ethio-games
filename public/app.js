@@ -3748,6 +3748,15 @@ function buildChainsFromCards(cards) {
     const effRankOf = (c) => (isFalseJokerCard(c) && jRankSet ? jRankSet : c.rank);
     if (currentChain.length >= 3 && currentChain.every(c => effRankOf(c) === effRankOf(currentChain[0]))) {
       currentChain = orderSameRankSet(currentChain);
+    } else {
+      const nonFalseChain = currentChain.filter(c => !isFalseJokerCard(c));
+      if (nonFalseChain.length > 0 && nonFalseChain.every(c => c.suit === nonFalseChain[0].suit)) {
+        const hasA = currentChain.some(c => effRankOf(c) === 'A');
+        const hasHigh = currentChain.some(c => ['K', 'Q', 'J', '10'].includes(effRankOf(c)));
+        const hasLow = currentChain.some(c => ['2', '3'].includes(effRankOf(c)));
+        const aceHigh = hasA && hasHigh && !hasLow;
+        currentChain.sort((a, b) => getRankNum(effRankOf(a), aceHigh) - getRankNum(effRankOf(b), aceHigh));
+      }
     }
 
     chains.push(currentChain);
@@ -3790,6 +3799,15 @@ function buildChainsFromCards(cards) {
       if (bestChain.length >= 3 && bestChain.every(c => effRankAttach(c) === effRankAttach(bestChain[0]))) {
         const reordered = orderSameRankSet(bestChain);
         bestChain.splice(0, bestChain.length, ...reordered);
+      } else {
+        const nonFalseAttach = bestChain.filter(c => !isFalseJokerCard(c));
+        if (nonFalseAttach.length > 0 && nonFalseAttach.every(c => c.suit === nonFalseAttach[0].suit)) {
+          const hasA = bestChain.some(c => effRankAttach(c) === 'A');
+          const hasHigh = bestChain.some(c => ['K', 'Q', 'J', '10'].includes(effRankAttach(c)));
+          const hasLow = bestChain.some(c => ['2', '3'].includes(effRankAttach(c)));
+          const aceHigh = hasA && hasHigh && !hasLow;
+          bestChain.sort((a, b) => getRankNum(effRankAttach(a), aceHigh) - getRankNum(effRankAttach(b), aceHigh));
+        }
       }
       remaining.delete(cand.id);
     }
