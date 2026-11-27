@@ -2943,22 +2943,14 @@ discardBtn.addEventListener('click', () => {
   const remainingAfterDiscard = (currentGameState.myHand || []).filter(c => c.id !== cardToDiscard);
   const isLastCardWin = remainingAfterDiscard.length === 0;
 
-  let winningMelds = (currentGameState._winningMelds && currentGameState._winningMelds.length >= 3)
-    ? currentGameState._winningMelds
-    : null;
   let isDubeWin = false;
-  if (!winningMelds && remainingAfterDiscard.length === 13) {
-    const autoMelds = partitionIntoValidMelds(remainingAfterDiscard, currentGameState.jokerRank, currentGameState.jokerSuits);
-    if (autoMelds && autoMelds.length >= 3) {
-      winningMelds = autoMelds;
-    } else {
-      const hasAlreadyOpened = currentGameState.tableMelds && currentGameState.tableMelds[userId] && currentGameState.tableMelds[userId].length > 0;
-      if (!hasAlreadyOpened && findDubeWinClient(remainingAfterDiscard, currentGameState.jokerRank, currentGameState.jokerSuits)) {
-        isDubeWin = true;
-      }
+  if (remainingAfterDiscard.length === 13) {
+    const hasAlreadyOpened = currentGameState.tableMelds && currentGameState.tableMelds[userId] && currentGameState.tableMelds[userId].length > 0;
+    if (!hasAlreadyOpened && findDubeWinClient(remainingAfterDiscard, currentGameState.jokerRank, currentGameState.jokerSuits)) {
+      isDubeWin = true;
     }
   }
-  const isWinningHand = !!winningMelds || isDubeWin || isLastCardWin;
+  const isWinningHand = isDubeWin || isLastCardWin;
 
   // If user drew from ground without having opened, they must close & win (or reach 41)
   if (currentGameState.mustMeld41 && !isWinningHand) {
@@ -2987,8 +2979,8 @@ discardBtn.addEventListener('click', () => {
     roomId: currentRoomId,
     userId,
     cardId: cardToDiscard,
-    toGebi: !!winningMelds || isDubeWin,
-    melds: winningMelds
+    toGebi: isDubeWin,
+    melds: null
   });
   selectedCardsSet.clear();
   selectedCardId = null;
