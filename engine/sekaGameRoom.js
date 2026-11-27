@@ -163,11 +163,17 @@ class SekaGameRoom {
 
   join(player) {
     if (this.players.length >= this.maxPlayers) return { success: false, message: 'Room already full' };
+    if (this.players.some(p => p.id === player.id)) return { success: false, message: 'Already in room' };
     this.players.push(player);
     this.hands[player.id] = [];
     if (!this.joiner) this.joiner = player;
 
     if (this.players.length === this.maxPlayers) {
+      if (this.isFreeBot || this.stakeAmount <= 0) {
+        this.pot = 0;
+        this.startGame();
+        return { success: true, started: true };
+      }
       // Lock bets into Escrow
       const escrowResult = walletManager.lockEscrow(this.roomId, this.players.map(p => p.id), this.stakeAmount);
       if (!escrowResult.success) {
