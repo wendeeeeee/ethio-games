@@ -4679,11 +4679,11 @@ function renderGame(state) {
       const style = o.eliminated
         ? 'text-decoration: line-through; color: #f87171;'
         : (isTurn ? 'color: #fef08a; font-weight: 900; background: rgba(245, 158, 11, 0.2); padding: 2px 6px; border-radius: 6px;' : '');
-      const statusText = o.eliminated ? '❌ ተሸንፏል' : `${isTurn ? '🔥 ተራ • ' : ''}${o.handCount} ካርታ`;
+      const statusText = o.eliminated ? '❌ ተሸንፏል' : `${isTurn ? '🔥 ተራ • ' : ''}${o.handCount ?? o.cardCount ?? 0} ካርታ`;
       return `<span style="margin-right: 8px; ${style}">${o.name} (${statusText})</span>`;
     }).join(' • ');
     const activeOpp = state.opponents.find(o => o.id === state.currentTurnPlayerId) || state.opponents.find(o => !o.eliminated) || state.opponents[0];
-    oppCount = activeOpp ? activeOpp.handCount : 0;
+    oppCount = activeOpp ? (activeOpp.handCount ?? activeOpp.cardCount ?? 0) : 0;
   } else {
     const oppName = state.opponentName || (state.creator && state.creator.id !== userId ? state.creator.name : (state.joiner && state.joiner.id !== userId ? state.joiner.name : 'Opponent'));
     opponentNameDisplay.textContent = oppName;
