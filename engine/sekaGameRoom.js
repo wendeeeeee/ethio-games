@@ -327,27 +327,13 @@ class SekaGameRoom {
     const hand = this.getHand(playerId);
     hand.push(drawnCard);
 
-    if (source === 'deck' && this.deck.length === 0) {
-      if (this.reshuffleCount === 0 && this.discardPile.length > 1) {
-        // Immediately reshuffle discard pile into deck so deckCount never stays 0!
-        const topDiscard = this.discardPile.pop();
-        this.deck = shuffleDeck([...this.discardPile]);
-        this.discardPile = [topDiscard];
-        this.reshuffleCount += 1;
-        this.log('🔄 የካርታ መደብ አልቆ ከመሬት ተደባልቆ 1 ጊዜ ተመቷል።');
-      } else if (this.reshuffleCount >= 1 || this.discardPile.length <= 1) {
-        this.status = 'FINISHED';
-        this.winner = 'MONTE';
-        this.winReason = 'MONTE';
-        const monteRes = walletManager.settleMonte(this.roomId, 0.05);
-        this.clearAllTimers();
-        this.log(
-          monteRes
-            ? `🃏 ሞንቴ (MONTE)! ካርታው ለ2ኛ ጊዜ ስላለቀ ጨዋታው ሞንቴ ሆኗል — 5% (${monteRes.feePerPlayer} ETB) ተቀንሶ ${monteRes.refundPerPlayer} ETB ተመልሷል።`
-            : '🃏 ሞንቴ (MONTE)! ካርታው ለ2ኛ ጊዜ ስላለቀ ጨዋታው ሞንቴ ሆኗል።'
-        );
-        return { success: true, card: drawnCard, from: source, isMonte: true };
-      }
+    if (source === 'deck' && this.deck.length === 0 && this.reshuffleCount === 0 && this.discardPile.length > 1) {
+      // Immediately reshuffle discard pile on 1st pass so deckCount never stays 0; on 2nd pass let player try to close!
+      const topDiscard = this.discardPile.pop();
+      this.deck = shuffleDeck([...this.discardPile]);
+      this.discardPile = [topDiscard];
+      this.reshuffleCount += 1;
+      this.log('🔄 የካርታ መደብ አልቆ ከመሬት ተደባልቆ 1 ጊዜ ተመቷል።');
     }
 
     this.turnState = 'AWAITING_DISCARD';
@@ -385,6 +371,26 @@ class SekaGameRoom {
     const playerObj = this.players.find(p => p.id === playerId);
     const playerName = playerObj ? playerObj.name : 'Player';
     this.log(`📤 ${playerName} [ ${cardToDiscard.suit} ${cardToDiscard.rank} ] ወደ መሬት ጣለ።`);
+
+    // If deck was empty on 2nd pass and player failed to close before discarding -> MONTE!
+    if (this.deck.length === 0 && (this.reshuffleCount >= 1 || this.discardPile.length <= 1)) {
+      this.status = 'FINISHED';
+      this.winner = 'MONTE';
+      this.winReason = 'MONTE';
+      const monteRes = walletManager.settleMonte(this.roomId, 0.05);
+      this.clearAllTimers();
+      this.log(
+        monteRes
+          ? `🃏 ሞንቴ (MONTE)! የመጨረሻውን ካርታ አንስቶ ስላልዘጋ ጨዋታው ሞንቴ ሆኗል — 5% (${monteRes.feePerPlayer} ETB) ተቀንሶ ${monteRes.refundPerPlayer} ETB ተመልሷል።`
+          : '🃏 ሞንቴ (MONTE)! የመጨረሻውን ካርታ አንስቶ ስላልዘጋ ጨዋታው ሞንቴ ሆኗል።'
+      );
+      return {
+        success: true,
+        isWin: false,
+        isMonte: true,
+        discardedCard: cardToDiscard
+      };
+    }
 
     // Switch Turn (skip eliminated players)
     const nextP = this.getNextActivePlayer(playerId);

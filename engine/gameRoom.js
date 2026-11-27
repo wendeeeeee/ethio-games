@@ -462,9 +462,10 @@ class GameRoom {
         return { success: false, message: 'ዴኩም መሬቱም ባዶ ነው!' };
       }
       hand.push(drawnCard);
-      const reshuffledAfter = this.checkAndReshuffleIfNeeded();
-      if (reshuffledAfter === 'MONTE') {
-        return { success: true, card: drawnCard, from: 'deck', isMonte: true };
+      // Only reshuffle immediately on 1st pass; on 2nd pass let the player attempt to close/win before triggering Monte on discard!
+      let reshuffledAfter = false;
+      if (this.deck.length === 0 && this.reshuffleCount === 0 && this.discardPile.length > 1) {
+        reshuffledAfter = this.checkAndReshuffleIfNeeded();
       }
       const reshuffled = reshuffledBefore || reshuffledAfter;
       this.turnState = 'AWAITING_DISCARD';
@@ -640,6 +641,22 @@ class GameRoom {
     this.discardPile.push(discardedCard);
     this.discardsCount = (this.discardsCount || 0) + 1;
     this.log(`${this.getPlayerName(playerId)} discarded ${discardedCard.rank}${discardedCard.suit} to the ground.`);
+
+    // If deck was empty on 2nd pass and the player failed to close before discarding -> MONTE!
+    if (this.deck.length === 0 && (this.reshuffleCount >= 1 || this.discardPile.length <= 1)) {
+      this.status = 'FINISHED';
+      this.winner = 'MONTE';
+      this.winReason = 'MONTE';
+      const monteRes = walletManager.settleMonte(this.roomId, 0.05);
+      this.resetPoke();
+      this.clearAllTimers();
+      this.log(
+        monteRes
+          ? `🃏 ሞንቴ (MONTE)! የመጨረሻውን ካርታ አንስቶ ስላልዘጋ ጨዋታው ሞንቴ ሆኗል — 5% (${monteRes.feePerPlayer} ETB) ተቀንሶ ${monteRes.refundPerPlayer} ETB ተመልሷል።`
+          : '🃏 ሞንቴ (MONTE)! የመጨረሻውን ካርታ አንስቶ ስላልዘጋ ጨዋታው ሞንቴ ሆኗል።'
+      );
+      return { success: true, isWin: false, isMonte: true };
+    }
 
     // First discard by the starter CANNOT be picked up
     if (this.discardsCount <= 1) {
