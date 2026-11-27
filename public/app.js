@@ -2966,14 +2966,7 @@ discardBtn.addEventListener('click', () => {
   const remainingAfterDiscard = (currentGameState.myHand || []).filter(c => c.id !== cardToDiscard);
   const isLastCardWin = remainingAfterDiscard.length === 0;
 
-  let isDubeWin = false;
-  if (remainingAfterDiscard.length === 13) {
-    const hasAlreadyOpened = currentGameState.tableMelds && currentGameState.tableMelds[userId] && currentGameState.tableMelds[userId].length > 0;
-    if (!hasAlreadyOpened && findDubeWinClient(remainingAfterDiscard, currentGameState.jokerRank, currentGameState.jokerSuits)) {
-      isDubeWin = true;
-    }
-  }
-  const isWinningHand = isDubeWin || isLastCardWin;
+  const isWinningHand = isLastCardWin;
 
   // If user drew from ground without having opened, they must close & win (or reach 41)
   if (currentGameState.mustMeld41 && !isWinningHand) {
@@ -3002,7 +2995,7 @@ discardBtn.addEventListener('click', () => {
     roomId: currentRoomId,
     userId,
     cardId: cardToDiscard,
-    toGebi: isDubeWin,
+    toGebi: false,
     melds: null
   });
   selectedCardsSet.clear();
