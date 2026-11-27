@@ -1,12 +1,15 @@
 <!DOCTYPE html>
 <html lang="am">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Admin Dashboard — Conquer & Seka Deposits</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=Noto+Sans+Ethiopic:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=Noto+Sans+Ethiopic:wght@400;600;700;800;900&display=swap"
+    rel="stylesheet">
   <style>
     * {
       box-sizing: border-box;
@@ -14,6 +17,7 @@
       padding: 0;
       -webkit-tap-highlight-color: transparent;
     }
+
     body {
       font-family: 'Plus Jakarta Sans', 'Noto Sans Ethiopic', sans-serif;
       background: #0f172a;
@@ -22,6 +26,7 @@
       display: flex;
       flex-direction: column;
     }
+
     header {
       background: #1e293b;
       border-bottom: 1px solid #334155;
@@ -33,6 +38,7 @@
       top: 0;
       z-index: 50;
     }
+
     .header-logo {
       display: flex;
       align-items: center;
@@ -41,11 +47,13 @@
       font-size: 18px;
       color: #fbbf24;
     }
+
     .header-actions {
       display: flex;
       align-items: center;
       gap: 12px;
     }
+
     .btn-secondary {
       background: #334155;
       color: #f8fafc;
@@ -60,6 +68,7 @@
       align-items: center;
       gap: 6px;
     }
+
     .btn-secondary:hover {
       background: #475569;
     }
@@ -76,6 +85,7 @@
       padding: 20px;
       z-index: 100;
     }
+
     .auth-card {
       background: #1e293b;
       border: 1px solid #334155;
@@ -84,19 +94,22 @@
       max-width: 380px;
       width: 100%;
       text-align: center;
-      box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
     }
+
     .auth-title {
       font-size: 22px;
       font-weight: 800;
       color: #fbbf24;
       margin-bottom: 8px;
     }
+
     .auth-subtitle {
       font-size: 13px;
       color: #94a3b8;
       margin-bottom: 24px;
     }
+
     .pin-input {
       width: 100%;
       background: #0f172a;
@@ -111,9 +124,11 @@
       outline: none;
       margin-bottom: 16px;
     }
+
     .pin-input:focus {
       border-color: #3b82f6;
     }
+
     .btn-login {
       width: 100%;
       background: linear-gradient(135deg, #f59e0b, #d97706);
@@ -126,6 +141,7 @@
       cursor: pointer;
       box-shadow: 0 4px 14px rgba(245, 158, 11, 0.35);
     }
+
     .auth-err {
       color: #ef4444;
       font-size: 12px;
@@ -149,6 +165,7 @@
       gap: 14px;
       margin-bottom: 24px;
     }
+
     .stat-card {
       background: #1e293b;
       border: 1px solid #334155;
@@ -158,19 +175,23 @@
       flex-direction: column;
       gap: 4px;
     }
+
     .stat-label {
       font-size: 12px;
       font-weight: 600;
       color: #94a3b8;
     }
+
     .stat-val {
       font-size: 24px;
       font-weight: 900;
       color: #f8fafc;
     }
+
     .stat-val.pending {
       color: #f59e0b;
     }
+
     .stat-val.approved {
       color: #10b981;
     }
@@ -183,6 +204,7 @@
       border-bottom: 1px solid #334155;
       padding-bottom: 10px;
     }
+
     .tab-btn {
       background: transparent;
       border: none;
@@ -197,10 +219,12 @@
       gap: 6px;
       transition: all 0.2s;
     }
+
     .tab-btn.active {
       background: #334155;
       color: #fbbf24;
     }
+
     .tab-badge {
       background: #ef4444;
       color: #fff;
@@ -216,6 +240,7 @@
       flex-direction: column;
       gap: 14px;
     }
+
     .deposit-card {
       background: #1e293b;
       border: 1px solid #334155;
@@ -226,38 +251,46 @@
       gap: 12px;
       transition: transform 0.2s, border-color 0.2s;
     }
+
     .deposit-card.pending {
       border-left: 5px solid #f59e0b;
     }
+
     .deposit-card.approved {
       border-left: 5px solid #10b981;
       opacity: 0.85;
     }
+
     .deposit-card.rejected {
       border-left: 5px solid #ef4444;
       opacity: 0.65;
     }
+
     .card-top {
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
       gap: 10px;
     }
+
     .card-user-info {
       display: flex;
       flex-direction: column;
       gap: 2px;
     }
+
     .user-name {
       font-size: 17px;
       font-weight: 800;
       color: #f8fafc;
     }
+
     .user-phone {
       font-size: 13px;
       color: #94a3b8;
       font-family: monospace;
     }
+
     .amount-badge {
       background: rgba(245, 158, 11, 0.15);
       border: 1px solid rgba(245, 158, 11, 0.3);
@@ -267,6 +300,7 @@
       font-size: 18px;
       font-weight: 900;
     }
+
     .card-txn-row {
       background: #0f172a;
       border: 1px solid #334155;
@@ -277,6 +311,7 @@
       align-items: center;
       gap: 10px;
     }
+
     .txn-text {
       font-family: monospace;
       font-size: 14px;
@@ -284,6 +319,7 @@
       color: #38bdf8;
       word-break: break-all;
     }
+
     .btn-copy {
       background: #334155;
       border: none;
@@ -294,20 +330,24 @@
       cursor: pointer;
       white-space: nowrap;
     }
+
     .btn-copy:hover {
       background: #475569;
     }
+
     .card-meta {
       display: flex;
       justify-content: space-between;
       font-size: 12px;
       color: #64748b;
     }
+
     .card-actions {
       display: flex;
       gap: 10px;
       margin-top: 4px;
     }
+
     .btn-approve {
       flex: 2;
       background: #10b981;
@@ -324,9 +364,11 @@
       gap: 6px;
       transition: background 0.2s;
     }
+
     .btn-approve:hover {
       background: #059669;
     }
+
     .btn-reject {
       flex: 1;
       background: #334155;
@@ -343,6 +385,7 @@
       gap: 6px;
       transition: background 0.2s;
     }
+
     .btn-reject:hover {
       background: rgba(239, 68, 68, 0.15);
     }
@@ -353,10 +396,12 @@
       padding: 60px 20px;
       color: #64748b;
     }
+
     .empty-icon {
       font-size: 48px;
       margin-bottom: 12px;
     }
+
     .empty-text {
       font-size: 16px;
       font-weight: 600;
@@ -374,7 +419,7 @@
       border-radius: 30px;
       font-weight: 700;
       font-size: 14px;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
       display: none;
       z-index: 200;
     }
@@ -384,34 +429,43 @@
         padding: 10px 12px;
         gap: 8px;
       }
+
       .header-logo {
         font-size: 15px;
       }
+
       .header-actions {
         gap: 6px;
       }
+
       .btn-secondary {
         padding: 6px 10px;
         font-size: 11px;
       }
+
       .container {
         padding: 12px 10px;
       }
+
       .stats-grid {
         grid-template-columns: repeat(3, 1fr);
         gap: 8px;
         margin-bottom: 14px;
       }
+
       .stat-card {
         padding: 10px 8px;
         border-radius: 12px;
       }
+
       .stat-label {
         font-size: 10px;
       }
+
       .stat-val {
         font-size: 16px;
       }
+
       .tabs-bar {
         display: flex;
         overflow-x: auto;
@@ -420,45 +474,56 @@
         padding-bottom: 4px;
         -webkit-overflow-scrolling: touch;
       }
+
       .tab-btn {
         white-space: nowrap;
         flex-shrink: 0;
         padding: 8px 12px;
         font-size: 12px;
       }
+
       .deposit-card {
         padding: 14px 12px;
         gap: 10px;
       }
+
       .user-name {
         font-size: 15px;
       }
+
       .amount-badge {
         font-size: 15px;
         padding: 5px 10px;
       }
+
       .card-txn-row {
         padding: 8px 10px;
         flex-wrap: wrap;
       }
+
       .txn-text {
         font-size: 12px;
       }
+
       .card-actions {
         flex-direction: column;
         gap: 8px;
       }
-      .btn-approve, .btn-reject {
+
+      .btn-approve,
+      .btn-reject {
         width: 100%;
         padding: 10px;
         font-size: 13px;
       }
+
       .auth-card {
         padding: 22px 16px;
       }
     }
   </style>
 </head>
+
 <body>
 
   <!-- Auth Screen -->
@@ -467,8 +532,10 @@
       <div style="font-size: 40px; margin-bottom: 8px;">🔐</div>
       <div class="auth-title">Admin Dashboard</div>
       <div class="auth-subtitle">የተቀማጭ ገንዘብ (Deposit) ማረጋገጫ ገጽ ለመክፈት Username እና Password ያስገቡ</div>
-      <input type="text" id="adminUserInput" class="pin-input" placeholder="Username" autocomplete="username" style="margin-bottom: 12px; font-size: 15px; letter-spacing: normal;" autofocus>
-      <input type="password" id="pinInput" class="pin-input" placeholder="Password" maxlength="50" autocomplete="current-password">
+      <input type="text" id="adminUserInput" class="pin-input" placeholder="Username" autocomplete="username"
+        style="margin-bottom: 12px; font-size: 15px; letter-spacing: normal;" autofocus>
+      <input type="password" id="pinInput" class="pin-input" placeholder="Password" maxlength="50"
+        autocomplete="current-password">
       <button class="btn-login" id="loginBtn">ግባ (Login)</button>
       <div id="authErr" class="auth-err">የተሳሳተ Username ወይም Password ነው! እባክዎ እንደገና ይሞክሩ።</div>
     </div>
@@ -511,10 +578,8 @@
         📜 ሁሉም ታሪክ (History)
       </button>
       <button class="tab-btn" data-tab="withdraws" id="tabWithdrawsBtn">
-        💸 Withdraws <span class="tab-badge" id="withdrawBadge" style="display:none; background: #f59e0b; color: #0f172a;">0</span>
-      </button>
-      <button class="tab-btn" data-tab="sms" id="tabSmsBtn">
-        📱 SMS Gateway <span class="tab-badge" id="smsBadge" style="display:none; background: #3b82f6;">0</span>
+        💸 Withdraws <span class="tab-badge" id="withdrawBadge"
+          style="display:none; background: #f59e0b; color: #0f172a;">0</span>
       </button>
       <button class="tab-btn" data-tab="users" id="tabUsersBtn">
         👥 ተጫዋቾች (Users) <span class="tab-badge" id="usersBadge" style="display:none; background: #10b981;">0</span>
@@ -537,69 +602,22 @@
       </div>
     </div>
 
-    <!-- SMS Gateway Panel -->
-    <div id="smsGatewayPanel" style="display: none; flex-direction: column; gap: 16px;">
-      <!-- Android Setup Guide Card -->
-      <div style="background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 18px;">
-        <div style="display: flex; align-items: center; gap: 8px; font-size: 16px; font-weight: 800; color: #38bdf8; margin-bottom: 8px;">
-          <span>📱 አንድሮይድ ስልክ (SMS Forwarder) ማገናኛ መመሪያ</span>
-        </div>
-        <p style="font-size: 13px; color: #94a3b8; line-height: 1.5; margin-bottom: 12px;">
-          ስልክዎ ላይ <strong>SMS Forwarder</strong> (ወይም Tasker) አፕሊኬሽን ጭነው ወደ ሰርቨራችን ዌብሁክ (Webhook) ያስተላልፉ።
-        </p>
-        <div style="display: flex; flex-direction: column; gap: 8px; font-size: 13px;">
-          <div style="background: #0f172a; padding: 8px 12px; border-radius: 8px; border: 1px solid #334155;">
-            <span style="color: #64748b;">Webhook URL:</span>
-            <code style="color: #38bdf8; font-weight: bold; margin-left: 6px;" id="webhookUrlDisplay">http://localhost:3000/api/sms/webhook</code>
-          </div>
-          <div style="background: #0f172a; padding: 8px 12px; border-radius: 8px; border: 1px solid #334155;">
-            <span style="color: #64748b;">Secret Key (x-sms-secret):</span>
-            <code style="color: #fbbf24; font-weight: bold; margin-left: 6px;">wende3428_sms_secret</code>
-          </div>
-        </div>
-      </div>
-
-      <!-- Test SMS Simulator Card -->
-      <div style="background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 18px;">
-        <div style="display: flex; align-items: center; gap: 8px; font-size: 16px; font-weight: 800; color: #fbbf24; margin-bottom: 12px;">
-          <span>🧪 የቴሌብር SMS ቴስት መሞከሪያ (Simulator)</span>
-        </div>
-        <p style="font-size: 12px; color: #94a3b8; margin-bottom: 12px;">
-          እውነተኛ ብር ሳያወጡ የቴሌብር ክፍያ እንደደረሰ አስመስለው ሰርቨሩ ላይ ቴስት ማድረግ ይችላሉ፦
-        </p>
-        <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 12px;">
-          <input type="number" id="simAmtInput" value="100" placeholder="መጠን (ETB)" style="padding: 10px 14px; background: #0f172a; border: 1px solid #334155; border-radius: 8px; color: #fff; width: 120px; font-weight: 700;">
-          <input type="text" id="simTxnInput" placeholder="Transaction ID (ባዶ ካደረጉት በራሱ ይፈጥራል)" style="padding: 10px 14px; background: #0f172a; border: 1px solid #334155; border-radius: 8px; color: #fff; flex: 1; min-width: 200px;">
-          <button id="sendSimSmsBtn" style="background: linear-gradient(135deg, #3b82f6, #2563eb); color: #fff; border: none; padding: 10px 18px; border-radius: 8px; font-weight: 800; cursor: pointer;">
-            🚀 ቴስት SMS ላክ (Simulate)
-          </button>
-        </div>
-        <div id="simResultMsg" style="display: none; font-size: 12px; padding: 8px 12px; border-radius: 8px;"></div>
-      </div>
-
-      <!-- Incoming Payments List -->
-      <div style="display: flex; justify-content: space-between; align-items: center;">
-        <span style="font-weight: 800; font-size: 15px; color: #f8fafc;">📩 የደረሱ የቴሌብር ክፍያዎች (Incoming Payments)</span>
-        <button id="refreshSmsBtn" style="background: #334155; border: none; color: #cbd5e1; padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer;">🔄 Refresh</button>
-      </div>
-      <div class="deposit-list" id="smsPaymentsList">
-        <div class="empty-state">
-          <div class="empty-icon">📱</div>
-          <div class="empty-text">እስካሁን የገባ SMS የለም</div>
-        </div>
-      </div>
-    </div>
-
     <!-- Users & Balances Panel -->
     <div id="usersPanel" style="display: none; flex-direction: column; gap: 14px;">
-      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; background: #1e293b; border: 1px solid #334155; border-radius: 14px; padding: 14px 16px;">
+      <div
+        style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; background: #1e293b; border: 1px solid #334155; border-radius: 14px; padding: 14px 16px;">
         <div>
-          <div style="font-weight: 800; font-size: 15px; color: #f8fafc;">👥 የተመዘገቡ ተጫዋቾች እና ሂሳብ (Users & Balances)</div>
-          <div id="usersSummaryText" style="font-size: 12px; color: #94a3b8; margin-top: 2px;">ጠቅላላ ተጫዋቾች: 0 | ጠቅላላ Balance: 0 ETB</div>
+          <div style="font-weight: 800; font-size: 15px; color: #f8fafc;">👥 የተመዘገቡ ተጫዋቾች እና ሂሳብ (Users & Balances)
+          </div>
+          <div id="usersSummaryText" style="font-size: 12px; color: #94a3b8; margin-top: 2px;">ጠቅላላ ተጫዋቾች: 0 | ጠቅላላ
+            Balance: 0 ETB</div>
         </div>
         <div style="display: flex; gap: 8px; align-items: center;">
-          <input type="text" id="usersSearchInput" placeholder="በስም ወይም በስልክ ፈልግ..." style="padding: 8px 12px; background: #0f172a; border: 1px solid #334155; border-radius: 8px; color: #fff; font-size: 13px; min-width: 190px;">
-          <button id="refreshUsersBtn" style="background: #334155; border: none; color: #cbd5e1; padding: 8px 12px; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer;">🔄 Refresh</button>
+          <input type="text" id="usersSearchInput" placeholder="በስም ወይም በስልክ ፈልግ..."
+            style="padding: 8px 12px; background: #0f172a; border: 1px solid #334155; border-radius: 8px; color: #fff; font-size: 13px; min-width: 190px;">
+          <button id="refreshUsersBtn"
+            style="background: #334155; border: none; color: #cbd5e1; padding: 8px 12px; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer;">🔄
+            Refresh</button>
         </div>
       </div>
       <div class="deposit-list" id="usersListContainer">
@@ -615,7 +633,8 @@
 
   <!-- Audio Chime for new deposits -->
   <audio id="chimeAudio" preload="auto">
-    <source src="data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YU9vT18AAAA=" type="audio/wav">
+    <source src="data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YU9vT18AAAA="
+      type="audio/wav">
   </audio>
 
   <script src="/socket.io/socket.io.js"></script>
@@ -636,15 +655,12 @@
     const tabPendingBtn = document.getElementById('tabPendingBtn');
     const tabAllBtn = document.getElementById('tabAllBtn');
     const tabWithdrawsBtn = document.getElementById('tabWithdrawsBtn');
-    const tabSmsBtn = document.getElementById('tabSmsBtn');
     const tabUsersBtn = document.getElementById('tabUsersBtn');
     const pendingBadge = document.getElementById('pendingBadge');
     const withdrawBadge = document.getElementById('withdrawBadge');
-    const smsBadge = document.getElementById('smsBadge');
     const usersBadge = document.getElementById('usersBadge');
     const withdrawalsList = document.getElementById('withdrawalsList');
     let withdrawalsData = [];
-    const smsGatewayPanel = document.getElementById('smsGatewayPanel');
     const usersPanel = document.getElementById('usersPanel');
     const usersListContainer = document.getElementById('usersListContainer');
     const usersSummaryText = document.getElementById('usersSummaryText');
@@ -653,21 +669,10 @@
     let usersData = [];
     let usersPage = 1;
     const USERS_PER_PAGE = 15;
-    const smsPaymentsList = document.getElementById('smsPaymentsList');
-    const webhookUrlDisplay = document.getElementById('webhookUrlDisplay');
-    const simAmtInput = document.getElementById('simAmtInput');
-    const simTxnInput = document.getElementById('simTxnInput');
-    const sendSimSmsBtn = document.getElementById('sendSimSmsBtn');
-    const simResultMsg = document.getElementById('simResultMsg');
-    const refreshSmsBtn = document.getElementById('refreshSmsBtn');
     const statPendingCount = document.getElementById('statPendingCount');
     const statApprovedSum = document.getElementById('statApprovedSum');
     const statTotalCount = document.getElementById('statTotalCount');
     const toast = document.getElementById('toast');
-
-    if (webhookUrlDisplay) {
-      webhookUrlDisplay.textContent = `${window.location.origin}/api/sms/webhook`;
-    }
 
     function showToast(msg) {
       if (!toast) return;
@@ -754,11 +759,9 @@
       tabPendingBtn.classList.add('active');
       tabAllBtn.classList.remove('active');
       if (tabWithdrawsBtn) tabWithdrawsBtn.classList.remove('active');
-      if (tabSmsBtn) tabSmsBtn.classList.remove('active');
       if (tabUsersBtn) tabUsersBtn.classList.remove('active');
       depositList.style.display = 'flex';
       if (withdrawalsList) withdrawalsList.style.display = 'none';
-      if (smsGatewayPanel) smsGatewayPanel.style.display = 'none';
       if (usersPanel) usersPanel.style.display = 'none';
       renderDeposits();
     });
@@ -768,11 +771,9 @@
       tabAllBtn.classList.add('active');
       tabPendingBtn.classList.remove('active');
       if (tabWithdrawsBtn) tabWithdrawsBtn.classList.remove('active');
-      if (tabSmsBtn) tabSmsBtn.classList.remove('active');
       if (tabUsersBtn) tabUsersBtn.classList.remove('active');
       depositList.style.display = 'flex';
       if (withdrawalsList) withdrawalsList.style.display = 'none';
-      if (smsGatewayPanel) smsGatewayPanel.style.display = 'none';
       if (usersPanel) usersPanel.style.display = 'none';
       renderDeposits();
     });
@@ -783,29 +784,11 @@
         tabWithdrawsBtn.classList.add('active');
         tabPendingBtn.classList.remove('active');
         tabAllBtn.classList.remove('active');
-        if (tabSmsBtn) tabSmsBtn.classList.remove('active');
         if (tabUsersBtn) tabUsersBtn.classList.remove('active');
         depositList.style.display = 'none';
         if (withdrawalsList) withdrawalsList.style.display = 'flex';
-        if (smsGatewayPanel) smsGatewayPanel.style.display = 'none';
         if (usersPanel) usersPanel.style.display = 'none';
         loadWithdrawals();
-      });
-    }
-
-    if (tabSmsBtn) {
-      tabSmsBtn.addEventListener('click', () => {
-        currentTab = 'sms';
-        tabSmsBtn.classList.add('active');
-        tabPendingBtn.classList.remove('active');
-        tabAllBtn.classList.remove('active');
-        if (tabWithdrawsBtn) tabWithdrawsBtn.classList.remove('active');
-        if (tabUsersBtn) tabUsersBtn.classList.remove('active');
-        depositList.style.display = 'none';
-        if (withdrawalsList) withdrawalsList.style.display = 'none';
-        if (smsGatewayPanel) smsGatewayPanel.style.display = 'flex';
-        if (usersPanel) usersPanel.style.display = 'none';
-        loadSmsPayments();
       });
     }
 
@@ -816,10 +799,8 @@
         tabPendingBtn.classList.remove('active');
         tabAllBtn.classList.remove('active');
         if (tabWithdrawsBtn) tabWithdrawsBtn.classList.remove('active');
-        if (tabSmsBtn) tabSmsBtn.classList.remove('active');
         depositList.style.display = 'none';
         if (withdrawalsList) withdrawalsList.style.display = 'none';
-        if (smsGatewayPanel) smsGatewayPanel.style.display = 'none';
         if (usersPanel) usersPanel.style.display = 'flex';
         loadUsers();
       });
@@ -894,8 +875,8 @@
             </thead>
             <tbody>
               ${pageItems.map((u, idx) => {
-                const dateStr = u.createdAt ? new Date(u.createdAt).toLocaleString() : '—';
-                return `
+        const dateStr = u.createdAt ? new Date(u.createdAt).toLocaleString() : '—';
+        return `
                   <tr style="border-bottom: 1px solid #334155;">
                     <td style="padding: 10px 14px; color: #64748b; font-weight: 700;">${startIdx + idx + 1}</td>
                     <td style="padding: 10px 14px; color: #f8fafc; font-weight: 700;">👤 ${escapeHtml(u.name || 'Player')}</td>
@@ -907,7 +888,7 @@
                       <button type="button" onclick="creditUser('${u.id}', '${escapeHtml(u.name || 'Player')}')" style="background: #10b981; color: #fff; border: none; padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: 800; cursor: pointer; white-space: nowrap;">+ ብር ጨምር</button>
                     </td>
                   </tr>`;
-              }).join('')}
+      }).join('')}
             </tbody>
           </table>
         </div>
@@ -923,122 +904,6 @@
       const nextBtn = document.getElementById('usersNextPageBtn');
       if (prevBtn) prevBtn.addEventListener('click', () => { if (usersPage > 1) { usersPage--; renderUsers(); } });
       if (nextBtn) nextBtn.addEventListener('click', () => { if (usersPage < totalPages) { usersPage++; renderUsers(); } });
-    }
-
-    if (refreshSmsBtn) {
-      refreshSmsBtn.addEventListener('click', () => {
-        loadSmsPayments();
-      });
-    }
-
-    // Simulate SMS Test
-    if (sendSimSmsBtn) {
-      sendSimSmsBtn.addEventListener('click', async () => {
-        const amt = Number(simAmtInput.value) || 100;
-        const txn = (simTxnInput.value || '').trim();
-        sendSimSmsBtn.disabled = true;
-        sendSimSmsBtn.textContent = '⏳ በመላክ ላይ...';
-
-        try {
-          const res = await fetch('/api/admin/sms/simulate', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ adminKey, amount: amt, transactionId: txn })
-          });
-          const data = await res.json();
-          if (data && data.success) {
-            showToast(`🎉 ቴስት SMS ተልኳል! (${amt} ETB)`);
-            if (simResultMsg) {
-              simResultMsg.style.display = 'block';
-              simResultMsg.style.background = '#064e3b';
-              simResultMsg.style.color = '#34d399';
-              simResultMsg.textContent = `✅ የደረሰ SMS፦ "${data.simText}"`;
-            }
-            if (simTxnInput) simTxnInput.value = '';
-            loadSmsPayments();
-            loadDeposits();
-          } else {
-            alert('Error simulating SMS');
-          }
-        } catch (e) {
-          alert('Network error');
-        } finally {
-          sendSimSmsBtn.disabled = false;
-          sendSimSmsBtn.textContent = '🚀 ቴስት SMS ላክ (Simulate)';
-        }
-      });
-    }
-
-    async function loadSmsPayments() {
-      if (!adminKey) return;
-      try {
-        const res = await fetch(`/api/admin/sms/payments?adminKey=${encodeURIComponent(adminKey)}`);
-        const data = await res.json();
-        if (data && data.payments) {
-          renderSmsPayments(data.payments, data.stats);
-        }
-      } catch (e) {
-        console.error('Failed to load SMS payments', e);
-      }
-    }
-
-    function renderSmsPayments(payments, stats) {
-      if (stats && smsBadge) {
-        if (stats.unclaimedCount > 0) {
-          smsBadge.textContent = stats.unclaimedCount;
-          smsBadge.style.display = 'inline-block';
-        } else {
-          smsBadge.style.display = 'none';
-        }
-      }
-
-      if (!smsPaymentsList) return;
-      if (payments.length === 0) {
-        smsPaymentsList.innerHTML = `
-          <div class="empty-state">
-            <div class="empty-icon">📱</div>
-            <div class="empty-text">እስካሁን ምንም የገባ SMS የለም</div>
-          </div>
-        `;
-        return;
-      }
-
-      smsPaymentsList.innerHTML = payments.map(p => {
-        const isClaimed = p.status === 'CLAIMED';
-        const date = new Date(p.receivedAt).toLocaleString('am-ET', {
-          month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
-        });
-
-        return `
-          <div class="deposit-card ${isClaimed ? 'approved' : 'pending'}" style="border-left: 5px solid ${isClaimed ? '#10b981' : '#f59e0b'};">
-            <div class="card-top">
-              <div class="card-user-info">
-                <div class="user-name">📱 ${p.method.toUpperCase()} ${isClaimed ? '✅ CLAIMED (ተወስዷል)' : '⏳ UNCLAIMED (ጥያቄ ይጠብቃል)'}</div>
-                <div class="user-phone">📞 ላኪ፦ ${escapeHtml(p.senderPhone || p.senderName || '127')}</div>
-              </div>
-              <div class="amount-badge">
-                ${Number(p.amount).toLocaleString()} ETB
-              </div>
-            </div>
-
-            <div class="card-txn-row">
-              <span class="txn-text">${escapeHtml(p.transactionId)}</span>
-              <button class="btn-copy" onclick="copyTxn('${p.id}', '${escapeHtml(p.transactionId)}')">📋 Copy TXN</button>
-            </div>
-
-            ${p.rawText ? `
-              <div style="font-size: 11px; color: #94a3b8; background: #0f172a; padding: 6px 10px; border-radius: 6px; font-family: monospace;">
-                ${escapeHtml(p.rawText)}
-              </div>
-            ` : ''}
-
-            <div class="card-meta">
-              <span>📅 የደረሰበት ሰዓት፦ ${date}</span>
-              ${isClaimed ? `<span style="color: #10b981;">👤 User: ${escapeHtml(p.claimedBy || '')}</span>` : '<span style="color: #f59e0b;">⏳ ተጫዋች ሲጠይቅ ወዲያውኑ ይገባል</span>'}
-            </div>
-          </div>
-        `;
-      }).join('');
     }
 
     refreshBtn.addEventListener('click', () => {
@@ -1241,13 +1106,13 @@
       return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     }
 
-    window.copyTxn = function(id, text) {
+    window.copyTxn = function (id, text) {
       navigator.clipboard.writeText(text).then(() => {
         showToast(`📋 ${text} ተኮርጅቷል!`);
-      }).catch(() => {});
+      }).catch(() => { });
     };
 
-    window.creditUser = async function(userId, userName) {
+    window.creditUser = async function (userId, userName) {
       const amtStr = prompt(`ለ ${userName} ስንት ETB ማስገባት ይፈልጋሉ?`, '100');
       if (amtStr === null) return;
       const amt = Math.floor(Number(amtStr));
@@ -1276,7 +1141,7 @@
       }
     };
 
-    window.approveDeposit = async function(id) {
+    window.approveDeposit = async function (id) {
       const card = document.getElementById(`card_${id}`);
       if (!confirm('ይህ ተጠቃሚ ገንዘቡን በትክክል መላኩን አረጋግጠዋል? ወደ balance-ሱ ይጨመር?')) return;
 
@@ -1298,7 +1163,7 @@
       }
     };
 
-    window.rejectDeposit = async function(id) {
+    window.rejectDeposit = async function (id) {
       const reason = prompt('ለምን ውድቅ እንደተደረገ ምክንያት ያስገቡ (ለምሳሌ: Transaction ID አልተገኘም):', 'Transaction ID አልተገኘም / ትክክል አይደለም');
       if (reason === null) return;
 
@@ -1326,19 +1191,8 @@
       loadDeposits();
     });
 
-    socket.on('new_sms_payment', (payment) => {
-      showToast(`📱 አዲስ የቴሌብር SMS ደርሷል፦ ${payment.amount} ETB (TXN: ${payment.transactionId})`);
-      if (currentTab === 'sms') {
-        loadSmsPayments();
-      }
-      loadDeposits();
-    });
-
     socket.on('deposit_status_changed', () => {
       loadDeposits();
-      if (currentTab === 'sms') {
-        loadSmsPayments();
-      }
     });
 
     async function loadWithdrawals() {
@@ -1423,7 +1277,7 @@
       }).join('');
     }
 
-    window.approveWithdraw = async function(id) {
+    window.approveWithdraw = async function (id) {
       const payoutTxnId = prompt('ብሩን ከላኩ በኋላ Transaction ID ያስገቡ (አማራጭ):', '');
       if (payoutTxnId === null) return;
       try {
@@ -1444,7 +1298,7 @@
       }
     };
 
-    window.rejectWithdraw = async function(id) {
+    window.rejectWithdraw = async function (id) {
       const reason = prompt('ለምን ውድቅ እንደተደረገ ምክንያት ያስገቡ (ብሩ ወደ ተጫዋቹ balance ይመለሳል):', 'የተሰጠው አካውንት ትክክል አይደለም');
       if (reason === null) return;
       try {
@@ -1482,4 +1336,5 @@
     setTimeout(loadWithdrawals, 800);
   </script>
 </body>
+
 </html>
