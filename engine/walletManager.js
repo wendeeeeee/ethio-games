@@ -679,35 +679,48 @@ class WalletManager {
     return wallet;
   }
 
-  lockEscrow(roomId, player1Id, player2Id, stakeAmount) {
+  lockEscrow(roomId, player1Id, player2Id, stakeAmount, options = {}) {
     let playerIds = [];
     let stake = stakeAmount;
+    let opts = options;
     if (Array.isArray(player1Id)) {
       playerIds = player1Id;
       stake = player2Id;
+      opts = (typeof stakeAmount === 'object' && stakeAmount !== null) ? stakeAmount : options;
     } else if (Array.isArray(player2Id)) {
       playerIds = [player1Id, ...player2Id];
     } else {
       playerIds = [player1Id, player2Id];
     }
 
+    const lockMultiplier = (opts && opts.lockMultiplier === 2) ? 2 : 1;
+    const lockPerPlayer = stake * lockMultiplier;
+
     const wallets = playerIds.map(id => this.getWallet(id));
     for (const w of wallets) {
-      if (w.balance < stake) {
-        return { success: false, message: `${w.name} has insufficient balance for ${stake} ETB stake` };
+      if (w.balance < lockPerPlayer) {
+        return {
+          success: false,
+          message: lockMultiplier === 2
+            ? `${w.name} has insufficient balance for ${lockPerPlayer} ETB (2× ${stake} ETB double lock)`
+            : `${w.name} has insufficient balance for ${stake} ETB stake`
+        };
       }
     }
 
     for (const w of wallets) {
-      w.balance -= stake;
-      w.locked += stake;
+      w.balance -= lockPerPlayer;
+      w.locked += lockPerPlayer;
     }
 
     const pot = stake * playerIds.length;
     this.escrows.set(roomId, {
       roomId,
       stakeAmount: stake,
+      lockPerPlayer,
+      lockMultiplier,
       pot,
+      maxPot: lockPerPlayer * playerIds.length,
       playerIds,
       player1Id: playerIds[0],
       player2Id: playerIds[1]
@@ -720,43 +733,67 @@ class WalletManager {
         supabase.from('transactions').insert({
           user_id: pid,
           type: 'ESCROW_LOCK',
-          amount: -stake,
+          amount: -lockPerPlayer,
           room_id: roomId,
-          description: `Escrow lock ${stake} ETB for game ${roomId}`
+          description: `Escrow lock ${lockPerPlayer} ETB for game ${roomId}`
         }).then(() => { }).catch(() => { });
       }
     }
 
-    return { success: true, pot };
+    return { success: true, pot, lockPerPlayer, maxPot: lockPerPlayer * playerIds.length };
   }
 
-  payoutWinner(roomId, winnerId) {
+  payoutWinner(roomId, winnerId, options = {}) {
     const escrow = this.escrows.get(roomId);
     if (!escrow) return null;
 
     const winnerWallet = this.getWallet(winnerId);
     const playerIds = escrow.playerIds || [escrow.player1Id, escrow.player2Id].filter(Boolean);
+    const lockPerPlayer = escrow.lockPerPlayer || escrow.stakeAmount;
+    const isDouble = !!(options && options.isDouble && escrow.lockMultiplier === 2);
+    const effectiveStake = isDouble ? escrow.stakeAmount * 2 : escrow.stakeAmount;
+    const effectivePot = effectiveStake * playerIds.length;
+    const refundPerPlayer = Math.max(0, lockPerPlayer - effectiveStake);
 
-    // Release locked stakes
+    // Release locked stakes and refund unused 1x lock if double was not triggered
     for (const pid of playerIds) {
       const pWallet = this.getWallet(pid);
-      pWallet.locked = Math.max(0, pWallet.locked - escrow.stakeAmount);
+      pWallet.locked = Math.max(0, pWallet.locked - lockPerPlayer);
+      if (refundPerPlayer > 0) {
+        pWallet.balance += refundPerPlayer;
+        pWallet.transactions.push({
+          type: 'ESCROW_REFUND',
+          amount: refundPerPlayer,
+          roomId,
+          date: new Date().toISOString()
+        });
+      }
       if (!this._isBot(pid)) {
         this._saveBalanceToDb(pid);
+        if (refundPerPlayer > 0) {
+          supabase.from('transactions').insert({
+            user_id: pid,
+            type: 'ESCROW_REFUND',
+            amount: refundPerPlayer,
+            room_id: roomId,
+            description: `Refund unused double lock ${refundPerPlayer} ETB for game ${roomId}`
+          }).then(() => { }).catch(() => { });
+        }
       }
     }
 
     // Credit pot to winner (10% platform fee on winnings / profit)
-    const profit = Math.max(0, escrow.pot - escrow.stakeAmount);
+    const profit = Math.max(0, effectivePot - effectiveStake);
     const platformRake = Math.floor(profit * 0.10);
-    const netWin = escrow.pot - platformRake;
+    const netWin = effectivePot - platformRake;
 
     winnerWallet.balance += netWin;
     winnerWallet.transactions.push({
       type: 'GAME_WIN',
       amount: netWin,
-      pot: escrow.pot,
+      pot: effectivePot,
       rake: platformRake,
+      isDouble,
       roomId,
       date: new Date().toISOString()
     });
@@ -769,31 +806,32 @@ class WalletManager {
         type: 'GAME_WIN',
         amount: netWin,
         room_id: roomId,
-        description: `Won ${netWin} ETB (pot: ${escrow.pot}, rake: ${platformRake})`
+        description: `Won ${netWin} ETB (pot: ${effectivePot}, rake: ${platformRake}${isDouble ? ', DOUBLE' : ''})`
       }).then(() => { }).catch(() => { });
     }
 
     this.escrows.delete(roomId);
-    return { winnerWallet, netWin, rake: platformRake };
+    return { winnerWallet, netWin, rake: platformRake, effectivePot, isDouble, refundPerPlayer };
   }
 
   refundEscrow(roomId) {
     const escrow = this.escrows.get(roomId);
     if (!escrow) return;
 
+    const refundAmt = escrow.lockPerPlayer || escrow.stakeAmount;
     const playerIds = escrow.playerIds || [escrow.player1Id, escrow.player2Id].filter(Boolean);
     for (const pid of playerIds) {
       const pWallet = this.getWallet(pid);
-      pWallet.balance += escrow.stakeAmount;
-      pWallet.locked = Math.max(0, pWallet.locked - escrow.stakeAmount);
+      pWallet.balance += refundAmt;
+      pWallet.locked = Math.max(0, pWallet.locked - refundAmt);
       if (!this._isBot(pid)) {
         this._saveBalanceToDb(pid);
         supabase.from('transactions').insert({
           user_id: pid,
           type: 'ESCROW_REFUND',
-          amount: escrow.stakeAmount,
+          amount: refundAmt,
           room_id: roomId,
-          description: `Refund ${escrow.stakeAmount} ETB from game ${roomId}`
+          description: `Refund ${refundAmt} ETB from game ${roomId}`
         }).then(() => { }).catch(() => { });
       }
     }

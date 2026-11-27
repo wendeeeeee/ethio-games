@@ -1488,10 +1488,15 @@ if (createSekaRoomBtn) {
       return;
     }
     const sekaPlayersSelect = document.getElementById('sekaPlayersSelect');
+    const sekaJokerDoubleToggle = document.getElementById('sekaJokerDoubleToggle');
+    const jokerDouble = !!(sekaJokerDoubleToggle && sekaJokerDoubleToggle.checked);
+    const requiredBalance = jokerDouble ? stakeAmount * 2 : stakeAmount;
 
-    // Check balance
-    if (currentUserBalance < stakeAmount) {
-      showSortToast(`⚠️ በቂ balance የለዎትም! ያለዎት ሂሳብ ${currentUserBalance.toLocaleString()} ETB ሲሆን የውርርድ መጠኑ ${stakeAmount.toLocaleString()} ETB ነው። እባክዎ መጀመሪያ Deposit ያድርጉ ወይም አነስ ያለ ውርርድ ይምረጡ።`);
+    // Check balance (2x required if Joker Double is ON)
+    if (currentUserBalance < requiredBalance) {
+      showSortToast(jokerDouble
+        ? `⚠️ በቂ balance የለዎትም! ጆከር ለመሬት ON ስለሆነ ቢያንስ 2× (${requiredBalance.toLocaleString()} ETB) ያስፈልጋል፤ ያለዎት ሂሳብ ${currentUserBalance.toLocaleString()} ETB ነው።`
+        : `⚠️ በቂ balance የለዎትም! ያለዎት ሂሳብ ${currentUserBalance.toLocaleString()} ETB ሲሆን የውርርድ መጠኑ ${stakeAmount.toLocaleString()} ETB ነው። እባክዎ መጀመሪያ Deposit ያድርጉ ወይም አነስ ያለ ውርርድ ይምረጡ።`);
       openDepositModal();
       return;
     }
@@ -1501,7 +1506,7 @@ if (createSekaRoomBtn) {
     isCreatingSekaRoom = true;
     setTimeout(() => { isCreatingSekaRoom = false; }, 2000);
     playCardSound();
-    socket.emit('create_seka_room', { userId, name: sName, stakeAmount, maxPlayers });
+    socket.emit('create_seka_room', { userId, name: sName, stakeAmount, maxPlayers, jokerDouble });
   });
 }
 
@@ -1992,6 +1997,19 @@ function getConquerStakeAmount() {
   return isNaN(val) ? 0 : Math.floor(val);
 }
 
+// Player count selector chips (Seka & Conquer)
+document.querySelectorAll('.player-count-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const targetId = btn.dataset.target;
+    const val = btn.dataset.value;
+    const hiddenInput = targetId ? document.getElementById(targetId) : null;
+    if (hiddenInput) hiddenInput.value = val;
+    document.querySelectorAll(`.player-count-btn[data-target="${targetId}"]`).forEach(b => {
+      b.classList.toggle('active', b === btn);
+    });
+  });
+});
+
 // Create Room (Conquer)
 if (createRoomBtn) {
   createRoomBtn.addEventListener('click', () => {
@@ -2005,8 +2023,14 @@ if (createRoomBtn) {
       if (inputEl) inputEl.focus();
       return;
     }
-    if (currentUserBalance < stakeAmount) {
-      showSortToast(`⚠️ በቂ balance የለዎትም! ያለዎት ሂሳብ ${currentUserBalance.toLocaleString()} ETB ሲሆን የውርርድ መጠኑ ${stakeAmount.toLocaleString()} ETB ነው።`);
+    const jokerDouble = !!(document.getElementById('conquerJokerDoubleToggle') && document.getElementById('conquerJokerDoubleToggle').checked);
+    const dubeDouble = !!(document.getElementById('conquerDubeDoubleToggle') && document.getElementById('conquerDubeDoubleToggle').checked);
+    const isDoubleRoom = jokerDouble || dubeDouble;
+    const requiredBalance = isDoubleRoom ? stakeAmount * 2 : stakeAmount;
+    if (currentUserBalance < requiredBalance) {
+      showSortToast(isDoubleRoom
+        ? `⚠️ በቂ balance የለዎትም! Double (ጆከር/ዱቤ) ON ስለሆነ ቢያንስ 2× (${requiredBalance.toLocaleString()} ETB) ያስፈልጋል፤ ያለዎት ሂሳብ ${currentUserBalance.toLocaleString()} ETB ነው።`
+        : `⚠️ በቂ balance የለዎትም! ያለዎት ሂሳብ ${currentUserBalance.toLocaleString()} ETB ሲሆን የውርርድ መጠኑ ${stakeAmount.toLocaleString()} ETB ነው።`);
       openDepositModal();
       return;
     }
@@ -2015,7 +2039,7 @@ if (createRoomBtn) {
     const conquerPlayersEl = document.getElementById('conquerPlayersSelect');
     const maxPlayers = conquerPlayersEl ? Number(conquerPlayersEl.value) || 2 : 2;
     playCardSound();
-    socket.emit('create_room', { userId, name: playerName || 'ተጫዋች', stakeAmount, maxPlayers });
+    socket.emit('create_room', { userId, name: playerName || 'ተጫዋች', stakeAmount, maxPlayers, jokerDouble, dubeDouble });
   });
 }
 
@@ -2046,11 +2070,12 @@ async function refreshRoomsList() {
       const isMyRoom = (r.creatorId && r.creatorId === userId) || (r.roomId === currentWaitingRoomId);
       const expSec = r.expiresIn !== undefined ? r.expiresIn : 60;
       const expAt = Date.now() + expSec * 1000;
+      const ruleBadges = `${r.jokerDouble ? '<span class="room-rule-badge">🃏 ጆከር 2×</span>' : ''}${r.dubeDouble ? '<span class="room-rule-badge">👑 ዱቤ 2×</span>' : ''}`;
       if (isMyRoom) {
         return `
           <div class="room-list-item" style="background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 12px; padding: 10px 14px; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between;">
             <div>
-              <strong style="color: #065f46; font-size: 14px;">${r.creatorName}</strong>
+              <strong style="color: #065f46; font-size: 14px;">${r.creatorName}</strong>${ruleBadges}
               <div style="font-size: 12px; color: #475569; margin-top: 2px;">
                 ${r.stakeAmount} ETB • ${r.playersCount || 1}/${r.maxPlayers || 2} ተጫዋች
               </div>
@@ -2062,7 +2087,7 @@ async function refreshRoomsList() {
       return `
         <div class="room-list-item">
           <div>
-            <strong style="color: #0f172a; font-size: 14px;">${r.creatorName}</strong>
+            <strong style="color: #0f172a; font-size: 14px;">${r.creatorName}</strong>${ruleBadges}
             <div style="font-size: 12px; color: #64748b;">${r.stakeAmount} ETB • ${r.playersCount || 1}/${r.maxPlayers || 2} ተጫዋች ${r.expiresIn ? `• <span class="waiting-countdown-badge" data-expires-at="${expAt}" style="color: #059669; font-weight: 700;">⏳ ${expSec}s</span>` : ''}</div>
           </div>
           <button class="btn-primary" style="width: auto; padding: 6px 14px; font-size: 12px;" onclick="joinRoom('${r.roomId}')">ግባ</button>
@@ -2087,11 +2112,12 @@ async function refreshSekaRoomsList() {
       const isMyRoom = (r.creatorId && r.creatorId === userId) || (r.roomId === currentWaitingRoomId);
       const expSec = r.expiresIn !== undefined ? r.expiresIn : 60;
       const expAt = Date.now() + expSec * 1000;
+      const ruleBadges = r.jokerDouble ? '<span class="room-rule-badge">🃏 ጆከር 2×</span>' : '';
       if (isMyRoom) {
         return `
           <div class="room-list-item" style="background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 12px; padding: 10px 14px; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between;">
             <div>
-              <strong style="color: #065f46; font-size: 14px;">${r.creatorName}</strong>
+              <strong style="color: #065f46; font-size: 14px;">${r.creatorName}</strong>${ruleBadges}
               <div style="font-size: 12px; color: #475569; margin-top: 2px;">
                 ${r.stakeAmount} ETB • ${r.playersCount || 1}/${r.maxPlayers || 2} ተጫዋች
               </div>
@@ -2103,7 +2129,7 @@ async function refreshSekaRoomsList() {
         return `
           <div class="room-list-item" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 10px 14px; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between;">
             <div>
-              <strong style="color: #0f172a; font-size: 14px;">${r.creatorName}</strong>
+              <strong style="color: #0f172a; font-size: 14px;">${r.creatorName}</strong>${ruleBadges}
               <div style="font-size: 12px; color: #64748b; margin-top: 2px;">
                 ${r.stakeAmount} ETB • ${r.playersCount || 1}/${r.maxPlayers || 2} ተጫዋች
                 ${r.expiresIn !== undefined ? `• <span class="waiting-countdown-badge" data-expires-at="${expAt}" style="color: #059669; font-weight: 700;">⏳ ${expSec}s</span>` : ''}

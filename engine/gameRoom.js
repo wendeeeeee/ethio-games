@@ -18,11 +18,15 @@ const {
 const walletManager = require('./walletManager');
 
 class GameRoom {
-  constructor(roomId, creator, stakeAmount = 100, maxPlayers = 2) {
+  constructor(roomId, creator, stakeAmount = 100, maxPlayers = 2, options = {}) {
     this.roomId = roomId;
     this.creator = creator; // { id, name, socketId }
     this.joiner = null;     // { id, name, socketId } (2nd player, calls Joker)
     this.maxPlayers = Math.min(4, Math.max(2, Number(maxPlayers) || 2));
+    this.jokerDouble = !!(options && options.jokerDouble);
+    this.dubeDouble = !!(options && options.dubeDouble);
+    this.doubleEnabled = this.jokerDouble || this.dubeDouble;
+    this.doubleWin = false;
     this.players = [creator];
     this.eliminatedPlayers = new Set();
     this.stakeAmount = stakeAmount;
@@ -264,7 +268,8 @@ class GameRoom {
     if (this.isFreeBot || this.stakeAmount <= 0) {
       this.pot = 0;
     } else {
-      const escrowResult = walletManager.lockEscrow(this.roomId, this.players.map(p => p.id), this.stakeAmount);
+      const lockMultiplier = this.doubleEnabled ? 2 : 1;
+      const escrowResult = walletManager.lockEscrow(this.roomId, this.players.map(p => p.id), this.stakeAmount, { lockMultiplier });
       if (!escrowResult.success) {
         this.players.pop();
         delete this.hands[player.id];
@@ -524,17 +529,26 @@ class GameRoom {
 
     // Conquer Win Condition: All 13 cards melded onto table (via ወረድ + ገቢ) and final 14th card discarded -> WIN!
     if (hand.length === 0) {
+      const discardedIsJoker = Boolean(
+        discardedCard.isJoker ||
+        (this.jokerRank && discardedCard.rank === this.jokerRank && (!this.jokerSuits || this.jokerSuits.includes(discardedCard.suit)))
+      );
+      const isDouble = this.jokerDouble && discardedIsJoker;
+      this.doubleWin = isDouble;
+
       this.mustMeld41PlayerId = null;
       this.discardPile.push(discardedCard);
       this.status = 'FINISHED';
       this.winner = playerId;
-      this.winReason = `👑 ኮንከር! ${this.getPlayerName(playerId)} 13ቱንም ካርታ አውርዶ መጨረሻ ላይ ${discardedCard.rank}${discardedCard.suit} በመጣል አሸነፈ!`;
+      this.winReason = isDouble
+        ? `🔥 DOUBLE ኮንከር (ጆከር ለመሬት)! ${this.getPlayerName(playerId)} 13ቱንም ካርታ አውርዶ መጨረሻ ላይ ጆከር (${discardedCard.rank}${discardedCard.suit}) በመጣል 2× አሸነፈ!`
+        : `👑 ኮንከር! ${this.getPlayerName(playerId)} 13ቱንም ካርታ አውርዶ መጨረሻ ላይ ${discardedCard.rank}${discardedCard.suit} በመጣል አሸነፈ!`;
       this.log(`🏆 ${this.winReason}`);
 
-      const payout = walletManager.payoutWinner(this.roomId, playerId);
+      const payout = walletManager.payoutWinner(this.roomId, playerId, { isDouble });
       this.resetPoke();
       this.clearTurnTimer();
-      return { success: true, isWin: true, winner: playerId, payout };
+      return { success: true, isWin: true, isDouble, winner: playerId, payout };
     }
 
     // Finishing Conquer or Dube directly from hand (Rule 5 & 12) — allowed even without 41 on table!
@@ -562,19 +576,32 @@ class GameRoom {
         this.hands[playerId] = [];
       }
 
+      const discardedIsJoker = Boolean(
+        discardedCard.isJoker ||
+        (this.jokerRank && discardedCard.rank === this.jokerRank && (!this.jokerSuits || this.jokerSuits.includes(discardedCard.suit)))
+      );
+      const isDouble = (this.jokerDouble && discardedIsJoker) || (this.dubeDouble && !!dubeResult);
+      this.doubleWin = isDouble;
+
       this.mustMeld41PlayerId = null;
       this.discardPile.push(discardedCard);
       this.status = 'FINISHED';
       this.winner = playerId;
-      this.winReason = dubeResult
-        ? `👑 ዱቤ (DUBE)! ${this.getPlayerName(playerId)} 1 ትሪስ + 5 ጥንድ አውርዶ አሸነፈ!`
-        : `CONQUER! ${this.getPlayerName(playerId)} discarded ${discardedCard.rank}${discardedCard.suit} and won!`;
+      if (dubeResult) {
+        this.winReason = (this.dubeDouble)
+          ? `🔥 DOUBLE ዱቤ (DUBE 2×)! ${this.getPlayerName(playerId)} 1 ትሪስ + 5 ጥንድ አውርዶ 2× አሸነፈ!`
+          : `👑 ዱቤ (DUBE)! ${this.getPlayerName(playerId)} 1 ትሪስ + 5 ጥንድ አውርዶ አሸነፈ!`;
+      } else {
+        this.winReason = isDouble
+          ? `🔥 DOUBLE ኮንከር (ጆከር ለመሬት)! ${this.getPlayerName(playerId)} ጆከር (${discardedCard.rank}${discardedCard.suit}) ጥሎ 2× አሸነፈ!`
+          : `CONQUER! ${this.getPlayerName(playerId)} discarded ${discardedCard.rank}${discardedCard.suit} and won!`;
+      }
       this.log(`🏆 ${this.winReason}`);
 
-      const payout = walletManager.payoutWinner(this.roomId, playerId);
+      const payout = walletManager.payoutWinner(this.roomId, playerId, { isDouble });
       this.resetPoke();
       this.clearTurnTimer();
-      return { success: true, isWin: true, isDube: !!dubeResult, winner: playerId, payout };
+      return { success: true, isWin: true, isDube: !!dubeResult, isDouble, winner: playerId, payout };
     }
 
     // Player picked from ground without having opened: cannot discard until 41 is melded or hand closes!
@@ -930,6 +957,10 @@ class GameRoom {
       eliminatedPlayers: Array.from(this.eliminatedPlayers),
       stakeAmount: this.stakeAmount,
       pot: this.pot,
+      jokerDouble: this.jokerDouble,
+      dubeDouble: this.dubeDouble,
+      doubleEnabled: this.doubleEnabled,
+      doubleWin: this.doubleWin,
       creator: { id: this.creator.id, name: this.creator.name },
       joiner: this.joiner ? { id: this.joiner.id, name: this.joiner.name } : null,
       baseCard: this.baseCard,

@@ -676,6 +676,9 @@ app.get('/api/rooms', (req, res) => {
         stakeAmount: room.stakeAmount,
         maxPlayers: room.maxPlayers || 2,
         playersCount: room.players ? room.players.length : 1,
+        jokerDouble: !!room.jokerDouble,
+        dubeDouble: !!room.dubeDouble,
+        doubleEnabled: !!room.doubleEnabled,
         expiresIn
       });
     }
@@ -705,6 +708,8 @@ app.get('/api/seka/rooms', (req, res) => {
         stakeAmount: room.stakeAmount,
         maxPlayers: room.maxPlayers || 2,
         playersCount: room.players ? room.players.length : 1,
+        jokerDouble: !!room.jokerDouble,
+        doubleEnabled: !!room.doubleEnabled,
         expiresIn
       });
     }
@@ -766,16 +771,22 @@ io.on('connection', (socket) => {
   });
 
   // Create Table
-  socket.on('create_room', ({ userId, name, stakeAmount, maxPlayers }) => {
+  socket.on('create_room', ({ userId, name, stakeAmount, maxPlayers, jokerDouble, dubeDouble }) => {
     const stake = Math.floor(Number(stakeAmount) || 0);
     const numPlayers = Math.min(4, Math.max(2, Number(maxPlayers) || 2));
+    const hasJokerDouble = !!jokerDouble;
+    const hasDubeDouble = !!dubeDouble;
+    const isDoubleRoom = hasJokerDouble || hasDubeDouble;
+    const requiredBalance = isDoubleRoom ? stake * 2 : stake;
     if (stake < 5) {
       return socket.emit('error_msg', '⚠️ ዝቅተኛው የውርርድ መጠን 5 ብር ነው!');
     }
     const userWallet = walletManager.getWallet(userId);
-    if (!userWallet || userWallet.balance < stake) {
+    if (!userWallet || userWallet.balance < requiredBalance) {
       const bal = userWallet ? userWallet.balance : 0;
-      return socket.emit('error_msg', `⚠️ በቂ balance የለዎትም! ያለዎት ሂሳብ ${bal.toLocaleString()} ETB ሲሆን የውርርድ መጠኑ ${stake.toLocaleString()} ETB ነው።`);
+      return socket.emit('error_msg', isDoubleRoom
+        ? `⚠️ በቂ balance የለዎትም! Double (ጆከር/ዱቤ) ON ስለሆነ ቢያንስ 2× (${requiredBalance.toLocaleString()} ETB) ያስፈልጋል፤ ያለዎት ሂሳብ ${bal.toLocaleString()} ETB ነው።`
+        : `⚠️ በቂ balance የለዎትም! ያለዎት ሂሳብ ${bal.toLocaleString()} ETB ሲሆን የውርርድ መጠኑ ${stake.toLocaleString()} ETB ነው።`);
     }
 
     // Block creating a second room while user already has an active waiting room
@@ -790,7 +801,10 @@ io.on('connection', (socket) => {
     }
 
     const roomId = `room_${Math.floor(1000 + Math.random() * 9000)}`;
-    const room = new GameRoom(roomId, { id: userId, name, socketId: socket.id }, stake, numPlayers);
+    const room = new GameRoom(roomId, { id: userId, name, socketId: socket.id }, stake, numPlayers, {
+      jokerDouble: hasJokerDouble,
+      dubeDouble: hasDubeDouble
+    });
     attachConquerRoomCallbacks(room);
     room.createdAt = Date.now();
     room.expiresAt = Date.now() + 60 * 1000; // 1-minute expiration if no opponent joins
@@ -843,9 +857,12 @@ io.on('connection', (socket) => {
     if (!room || room.status === 'EXPIRED') return socket.emit('error_msg', 'Room expired or not found');
 
     const userWallet = walletManager.getWallet(userId);
-    if (!userWallet || userWallet.balance < room.stakeAmount) {
+    const requiredBalance = room.doubleEnabled ? room.stakeAmount * 2 : room.stakeAmount;
+    if (!userWallet || userWallet.balance < requiredBalance) {
       const bal = userWallet ? userWallet.balance : 0;
-      return socket.emit('error_msg', `⚠️ በቂ balance የለዎትም! ያለዎት ሂሳብ ${bal.toLocaleString()} ETB ሲሆን የውርርድ መጠኑ ${room.stakeAmount.toLocaleString()} ETB ነው።`);
+      return socket.emit('error_msg', room.doubleEnabled
+        ? `⚠️ በቂ balance የለዎትም! ይህ ጨዋታ Double ON ስለሆነ ቢያንስ 2× (${requiredBalance.toLocaleString()} ETB) ያስፈልጋል፤ ያለዎት ሂሳብ ${bal.toLocaleString()} ETB ነው።`
+        : `⚠️ በቂ balance የለዎትም! ያለዎት ሂሳብ ${bal.toLocaleString()} ETB ሲሆን የውርርድ መጠኑ ${room.stakeAmount.toLocaleString()} ETB ነው።`);
     }
 
     const result = room.join({ id: userId, name, socketId: socket.id });
@@ -1026,15 +1043,19 @@ io.on('connection', (socket) => {
   // ==========================================
 
   // Create Seka Table
-  socket.on('create_seka_room', ({ userId, name, stakeAmount, maxPlayers }) => {
+  socket.on('create_seka_room', ({ userId, name, stakeAmount, maxPlayers, jokerDouble }) => {
     const stake = Math.floor(Number(stakeAmount) || 0);
+    const hasJokerDouble = !!jokerDouble;
+    const requiredBalance = hasJokerDouble ? stake * 2 : stake;
     if (stake < 5) {
       return socket.emit('error_msg', '⚠️ ዝቅተኛው የውርርድ መጠን 5 ብር ነው!');
     }
     const userWallet = walletManager.getWallet(userId);
-    if (!userWallet || userWallet.balance < stake) {
+    if (!userWallet || userWallet.balance < requiredBalance) {
       const bal = userWallet ? userWallet.balance : 0;
-      return socket.emit('error_msg', `⚠️ በቂ balance የለዎትም! ያለዎት ሂሳብ ${bal.toLocaleString()} ETB ሲሆን የውርርድ መጠኑ ${stake.toLocaleString()} ETB ነው። እባክዎ መጀመሪያ Deposit ያድርጉ ወይም አነስ ያለ ውርርድ ይምረጡ።`);
+      return socket.emit('error_msg', hasJokerDouble
+        ? `⚠️ በቂ balance የለዎትም! ጆከር ለመሬት ON ስለሆነ ቢያንስ 2× (${requiredBalance.toLocaleString()} ETB) ያስፈልጋል፤ ያለዎት ሂሳብ ${bal.toLocaleString()} ETB ነው።`
+        : `⚠️ በቂ balance የለዎትም! ያለዎት ሂሳብ ${bal.toLocaleString()} ETB ሲሆን የውርርድ መጠኑ ${stake.toLocaleString()} ETB ነው። እባክዎ መጀመሪያ Deposit ያድርጉ ወይም አነስ ያለ ውርርድ ይምረጡ።`);
     }
 
     // Block creating a second room while user already has an active waiting room
@@ -1050,7 +1071,9 @@ io.on('connection', (socket) => {
 
     const roomId = `seka_${Math.floor(1000 + Math.random() * 9000)}`;
     const numPlayers = Number(maxPlayers) === 3 ? 3 : 2;
-    const room = new SekaGameRoom(roomId, { id: userId, name, socketId: socket.id }, stake, numPlayers);
+    const room = new SekaGameRoom(roomId, { id: userId, name, socketId: socket.id }, stake, numPlayers, {
+      jokerDouble: hasJokerDouble
+    });
     attachSekaRoomCallbacks(room);
     room.createdAt = Date.now();
     room.expiresAt = Date.now() + 60 * 1000; // 1-minute expiration if no opponent joins
@@ -1089,10 +1112,13 @@ io.on('connection', (socket) => {
     if (!room || room.status === 'EXPIRED') return socket.emit('error_msg', 'Seka room expired or not found');
 
     const stake = room.stakeAmount || 100;
+    const requiredBalance = room.doubleEnabled ? stake * 2 : stake;
     const userWallet = walletManager.getWallet(userId);
-    if (!userWallet || userWallet.balance < stake) {
+    if (!userWallet || userWallet.balance < requiredBalance) {
       const bal = userWallet ? userWallet.balance : 0;
-      return socket.emit('error_msg', `⚠️ በቂ balance የለዎትም! ያለዎት ሂሳብ ${bal.toLocaleString()} ETB ሲሆን የውርርድ መጠኑ ${stake.toLocaleString()} ETB ነው። እባክዎ መጀመሪያ Deposit ያድርጉ።`);
+      return socket.emit('error_msg', room.doubleEnabled
+        ? `⚠️ በቂ balance የለዎትም! ጆከር ለመሬት ON ስለሆነ ቢያንስ 2× (${requiredBalance.toLocaleString()} ETB) ያስፈልጋል፤ ያለዎት ሂሳብ ${bal.toLocaleString()} ETB ነው።`
+        : `⚠️ በቂ balance የለዎትም! ያለዎት ሂሳብ ${bal.toLocaleString()} ETB ሲሆን የውርርድ መጠኑ ${stake.toLocaleString()} ETB ነው። እባክዎ መጀመሪያ Deposit ያድርጉ።`);
     }
 
     const result = room.join({ id: userId, name, socketId: socket.id });

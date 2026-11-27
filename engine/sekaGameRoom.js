@@ -10,9 +10,12 @@ const { RANK_ORDER } = require('./cardTypes');
 const walletManager = require('./walletManager');
 
 class SekaGameRoom {
-  constructor(roomId, creator, stakeAmount = 100, maxPlayers = 2) {
+  constructor(roomId, creator, stakeAmount = 100, maxPlayers = 2, options = {}) {
     this.roomId = roomId;
     this.maxPlayers = Number(maxPlayers) === 3 ? 3 : 2;
+    this.jokerDouble = !!(options && options.jokerDouble);
+    this.doubleEnabled = this.jokerDouble;
+    this.doubleWin = false;
     this.players = [creator];
     this.creator = creator; // { id, name, socketId, isBot }
     this.joiner = null;     // { id, name, socketId, isBot }
@@ -174,8 +177,9 @@ class SekaGameRoom {
         this.startGame();
         return { success: true, started: true };
       }
-      // Lock bets into Escrow
-      const escrowResult = walletManager.lockEscrow(this.roomId, this.players.map(p => p.id), this.stakeAmount);
+      // Lock bets into Escrow (2x if jokerDouble is ON)
+      const lockMultiplier = this.doubleEnabled ? 2 : 1;
+      const escrowResult = walletManager.lockEscrow(this.roomId, this.players.map(p => p.id), this.stakeAmount, { lockMultiplier });
       if (!escrowResult.success) {
         this.players.pop();
         if (this.joiner && this.joiner.id === player.id) this.joiner = null;
@@ -363,6 +367,9 @@ class SekaGameRoom {
     }
     this.discardPile.push(tetay);
 
+    const isDouble = this.jokerDouble && isSekaJoker(tetay);
+    this.doubleWin = isDouble;
+
     this.status = 'FINISHED';
     this.winner = this.players.find(p => p.id === playerId) || this.creator;
     this.winReason = 'SEKA_WIN';
@@ -370,16 +377,23 @@ class SekaGameRoom {
     this.winningDiscard = tetay;
     this.clearAllTimers();
 
-    walletManager.payoutWinner(this.roomId, this.winner.id);
+    const payout = walletManager.payoutWinner(this.roomId, this.winner.id, { isDouble });
+    const paidPot = payout && payout.effectivePot ? payout.effectivePot : this.pot;
 
-    this.log(`🏆 እንኳን ደስ አለህ! ${this.winner.name} በ 2 ትሪስ + 1 ኳትሪስ ሴካ ጨርሶ አሸነፈ! ፖት: ${this.pot} ETB ወሰደ!`);
+    this.log(
+      isDouble
+        ? `🔥 DOUBLE WIN (ጆከር ለመሬት)! ${this.winner.name} ጆከር ጥሎ በ 2 ትሪስ + 1 ኳትሪስ ሴካ ጨርሶ አሸነፈ! ፖት: ${paidPot} ETB (2×) ወሰደ!`
+        : `🏆 እንኳን ደስ አለህ! ${this.winner.name} በ 2 ትሪስ + 1 ኳትሪስ ሴካ ጨርሶ አሸነፈ! ፖት: ${paidPot} ETB ወሰደ!`
+    );
 
     return {
       success: true,
       isWin: true,
+      isDouble,
       winner: this.winner,
       winningMelds: winCheck.melds,
-      discardedCard: tetay
+      discardedCard: tetay,
+      payout
     };
   }
 
@@ -407,6 +421,9 @@ class SekaGameRoom {
       status: this.status,
       stakeAmount: this.stakeAmount,
       pot: this.pot,
+      jokerDouble: this.jokerDouble,
+      doubleEnabled: this.doubleEnabled,
+      doubleWin: this.doubleWin,
       maxPlayers: this.maxPlayers,
       playersCount: this.players.length,
       creator: { id: this.creator.id, name: this.creator.name },
