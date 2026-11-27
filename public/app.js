@@ -4691,8 +4691,15 @@ function renderGame(state) {
   opponentCardCount.textContent = oppCount;
   const isInitialDeal = !hasPlayedDealingAnim && state.status === 'PLAYING';
   const isFinished = state.status === 'FINISHED';
-  if (opponentCardsContainer) opponentCardsContainer.style.display = 'flex';
-  renderOpponentCards(oppCount, isInitialDeal);
+  if (!isSeka) {
+    if (opponentCardsContainer) {
+      opponentCardsContainer.innerHTML = '';
+      opponentCardsContainer.style.display = 'none';
+    }
+  } else {
+    if (opponentCardsContainer) opponentCardsContainer.style.display = 'flex';
+    renderOpponentCards(oppCount, isInitialDeal);
+  }
 
   // Center Field: Base Joker Card (Conquer only — hidden once picked up)
   const canShowJokerCard = !isSeka && state.status === 'PLAYING' && !!state.baseCard;
@@ -4926,11 +4933,8 @@ function renderGame(state) {
         }
       }
       if (opponentCardsContainer) {
-        // Keep opponent's remaining hand cards hidden (proper .card-back elements, never white .card!)
-        opponentCardsContainer.innerHTML = Array.from({ length: Math.max(0, oppCount) }, () => '<div class="card-back"></div>').join('');
-        opponentCardsContainer.style.display = 'flex';
-        opponentCardsContainer.style.justifyContent = 'center';
-        opponentCardsContainer.style.flexWrap = 'nowrap';
+        opponentCardsContainer.innerHTML = '';
+        opponentCardsContainer.style.display = 'none';
       }
     } else {
       let winMelds = state.winningMelds;

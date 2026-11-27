@@ -1946,7 +1946,7 @@ select:focus {
   background: transparent;
   border: none;
   border-radius: 0;
-  max-height: 220px;
+  max-height: 280px;
   overflow-y: auto;
   flex-shrink: 0;
 }
@@ -1980,11 +1980,11 @@ select:focus {
 
 @media (max-width: 768px) {
   .table-melds-area {
-    max-height: 155px;
+    max-height: 210px;
   }
 
   .table-melds-area.multi-player-melds {
-    max-height: 145px;
+    max-height: 200px;
   }
 
   .table-melds-area.multi-player-melds .card {
