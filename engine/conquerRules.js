@@ -536,9 +536,6 @@ function sortMeldCards(meld, jokerRank, jokerSuits) {
       const suit = (c.assignedCard && c.assignedCard.suit) ? c.assignedCard.suit : c.suit;
       if (suit === '♥' || suit === '♦') return true;
       if (suit === '♠' || suit === '♣') return false;
-      if (c.isFalseJoker && Array.isArray(jokerSuits) && jokerSuits.length > 0) {
-        return jokerSuits.some(s => s === '♥' || s === '♦');
-      }
       return c.color === 'red';
     };
     const reds = [];

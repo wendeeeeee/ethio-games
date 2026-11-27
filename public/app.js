@@ -3502,13 +3502,9 @@ function getRankNum(rank, aceHigh = false) {
 function orderSameRankSet(cards) {
   if (!cards || cards.length < 3) return cards;
 
-  const jSuits = (typeof currentGameState !== 'undefined' && currentGameState) ? currentGameState.jokerSuits : null;
   const isRed = (c) => {
     if (c.suit === '♥' || c.suit === '♦') return true;
     if (c.suit === '♠' || c.suit === '♣') return false;
-    if (isFalseJokerCard(c) && Array.isArray(jSuits) && jSuits.length > 0) {
-      return jSuits.some(s => s === '♥' || s === '♦');
-    }
     return c.color === 'red';
   };
   const reds = cards.filter(isRed);
@@ -3773,13 +3769,15 @@ function buildChainsFromCards(cards) {
       }
     }
     if (bestChain && bestConn > 0) {
+      const jRankAttach = (typeof currentGameState !== 'undefined' && currentGameState) ? currentGameState.jokerRank : null;
+      const effRankAttach = (c) => (isFalseJokerCard(c) && jRankAttach ? jRankAttach : c.rank);
       if (bestIdx === 0) {
         bestChain.unshift(cand);
       } else if (bestIdx === bestChain.length - 1) {
         bestChain.push(cand);
       } else {
         // Target card is interior in a same-rank set: move it to the edge so cand (e.g. False Joker) sits right beside it!
-        const allSameRank = bestChain.every(c => c.rank === bestChain[0].rank);
+        const allSameRank = bestChain.every(c => effRankAttach(c) === effRankAttach(bestChain[0]));
         if (allSameRank) {
           const [targetCard] = bestChain.splice(bestIdx, 1);
           bestChain.push(targetCard, cand);
@@ -3788,6 +3786,10 @@ function buildChainsFromCards(cards) {
         } else {
           bestChain.push(cand);
         }
+      }
+      if (bestChain.length >= 3 && bestChain.every(c => effRankAttach(c) === effRankAttach(bestChain[0]))) {
+        const reordered = orderSameRankSet(bestChain);
+        bestChain.splice(0, bestChain.length, ...reordered);
       }
       remaining.delete(cand.id);
     }
