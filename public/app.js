@@ -2071,7 +2071,7 @@ async function refreshRoomsList() {
       const isMyRoom = (r.creatorId && r.creatorId === userId) || (r.roomId === currentWaitingRoomId);
       const expSec = r.expiresIn !== undefined ? r.expiresIn : 60;
       const expAt = Date.now() + expSec * 1000;
-      const ruleBadges = `${r.jokerDouble ? '<span class="room-rule-badge">🃏 ጆከር 2×</span>' : ''}${r.dubeDouble ? '<span class="room-rule-badge">👑 ዱቤ 2×</span>' : ''}`;
+      const ruleBadges = `${r.jokerDouble ? '<span class="room-rule-badge">🃏 ጆከር ለመሬት</span>' : ''}${r.dubeDouble ? '<span class="room-rule-badge">👑 ዱቤ</span>' : ''}`;
       if (isMyRoom) {
         return `
           <div class="room-list-item" style="background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 12px; padding: 10px 14px; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between;">
@@ -2112,7 +2112,7 @@ async function refreshSekaRoomsList() {
       const isMyRoom = (r.creatorId && r.creatorId === userId) || (r.roomId === currentWaitingRoomId);
       const expSec = r.expiresIn !== undefined ? r.expiresIn : 60;
       const expAt = Date.now() + expSec * 1000;
-      const ruleBadges = r.jokerDouble ? '<span class="room-rule-badge">🃏 ጆከር 2×</span>' : '';
+      const ruleBadges = r.jokerDouble ? '<span class="room-rule-badge">🃏 ጆከር ለመሬት</span>' : '';
       if (isMyRoom) {
         return `
           <div class="room-list-item" style="background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 12px; padding: 10px 14px; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between;">
@@ -4658,8 +4658,8 @@ function renderGame(state) {
   if (potDisplay) {
     const potVal = Number(state.pot) || 0;
     const ruleTags = [];
-    if (state.jokerDouble) ruleTags.push('🃏 ጆከር 2×');
-    if (state.dubeDouble) ruleTags.push('👑 ዱቤ 2×');
+    if (state.jokerDouble) ruleTags.push('🃏 ጆከር ለመሬት');
+    if (state.dubeDouble) ruleTags.push('👑 ዱቤ');
     const ruleSuffix = ruleTags.length > 0 ? ` • ${ruleTags.join(' • ')}` : '';
     if (potVal > 0 || ruleTags.length > 0) {
       potDisplay.textContent = potVal > 0
