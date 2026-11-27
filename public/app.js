@@ -1808,7 +1808,7 @@ function copyDepositPhone() {
       showSortToast(`📋 ${methodInfo.phone} ተኮርጅቷል (Copied)!`);
       const copyBtn = document.getElementById('copyTelebirrBtn');
       if (copyBtn) {
-        copyBtn.textContent = '✅ ተኮርጇል';
+        copyBtn.textContent = '✅ Copy ሆኗል';
         setTimeout(() => { copyBtn.textContent = '📋 ኮፒ'; }, 2000);
       }
     }).catch(() => { });
