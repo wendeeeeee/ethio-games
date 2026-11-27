@@ -1185,27 +1185,41 @@ io.on('connection', (socket) => {
 });
 
 function attachSekaRoomCallbacks(room) {
-  room.onTurnTimeoutCallback = (r, winner, loser) => {
+  room.onTurnTimeoutCallback = (r, winner, loser, gameFinished = true) => {
     for (const p of r.players) {
       if (p && p.id) broadcastWallet(p.id);
     }
     broadcastSekaRoomUpdate(r);
-    io.to(r.roomId).emit('player_timed_out', {
-      winnerName: winner ? winner.name : 'Opponent',
-      loserName: loser ? loser.name : 'Player',
-      message: `⏰ ${loser ? loser.name : 'ተጫዋች'} በ1 ደቂቃ ውስጥ ካርታ ስላልጣለ ተሸንፏል! ${winner ? winner.name : 'ተጋጣሚ'} አሸነፈ!`
-    });
+    if (gameFinished) {
+      io.to(r.roomId).emit('player_timed_out', {
+        winnerName: winner ? winner.name : 'Opponent',
+        loserName: loser ? loser.name : 'Player',
+        message: `⏰ ${loser ? loser.name : 'ተጫዋች'} በ1 ደቂቃ ውስጥ ካርታ ስላልጣለ ተሸንፏል! ${winner ? winner.name : 'ተጋጣሚ'} አሸነፈ!`
+      });
+    } else {
+      io.to(r.roomId).emit('player_eliminated', {
+        loserName: loser ? loser.name : 'Player',
+        message: `⏰ ${loser ? loser.name : 'ተጫዋች'} በ1 ደቂቃ ውስጥ ካርታ ስላልጣለ ተሸንፎ ወጥቷል! ቀሪዎቹ ተጫዋቾች ይቀጥላሉ!`
+      });
+    }
   };
-  room.onLeaveTimeoutCallback = (r, winner, loser) => {
+  room.onLeaveTimeoutCallback = (r, winner, loser, gameFinished = true) => {
     for (const p of r.players) {
       if (p && p.id) broadcastWallet(p.id);
     }
     broadcastSekaRoomUpdate(r);
-    io.to(r.roomId).emit('player_abandoned', {
-      winnerName: winner ? winner.name : 'Opponent',
-      loserName: loser ? loser.name : 'Player',
-      message: `❌ ${loser ? loser.name : 'ተጫዋች'} በ1 ደቂቃ ውስጥ ስላልተመለሰ ተሸንፏል! ${winner ? winner.name : 'ተጋጣሚ'} አሸነፈ!`
-    });
+    if (gameFinished) {
+      io.to(r.roomId).emit('player_abandoned', {
+        winnerName: winner ? winner.name : 'Opponent',
+        loserName: loser ? loser.name : 'Player',
+        message: `❌ ${loser ? loser.name : 'ተጫዋች'} በ1 ደቂቃ ውስጥ ስላልተመለሰ ተሸንፏል! ${winner ? winner.name : 'ተጋጣሚ'} አሸነፈ!`
+      });
+    } else {
+      io.to(r.roomId).emit('player_eliminated', {
+        loserName: loser ? loser.name : 'Player',
+        message: `❌ ${loser ? loser.name : 'ተጫዋች'} በ1 ደቂቃ ውስጥ ስላልተመለሰ ተሸንፎ ወጥቷል! ቀሪዎቹ ተጫዋቾች ይቀጥላሉ!`
+      });
+    }
   };
 }
 

@@ -17,6 +17,7 @@ class SekaGameRoom {
     this.doubleEnabled = this.jokerDouble;
     this.doubleWin = false;
     this.players = [creator];
+    this.eliminatedPlayers = new Set();
     this.creator = creator; // { id, name, socketId, isBot }
     this.joiner = null;     // { id, name, socketId, isBot }
     this.stakeAmount = stakeAmount;
@@ -83,25 +84,72 @@ class SekaGameRoom {
     }, this.turnDuration);
   }
 
+  getActivePlayers() {
+    return this.players.filter(p => !this.eliminatedPlayers.has(p.id));
+  }
+
+  getNextActivePlayer(currentPlayerId) {
+    const idx = this.players.findIndex(p => p.id === currentPlayerId);
+    if (idx === -1) return this.getActivePlayers()[0] || null;
+    for (let offset = 1; offset <= this.players.length; offset++) {
+      const candidate = this.players[(idx + offset) % this.players.length];
+      if (candidate && !this.eliminatedPlayers.has(candidate.id)) {
+        return candidate;
+      }
+    }
+    return null;
+  }
+
+  eliminateOrFinish(playerId, winReasonCode, logMsg) {
+    if (this.status !== 'PLAYING') return { gameFinished: false };
+    this.eliminatedPlayers.add(playerId);
+
+    const active = this.getActivePlayers();
+    if (active.length <= 1) {
+      const winner = active[0] || this.creator;
+      this.status = 'FINISHED';
+      this.winner = winner;
+      this.winReason = winReasonCode;
+      this.forfeitedPlayer = { id: playerId, name: (this.players.find(p => p.id === playerId) || {}).name || 'Player' };
+
+      walletManager.payoutWinner(this.roomId, winner.id);
+      this.log(`🏆 ${logMsg} ${winner.name} አሸነፈ!`);
+      this.clearAllTimers();
+      return { gameFinished: true, winner };
+    }
+
+    // 2+ active players remain: return eliminated player's cards to deck and continue!
+    const hand = this.hands[playerId] || [];
+    if (hand.length > 0) {
+      this.deck.push(...hand);
+      this.hands[playerId] = [];
+      this.deck = shuffleDeck(this.deck);
+    }
+
+    this.log(`${logMsg} (ቀሪ ${active.length} ተጫዋቾች ይቀጥላሉ!)`);
+    if (this.currentTurnPlayerId === playerId) {
+      const nextP = this.getNextActivePlayer(playerId);
+      if (nextP) {
+        this.currentTurnPlayerId = nextP.id;
+        this.turnState = 'AWAITING_DRAW';
+      }
+      this.resetTurnTimer();
+    }
+    return { gameFinished: false, eliminatedId: playerId };
+  }
+
   handleTurnTimeout(onTimeout) {
     if (this.status !== 'PLAYING') return;
     const timedOutPlayer = this.players.find(p => p.id === this.currentTurnPlayerId);
     if (!timedOutPlayer) return;
 
-    const opponents = this.players.filter(p => p.id !== timedOutPlayer.id);
-    const winner = opponents[0] || this.creator;
+    const elimRes = this.eliminateOrFinish(
+      timedOutPlayer.id,
+      'TIMEOUT_FORFEIT',
+      `⏰ ተጫዋች ${timedOutPlayer.name} በ1 ደቂቃ ውስጥ ካርታ ስላልጣለ ተሸንፏል!`
+    );
 
-    this.status = 'FINISHED';
-    this.winner = winner;
-    this.winReason = 'TIMEOUT_FORFEIT';
-    this.forfeitedPlayer = timedOutPlayer;
-
-    walletManager.payoutWinner(this.roomId, winner.id);
-    this.log(`⏰ ተጫዋች ${timedOutPlayer.name} በ1 ደቂቃ ውስጥ ካርታ ስላልጣለ ተሸንፏል! ${winner.name} አሸነፈ (Timeout)!`);
-
-    this.clearAllTimers();
-
-    if (onTimeout) onTimeout(this, winner, timedOutPlayer);
+    if (onTimeout) onTimeout(this, elimRes.winner || null, timedOutPlayer, elimRes.gameFinished);
   }
 
   playerLeaveTemp(userId, onTimeout) {
@@ -124,23 +172,16 @@ class SekaGameRoom {
     const cb = onTimeout || this.onLeaveTimeoutCallback;
     this.leaveTimeouts[userId] = setTimeout(() => {
       if (this.status === 'PLAYING' && this.temporarilyLeft[userId]) {
-        const opponents = this.players.filter(p => p.id !== userId);
-        const winner = opponents[0] || this.creator;
-
-        this.status = 'FINISHED';
-        this.winner = winner;
-        this.winReason = 'ABANDON_FORFEIT';
-        this.forfeitedPlayer = leftPlayer;
-
-        walletManager.payoutWinner(this.roomId, winner.id);
-        this.log(`❌ ${leftPlayer.name} በ1 ደቂቃ ውስጥ ስላልተመለሰ ተሸንፏል! ${winner.name} አሸነፈ!`);
-
         delete this.temporarilyLeft[userId];
         delete this.leaveTimeouts[userId];
 
-        this.clearAllTimers();
+        const elimRes = this.eliminateOrFinish(
+          userId,
+          'ABANDON_FORFEIT',
+          `❌ ${leftPlayer.name} በ1 ደቂቃ ውስጥ ስላልተመለሰ ተሸንፏል!`
+        );
 
-        if (cb) cb(this, winner, leftPlayer);
+        if (cb) cb(this, elimRes.winner || null, leftPlayer, elimRes.gameFinished);
       }
     }, 60 * 1000);
   }
@@ -286,18 +327,27 @@ class SekaGameRoom {
     const hand = this.getHand(playerId);
     hand.push(drawnCard);
 
-    if (source === 'deck' && this.deck.length === 0 && (this.reshuffleCount >= 1 || this.discardPile.length <= 1)) {
-      this.status = 'FINISHED';
-      this.winner = 'MONTE';
-      this.winReason = 'MONTE';
-      const monteRes = walletManager.settleMonte(this.roomId, 0.05);
-      this.clearAllTimers();
-      this.log(
-        monteRes
-          ? `🃏 ሞንቴ (MONTE)! ካርታው ለ2ኛ ጊዜ ስላለቀ ጨዋታው ሞንቴ ሆኗል — 5% (${monteRes.feePerPlayer} ETB) ተቀንሶ ${monteRes.refundPerPlayer} ETB ተመልሷል።`
-          : '🃏 ሞንቴ (MONTE)! ካርታው ለ2ኛ ጊዜ ስላለቀ ጨዋታው ሞንቴ ሆኗል።'
-      );
-      return { success: true, card: drawnCard, from: source, isMonte: true };
+    if (source === 'deck' && this.deck.length === 0) {
+      if (this.reshuffleCount === 0 && this.discardPile.length > 1) {
+        // Immediately reshuffle discard pile into deck so deckCount never stays 0!
+        const topDiscard = this.discardPile.pop();
+        this.deck = shuffleDeck([...this.discardPile]);
+        this.discardPile = [topDiscard];
+        this.reshuffleCount += 1;
+        this.log('🔄 የካርታ መደብ አልቆ ከመሬት ተደባልቆ 1 ጊዜ ተመቷል።');
+      } else if (this.reshuffleCount >= 1 || this.discardPile.length <= 1) {
+        this.status = 'FINISHED';
+        this.winner = 'MONTE';
+        this.winReason = 'MONTE';
+        const monteRes = walletManager.settleMonte(this.roomId, 0.05);
+        this.clearAllTimers();
+        this.log(
+          monteRes
+            ? `🃏 ሞንቴ (MONTE)! ካርታው ለ2ኛ ጊዜ ስላለቀ ጨዋታው ሞንቴ ሆኗል — 5% (${monteRes.feePerPlayer} ETB) ተቀንሶ ${monteRes.refundPerPlayer} ETB ተመልሷል።`
+            : '🃏 ሞንቴ (MONTE)! ካርታው ለ2ኛ ጊዜ ስላለቀ ጨዋታው ሞንቴ ሆኗል።'
+        );
+        return { success: true, card: drawnCard, from: source, isMonte: true };
+      }
     }
 
     this.turnState = 'AWAITING_DISCARD';
@@ -336,10 +386,11 @@ class SekaGameRoom {
     const playerName = playerObj ? playerObj.name : 'Player';
     this.log(`📤 ${playerName} [ ${cardToDiscard.suit} ${cardToDiscard.rank} ] ወደ መሬት ጣለ።`);
 
-    // Switch Turn
-    const currIdx = this.players.findIndex(p => p.id === playerId);
-    const nextIdx = (currIdx + 1) % this.players.length;
-    this.currentTurnPlayerId = this.players[nextIdx].id;
+    // Switch Turn (skip eliminated players)
+    const nextP = this.getNextActivePlayer(playerId);
+    if (nextP) {
+      this.currentTurnPlayerId = nextP.id;
+    }
     this.turnState = 'AWAITING_DRAW';
     this.resetTurnTimer();
 

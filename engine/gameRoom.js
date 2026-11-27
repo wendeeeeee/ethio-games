@@ -99,11 +99,9 @@ class GameRoom {
 
   playerLeaveTemp(userId, onTimeout) {
     if (this.status !== 'PLAYING') return;
-    const isCreator = this.creator && this.creator.id === userId;
-    const isJoiner = this.joiner && this.joiner.id === userId;
-    if (!isCreator && !isJoiner) return;
+    const leftPlayer = this.players.find(p => p.id === userId);
+    if (!leftPlayer) return;
 
-    const leftPlayer = isCreator ? this.creator : this.joiner;
     const deadline = Date.now() + 60 * 1000;
     this.temporarilyLeft[userId] = {
       name: leftPlayer.name,
