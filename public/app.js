@@ -3558,6 +3558,9 @@ function isCardHigherRank(a, b) {
 function isCardGebiToMeld(card, meld, jokerRank, jokerSuits) {
   if (!card || !meld || meld.length < 3) return false;
 
+  // False Joker CANNOT be used for Gebi (ገቢ) — it may only be part of a meld when laying down!
+  if (card.isFalseJoker) return false;
+
   const isJk = (c) => isWildJoker(c, jokerRank, jokerSuits);
   const naturals = meld.filter(c => !isJk(c));
   if (naturals.length === 0) return false;

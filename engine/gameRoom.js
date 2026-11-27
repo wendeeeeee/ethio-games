@@ -916,6 +916,11 @@ class GameRoom {
     if (cardIndex === -1) return { success: false, message: 'Card not in hand' };
     const card = playerHand[cardIndex];
 
+    // False Joker cannot be attached via Gebi!
+    if (card.isFalseJoker) {
+      return { success: false, message: 'False Joker ገቢ ማድረግ አይቻልም! ወረድ (ትሪስ) ውስጥ ብቻ ያስገባል።' };
+    }
+
     const melds = this.tableMelds[targetPlayerMeldOwnerId];
     if (!melds || !melds[meldIndex]) return { success: false, message: 'የወረደ ቡድን አልተገኘም' };
     const targetMeld = melds[meldIndex];
