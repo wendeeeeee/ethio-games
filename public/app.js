@@ -591,6 +591,126 @@ const registerModal = document.getElementById('registerModal');
 const openProfileBtn = document.getElementById('openProfileBtn');
 const closeRegModalBtn = document.getElementById('closeRegModalBtn');
 
+const transactionHistoryModal = document.getElementById('transactionHistoryModal');
+const closeHistoryModalBtn = document.getElementById('closeHistoryModalBtn');
+const historyModalBalanceDisplay = document.getElementById('historyModalBalanceDisplay');
+const txHistoryList = document.getElementById('txHistoryList');
+let txHistoryFilter = 'all';
+let txHistoryItems = [];
+
+function renderTransactionHistory() {
+  if (!txHistoryList) return;
+  const filtered = txHistoryFilter === 'all'
+    ? txHistoryItems
+    : txHistoryItems.filter(item => item.kind === txHistoryFilter);
+
+  if (!filtered.length) {
+    txHistoryList.innerHTML = `<div style="text-align: center; color: #64748b; font-size: 13px; padding: 24px;">ምንም የ${txHistoryFilter === 'deposit' ? 'Deposit' : txHistoryFilter === 'withdraw' ? 'Withdraw' : 'ግብይት'} ታሪክ የለም።</div>`;
+    return;
+  }
+
+  txHistoryList.innerHTML = filtered.map(item => {
+    const status = String(item.status || 'PENDING').toUpperCase();
+    let badgeBg = '#fef3c7';
+    let badgeColor = '#b45309';
+    let badgeText = '⏳ Pending';
+    if (status === 'APPROVED') {
+      badgeBg = '#dcfce7';
+      badgeColor = '#15803d';
+      badgeText = '✅ Approved';
+    } else if (status === 'REJECTED') {
+      badgeBg = '#fee2e2';
+      badgeColor = '#b91c1c';
+      badgeText = '❌ Rejected';
+    }
+    const isDeposit = item.kind === 'deposit';
+    const amtText = `${isDeposit ? '+' : '-'}${Number(item.amount || 0).toLocaleString()} ETB`;
+    const amtColor = isDeposit ? '#059669' : '#dc2626';
+    const dateStr = item.createdAt
+      ? new Date(item.createdAt).toLocaleString('am-ET', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+      : '';
+    const subInfo = isDeposit
+      ? `${(item.method || 'telebirr').toUpperCase()}${item.transactionId ? ` • TXN: ${item.transactionId}` : ''}`
+      : `${(item.method || 'telebirr').toUpperCase()}${item.accountNumber ? ` • ${item.accountNumber}` : ''}`;
+
+    return `
+      <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 10px 12px; display: flex; justify-content: space-between; align-items: center; gap: 10px;">
+        <div style="min-width: 0;">
+          <div style="font-size: 13px; font-weight: 800; color: #0f172a;">
+            ${isDeposit ? '💰 Deposit' : '💸 Withdraw'}
+          </div>
+          <div style="font-size: 11px; color: #64748b; margin-top: 2px; word-break: break-all;">${subInfo}</div>
+          ${dateStr ? `<div style="font-size: 10px; color: #94a3b8; margin-top: 2px;">🕒 ${dateStr}</div>` : ''}
+        </div>
+        <div style="text-align: right; flex-shrink: 0;">
+          <div style="font-size: 14px; font-weight: 900; color: ${amtColor};">${amtText}</div>
+          <span style="display: inline-block; margin-top: 4px; font-size: 10px; font-weight: 800; padding: 2px 8px; border-radius: 10px; background: ${badgeBg}; color: ${badgeColor};">${badgeText}</span>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+async function openTransactionHistoryModal() {
+  if (!userId || !transactionHistoryModal) return;
+  if (historyModalBalanceDisplay) {
+    historyModalBalanceDisplay.textContent = `${Number(currentUserBalance || 0).toLocaleString()} ETB`;
+  }
+  transactionHistoryModal.style.display = 'flex';
+  if (txHistoryList) {
+    txHistoryList.innerHTML = `<div style="text-align: center; color: #64748b; font-size: 13px; padding: 20px;">⏳ በመጫን ላይ...</div>`;
+  }
+  try {
+    const [depRes, wdRes] = await Promise.all([
+      fetch(`/api/wallet/deposits/${encodeURIComponent(userId)}`),
+      fetch(`/api/wallet/withdrawals/${encodeURIComponent(userId)}`)
+    ]);
+    const depData = await depRes.json();
+    const wdData = await wdRes.json();
+    const deps = (depData.deposits || []).map(d => ({
+      kind: 'deposit',
+      amount: d.amount,
+      status: d.status,
+      method: d.method,
+      transactionId: d.transactionId,
+      createdAt: d.createdAt || d.updatedAt
+    }));
+    const wds = (wdData.withdrawals || []).map(w => ({
+      kind: 'withdraw',
+      amount: w.amount,
+      status: w.status,
+      method: w.method,
+      accountNumber: w.accountNumber,
+      createdAt: w.createdAt || w.updatedAt
+    }));
+    txHistoryItems = [...deps, ...wds].sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+    renderTransactionHistory();
+  } catch (e) {
+    if (txHistoryList) {
+      txHistoryList.innerHTML = `<div style="text-align: center; color: #dc2626; font-size: 13px; padding: 20px;">⚠️ ታሪኩን ማምጣት አልተቻለም።</div>`;
+    }
+  }
+}
+
+if (openProfileBtn) {
+  openProfileBtn.addEventListener('click', openTransactionHistoryModal);
+}
+if (closeHistoryModalBtn && transactionHistoryModal) {
+  closeHistoryModalBtn.addEventListener('click', () => {
+    transactionHistoryModal.style.display = 'none';
+  });
+  transactionHistoryModal.addEventListener('click', (e) => {
+    if (e.target === transactionHistoryModal) transactionHistoryModal.style.display = 'none';
+  });
+}
+document.querySelectorAll('[data-hist-tab]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    txHistoryFilter = btn.dataset.histTab || 'all';
+    document.querySelectorAll('[data-hist-tab]').forEach(b => b.classList.toggle('active', b === btn));
+    renderTransactionHistory();
+  });
+});
+
 const tabBtnLogin = document.getElementById('tabBtnLogin');
 const tabBtnRegister = document.getElementById('tabBtnRegister');
 const loginForm = document.getElementById('loginForm');

@@ -30,7 +30,7 @@
 
       <!-- Registered user: Shows User Profile, Balance & Logout Button -->
       <div id="userLoggedInArea" class="user-logged-in-area" style="display: none;">
-        <div class="user-profile-badge" id="openProfileBtn" title="የተጫዋች ስም">
+        <div class="user-profile-badge" id="openProfileBtn" style="cursor: pointer;" title="የግብይት ታሪክ (Transaction History)">
           <span>👤 <span id="walletUserDisplay"></span></span>
         </div>
         <div class="wallet-balance-wrap" id="headerBalanceClick" style="cursor: pointer;" title="ገንዘብ አስገባ (Deposit)">
@@ -753,6 +753,28 @@
     </div>
   </div>
 
+  <!-- TRANSACTION HISTORY MODAL (Deposit & Withdraw) -->
+  <div id="transactionHistoryModal" class="modal-overlay" style="display: none;">
+    <div class="modal-content deposit-modal-content" style="max-width: 460px;">
+      <button class="modal-close-btn" id="closeHistoryModalBtn" title="ዝጋ (Close)">✕</button>
+
+      <div class="simple-deposit-header">
+        <h3 class="simple-deposit-title">📜 የግብይት ታሪክ (History)</h3>
+        <span class="simple-deposit-balance">ቀሪ ሂሳብ: <strong id="historyModalBalanceDisplay">0 ETB</strong></span>
+      </div>
+
+      <div style="display: flex; gap: 6px; margin-bottom: 12px;">
+        <button type="button" class="amount-preset-btn active" id="histTabAll" data-hist-tab="all" style="flex: 1;">ሁሉም</button>
+        <button type="button" class="amount-preset-btn" id="histTabDeposit" data-hist-tab="deposit" style="flex: 1;">💰 Deposit</button>
+        <button type="button" class="amount-preset-btn" id="histTabWithdraw" data-hist-tab="withdraw" style="flex: 1;">💸 Withdraw</button>
+      </div>
+
+      <div id="txHistoryList" style="max-height: 360px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; text-align: left;">
+        <div style="text-align: center; color: #64748b; font-size: 13px; padding: 20px;">⏳ በመጫን ላይ...</div>
+      </div>
+    </div>
+  </div>
+
   <!-- WAITING FOR OPPONENT / SEARCHING FOR PLAYERS MODAL -->
   <div id="waitingForOpponentModal" class="modal-overlay" style="display: none;">
     <div class="modal-content"
@@ -854,7 +876,7 @@
 
   <!-- Socket.io & App Script -->
   <script src="/socket.io/socket.io.js"></script>
-  <script src="app.js?v=91"></script>
+  <script src="app.js?v=92"></script>
 </body>
 
 </html>
