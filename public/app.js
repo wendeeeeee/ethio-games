@@ -4672,7 +4672,9 @@ function renderGame(state) {
   }
 
   // Opponent display (supports 2, 3, or 4 players)
-  let oppCount = state.opponentCardCount !== undefined ? state.opponentCardCount : (state.opponentHandCount || 10);
+  let oppCount = state.opponentCardCount !== undefined
+    ? state.opponentCardCount
+    : (state.opponentHandCount !== undefined ? state.opponentHandCount : 10);
   if (state.opponents && state.opponents.length > 1) {
     opponentNameDisplay.innerHTML = state.opponents.map(o => {
       const isTurn = !o.eliminated && state.status === 'PLAYING' && state.currentTurnPlayerId === o.id;
