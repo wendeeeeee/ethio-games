@@ -21,6 +21,36 @@ class WalletManager {
     this.escrows = new Map();
     this.usersList = [];
     this._loadUsersFromFile();
+    this._loadAllFromSupabase();
+  }
+
+  async _loadAllFromSupabase() {
+    try {
+      const { data: rows, error } = await supabase
+        .from('users')
+        .select('id, name, phone, balance, locked')
+        .limit(1000);
+      if (error || !Array.isArray(rows)) return;
+      for (const r of rows) {
+        if (!r || !r.id || this._isBot(r.id)) continue;
+        const existing = this.wallets.get(r.id);
+        if (existing) {
+          existing.balance = Number(r.balance ?? existing.balance ?? 0);
+          existing.locked = Number(r.locked ?? existing.locked ?? 0);
+          if (r.name && !this._isGenericName(r.name)) existing.name = r.name;
+          if (r.phone) existing.phone = r.phone;
+        } else {
+          this.wallets.set(r.id, {
+            id: r.id,
+            name: (r.name && !this._isGenericName(r.name)) ? r.name : '',
+            phone: r.phone || '',
+            balance: Number(r.balance ?? 0),
+            locked: Number(r.locked ?? 0),
+            transactions: []
+          });
+        }
+      }
+    } catch (e) { }
   }
 
   _loadUsersFromFile() {
@@ -845,8 +875,8 @@ class WalletManager {
     if (!escrow) return null;
 
     const lockPerPlayer = escrow.lockPerPlayer || escrow.stakeAmount;
-    const feePerPlayer = Math.floor(escrow.stakeAmount * feeRate);
-    const refundPerPlayer = Math.max(0, lockPerPlayer - feePerPlayer);
+    const feePerPlayer = Math.round(escrow.stakeAmount * feeRate * 100) / 100;
+    const refundPerPlayer = Math.max(0, Math.round((lockPerPlayer - feePerPlayer) * 100) / 100);
     const playerIds = escrow.playerIds || [escrow.player1Id, escrow.player2Id].filter(Boolean);
 
     for (const pid of playerIds) {

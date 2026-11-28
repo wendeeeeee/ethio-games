@@ -11,6 +11,7 @@ const { executeSmartBotTurn } = require('./engine/conquerBot');
 const { SekaGameRoom, SekaBotPlayer } = require('./engine/sekaGameRoom');
 const walletManager = require('./engine/walletManager');
 const depositManager = require('./engine/depositManager');
+const { extractTelebirrTxnId, verifyTelebirrReceipt } = require('./engine/telebirrVerifier');
 const withdrawManager = require('./engine/withdrawManager');
 const { supabase, SUPABASE_URL, SUPABASE_ANON_KEY } = require('./engine/supabaseClient');
 
@@ -110,14 +111,64 @@ app.post('/api/wallet/deposit', rateLimit(15, 60000), async (req, res) => {
     return res.status(400).json({ success: false, message: 'እባክዎ Transaction ID ያስገቡ (ቢያንስ 4 ፊደል)' });
   }
 
-  const txnTrimmed = transactionId.trim();
   const methodName = method || 'telebirr';
+  const txnTrimmed = methodName === 'telebirr'
+    ? (extractTelebirrTxnId(transactionId) || transactionId.trim())
+    : transactionId.trim();
 
   try {
+    // Strict duplicate check (local + Supabase) before anything else
+    if (await depositManager.isDuplicateTxnAsync(txnTrimmed)) {
+      return res.status(400).json({
+        success: false,
+        message: `⚠️ ይህ Transaction ID (${txnTrimmed}) ቀድሞ ገብቷል! ተደጋጋሚ Transaction ID መጠቀም አይቻልም።`
+      });
+    }
+
     // Lookup user name & phone for admin visibility
     const userWallet = await walletManager.getWalletAsync(userId);
     const userName = (userWallet && userWallet.name) ? userWallet.name : '';
     const userPhone = (userWallet && userWallet.phone) ? userWallet.phone : '';
+
+    // Auto-verify Telebirr receipt directly against Ethio Telecom receipt page
+    if (methodName === 'telebirr') {
+      const verifyRes = await verifyTelebirrReceipt(txnTrimmed, num);
+      if (verifyRes.ok) {
+        const deposit = await depositManager.createDeposit({
+          userId,
+          userName,
+          userPhone,
+          amount: num,
+          method: methodName,
+          transactionId: txnTrimmed
+        });
+        await depositManager.approveDeposit(deposit.id, 'Auto-verified via Telebirr receipt');
+        const wallet = walletManager.deposit(userId, num);
+        io.emit(`wallet_${userId}`, wallet);
+        io.emit(`deposit_approved_${userId}`, {
+          amount: deposit.amount,
+          transactionId: deposit.transactionId,
+          depositId: deposit.id
+        });
+        io.emit('new_deposit_request', deposit);
+        io.emit('deposit_status_changed', { id: deposit.id, status: 'APPROVED' });
+
+        return res.json({
+          success: true,
+          status: 'APPROVED',
+          autoApproved: true,
+          deposit,
+          wallet,
+          message: `✅ የTelebirr ደረሰኝ ተረጋግጧል! ${num} ETB ወዲያውኑ ወደ ሂሳብዎ ገብቷል።`
+        });
+      } else if (!verifyRes.unreachable) {
+        return res.status(400).json({
+          success: false,
+          message: verifyRes.message
+        });
+      }
+      // If Telebirr receipt site is temporarily unreachable, fall through to PENDING for admin review
+    }
 
     // Create PENDING deposit for admin review
     const deposit = await depositManager.createDeposit({

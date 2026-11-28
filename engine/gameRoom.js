@@ -944,8 +944,15 @@ class GameRoom {
       return { success: false, message: 'ይህ ካርታ ወደዚህ ቡድን ገቢ (GEBI) መሆን አይችልም!' };
     }
 
-    // Attach card to target meld and sort into proper sequence order (e.g. 2 + 3-4-5 -> 2-3-4-5)
+    // Attach card to target meld and assign Joker position if it's a wild Joker
     targetMeld.push(card);
+    if (isWildJoker(card, this.jokerRank, this.jokerSuits)) {
+      const jkOpts = getJokerReplacementOptions(targetMeld, this.jokerRank, this.jokerSuits);
+      if (jkOpts.length > 0) {
+        const bestOpt = jkOpts[jkOpts.length - 1];
+        card.assignedCard = { rank: bestOpt.rank, suit: bestOpt.suit };
+      }
+    }
     melds[meldIndex] = sortMeldCards(targetMeld, this.jokerRank, this.jokerSuits);
     playerHand.splice(cardIndex, 1);
 

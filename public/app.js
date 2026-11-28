@@ -2615,6 +2615,20 @@ function getRankPointClient(rank) {
 function getMeldPointsClient(meld, jokerRank, jokerSuits) {
   if (!meld || meld.length === 0) return 0;
   const isJk = (c) => isWildJoker(c, jokerRank, jokerSuits);
+
+  // Conquer Exceptional Rule: 4 of a kind of A, K, Q, or J laid down together = 41 points! (3-card J-Q-K tris = 30)
+  if (meld.length === 4) {
+    const naturals = meld.filter(c => !isJk(c));
+    const getEffRank = (c) => (c.isFalseJoker ? jokerRank : c.rank);
+    const firstRank = naturals.length > 0 ? getEffRank(naturals[0]) : null;
+    if (firstRank && ['A', 'K', 'Q', 'J'].includes(firstRank) && naturals.every(c => getEffRank(c) === firstRank)) {
+      const jokers = meld.filter(isJk);
+      if (jokers.every(jk => !jk.assignedCard || !jk.assignedCard.rank || jk.assignedCard.rank === firstRank)) {
+        return 41;
+      }
+    }
+  }
+
   const jkOpts = getJokerReplacementOptionsClient(meld, jokerRank, jokerSuits);
   let total = 0;
   for (const c of meld) {
@@ -3555,7 +3569,7 @@ function isCardHigherRank(a, b) {
 
 // Rule: GEBI (ገቢ) Detection
 // Checks if a card can attach to an existing table meld (extends sequence or completes 4-set).
-function isCardGebiToMeld(card, meld, jokerRank, jokerSuits) {
+function isCardGebiToMeld(card, meld, jokerRank, jokerSuits, options = { allowWildJoker: true }) {
   if (!card || !meld || meld.length < 3) return false;
 
   // False Joker CANNOT be used for Gebi (ገቢ) — it may only be part of a meld when laying down!
@@ -3565,8 +3579,22 @@ function isCardGebiToMeld(card, meld, jokerRank, jokerSuits) {
   const naturals = meld.filter(c => !isJk(c));
   if (naturals.length === 0) return false;
 
-  // 1. Same-rank set of 3 cards (can take 4th card of same rank)
   const isSet = naturals.every(c => (c.isFalseJoker ? jokerRank : c.rank) === (naturals[0].isFalseJoker ? jokerRank : naturals[0].rank));
+  const nonFalseNaturals = naturals.filter(c => !c.isFalseJoker);
+  const suit = nonFalseNaturals.length > 0 ? nonFalseNaturals[0].suit : naturals[0].suit;
+  const isSeq = nonFalseNaturals.every(c => c.suit === suit) &&
+    (!naturals.some(c => c.isFalseJoker) || !jokerSuits || jokerSuits.includes(suit));
+
+  // Designated Main Joker (ስያሜ ጆከር) can attach via Gebi to any table meld that doesn't already have a wild Joker
+  if (isJk(card)) {
+    if (options && options.allowWildJoker === false) return false;
+    if (meld.some(isJk)) return false; // Rule 14: max 1 wild Joker per meld
+    if (isSet && meld.length === 3) return true;
+    if (isSeq && meld.length < 13) return true;
+    return false;
+  }
+
+  // 1. Same-rank set of 3 cards (can take 4th card of same rank)
   if (isSet && meld.length === 3) {
     const setRank = naturals[0].isFalseJoker ? jokerRank : naturals[0].rank;
     const cardRank = card.isFalseJoker ? jokerRank : card.rank;
@@ -3581,10 +3609,6 @@ function isCardGebiToMeld(card, meld, jokerRank, jokerSuits) {
   }
 
   // 2. Same-suit sequence (can extend on either end, including assigned/placed Joker positions and False Joker)
-  const nonFalseNaturals = naturals.filter(c => !c.isFalseJoker);
-  const suit = nonFalseNaturals.length > 0 ? nonFalseNaturals[0].suit : naturals[0].suit;
-  const isSeq = nonFalseNaturals.every(c => c.suit === suit) &&
-    (!naturals.some(c => c.isFalseJoker) || !jokerSuits || jokerSuits.includes(suit));
   if (isSeq) {
     if (card.suit !== suit && !(card.isFalseJoker && (!jokerSuits || jokerSuits.includes(suit)))) return false;
 
@@ -3636,7 +3660,7 @@ function isCardGebiToTable(card, tableMelds, jokerRank, jokerSuits) {
   }
 
   for (const group of allGroups) {
-    if (isCardGebiToMeld(card, group, jokerRank, jokerSuits)) {
+    if (isCardGebiToMeld(card, group, jokerRank, jokerSuits, { allowWildJoker: false })) {
       return true;
     }
   }

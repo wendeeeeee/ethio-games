@@ -80,10 +80,30 @@ class DepositManager {
     return this.deposits.some(d => d.transactionId && d.transactionId.trim().toLowerCase() === clean && d.status !== 'REJECTED');
   }
 
+  async isDuplicateTxnAsync(transactionId) {
+    if (!transactionId) return false;
+    if (this.isDuplicateTxn(transactionId)) return true;
+    const clean = transactionId.trim();
+    if (this.hasSupabaseTable !== false) {
+      try {
+        const { data, error } = await supabase
+          .from('deposits')
+          .select('id, status')
+          .ilike('transaction_id', clean)
+          .neq('status', 'REJECTED')
+          .limit(1);
+        if (!error && Array.isArray(data) && data.length > 0) {
+          return true;
+        }
+      } catch (e) { }
+    }
+    return false;
+  }
+
   async createDeposit({ userId, userName = '', userPhone = '', amount, method = 'telebirr', transactionId }) {
     const txnTrimmed = transactionId.trim();
-    if (this.isDuplicateTxn(txnTrimmed)) {
-      throw new Error(`ይህ Transaction ID (${txnTrimmed}) ቀድሞ ገብቷል! እባክዎ ትክክለኛውን ያስገቡ።`);
+    if (await this.isDuplicateTxnAsync(txnTrimmed)) {
+      throw new Error(`ይህ Transaction ID (${txnTrimmed}) ቀድሞ ገብቷል! ተደጋጋሚ Transaction ID መጠቀም አይቻልም።`);
     }
 
     const newDeposit = {
@@ -115,7 +135,7 @@ class DepositManager {
         transaction_id: newDeposit.transactionId,
         status: newDeposit.status,
         created_at: newDeposit.createdAt
-      }).then(() => {}).catch(() => {});
+      }).then(() => { }).catch(() => { });
     }
 
     return newDeposit;
@@ -160,7 +180,7 @@ class DepositManager {
         status: 'APPROVED',
         admin_note: deposit.adminNote,
         reviewed_at: deposit.reviewedAt
-      }).eq('id', deposit.id).then(() => {}).catch(() => {});
+      }).eq('id', deposit.id).then(() => { }).catch(() => { });
     }
 
     return deposit;
@@ -183,7 +203,7 @@ class DepositManager {
         status: 'REJECTED',
         admin_note: deposit.adminNote,
         reviewed_at: deposit.reviewedAt
-      }).eq('id', deposit.id).then(() => {}).catch(() => {});
+      }).eq('id', deposit.id).then(() => { }).catch(() => { });
     }
 
     return deposit;
