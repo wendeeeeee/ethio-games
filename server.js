@@ -117,11 +117,23 @@ app.post('/api/wallet/deposit', rateLimit(15, 60000), async (req, res) => {
     : transactionId.trim();
 
   try {
-    // Strict duplicate check (local + Supabase) before anything else
+    // Check for existing PENDING deposit with same TXN — let user know it's already submitted
+    const existingPending = depositManager.findPendingByTxn(txnTrimmed);
+    if (existingPending) {
+      // Already PENDING for admin review — return success so user isn't confused
+      return res.json({
+        success: true,
+        status: 'PENDING',
+        deposit: existingPending,
+        message: `📋 ይህ Transaction ID (${txnTrimmed}) ቀድሞ ተልኳል እና አስተዳዳሪ ሲያረጋግጥ ይጠብቁ። ደጋግመው መላክ አያስፈልግም!`
+      });
+    }
+
+    // Block only APPROVED duplicates (already credited)
     if (await depositManager.isDuplicateTxnAsync(txnTrimmed)) {
       return res.status(400).json({
         success: false,
-        message: `⚠️ ይህ Transaction ID (${txnTrimmed}) ቀድሞ ገብቷል! ተደጋጋሚ Transaction ID መጠቀም አይቻልም።`
+        message: `⚠️ ይህ Transaction ID (${txnTrimmed}) ቀድሞ ገብቷል እና ተረጋግጧል! ተደጋጋሚ Transaction ID መጠቀም አይቻልም።`
       });
     }
 
