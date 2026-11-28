@@ -1579,17 +1579,10 @@ if (homeSekaBtn) {
 if (homeConquerBtn) {
   homeConquerBtn.addEventListener('click', () => {
     playCardSound();
-    if (!requireAuth('⚠️ ኮንከር ለመጫወት እባክዎ መጀመሪያ ይግቡ ወይም ይመዝገቡ!')) {
-      return;
+    // Conquer is Coming Soon — show modal instead of lobby
+    if (conquerComingSoonModal) {
+      conquerComingSoonModal.style.display = 'flex';
     }
-    lastLobbyGameType = 'CONQUER';
-    localStorage.setItem('conquer_last_game_type', 'CONQUER');
-    const cNameDisplay = document.getElementById('conquerPlayerNameDisplayVal');
-    if (cNameDisplay) cNameDisplay.textContent = playerName || 'ተጫዋች';
-    if (homeGameSelectView) homeGameSelectView.style.display = 'none';
-    if (sekaLobbySection) sekaLobbySection.style.display = 'none';
-    if (conquerLobbySection) conquerLobbySection.style.display = 'block';
-    refreshRoomsList();
   });
 }
 
