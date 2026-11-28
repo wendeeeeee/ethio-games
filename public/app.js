@@ -1343,6 +1343,10 @@ socket.on('game_state', (state) => {
   if (state.roomId !== currentRoomId) {
     playerOrderedCardIds = [];
     currentRoomId = state.roomId;
+    // New room → reset any stale leave-state from previous game
+    isTemporarilyOut = false;
+    activeGameReturnRoomId = null;
+    hideActiveGameReturnBanner();
   }
 
   if (state.status === 'WAITING') {
