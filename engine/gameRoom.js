@@ -109,6 +109,11 @@ class GameRoom {
       deadline
     };
 
+    // Pause the turn timer so turn-timeout doesn't fire while player is temporarily out
+    if (this.currentTurnPlayerId === userId) {
+      this.clearTurnTimer();
+    }
+
     this.log(`🚪 ${leftPlayer.name} ለጊዜው ከጠረጴዛው ወጥቷል! በ1 ደቂቃ ውስጥ ካልተመለሰ ይሸነፋል!`);
 
     if (this.leaveTimeouts[userId]) {
@@ -139,6 +144,10 @@ class GameRoom {
     if (this.temporarilyLeft && this.temporarilyLeft[userId]) {
       delete this.temporarilyLeft[userId];
       this.log(`👋 ${this.getPlayerName(userId)} ወደ ጨዋታው ተመልሷል!`);
+    }
+    // Restart turn timer if it's this player's turn (was paused on leave)
+    if (this.status === 'PLAYING' && this.currentTurnPlayerId === userId && !this.turnTimer) {
+      this.resetTurnTimer(this.onTurnTimeoutCallback);
     }
   }
 
@@ -174,6 +183,10 @@ class GameRoom {
   }
 
   checkTurnTimeout() {
+    // Don't fire timeout if the current turn player temporarily left (they get 60s leave timer instead)
+    if (this.currentTurnPlayerId && this.temporarilyLeft && this.temporarilyLeft[this.currentTurnPlayerId]) {
+      return false;
+    }
     if (this.status === 'PLAYING' && this.turnDeadline && Date.now() >= this.turnDeadline) {
       this.handleTurnTimeout(this.onTurnTimeoutCallback);
       return true;
