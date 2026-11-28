@@ -1066,6 +1066,7 @@ class GameRoom {
       },
       winner: this.winner,
       winReason: this.winReason,
+      temporarilyLeft: this.temporarilyLeft || {},
       logs: this.logs
     };
   }

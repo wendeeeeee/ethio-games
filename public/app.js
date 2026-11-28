@@ -1344,18 +1344,43 @@ socket.on('game_state', (state) => {
     playerOrderedCardIds = [];
     currentRoomId = state.roomId;
   }
-  if (state.status === 'PLAYING' || state.status === 'CUTTING_JOKER') {
-    localStorage.setItem('conquer_active_room_id', state.roomId);
-    if (gameView && gameView.style.display === 'none') {
-      switchToGameView();
-    }
-  } else if (state.status === 'WAITING') {
+
+  if (state.status === 'WAITING') {
     localStorage.setItem('conquer_active_room_id', state.roomId);
     refreshRoomsList();
     return;
+  }
+
+  if (state.status === 'PLAYING' || state.status === 'CUTTING_JOKER') {
+    localStorage.setItem('conquer_active_room_id', state.roomId);
   } else if (state.status === 'FINISHED' || state.status === 'EXPIRED') {
     localStorage.removeItem('conquer_active_room_id');
   }
+
+  // Check if player intentionally left the table temporarily via leave button
+  const userIsTemporarilyAway = isTemporarilyOut || (activeGameReturnRoomId === state.roomId);
+
+  if (state.status === 'PLAYING' || state.status === 'CUTTING_JOKER') {
+    if (userIsTemporarilyAway) {
+      // Player is away — show/update return banner, don't switch to game view
+      const deadline = state.temporarilyLeft && state.temporarilyLeft[userId]
+        ? state.temporarilyLeft[userId].deadline
+        : (Date.now() + 60 * 1000);
+      showActiveGameReturnBanner(state.roomId, deadline, 'CONQUER');
+    } else {
+      hideActiveGameReturnBanner();
+      if (gameView && gameView.style.display === 'none') {
+        switchToGameView();
+      }
+    }
+  }
+
+  if (state.status === 'FINISHED') {
+    isTemporarilyOut = false;
+    activeGameReturnRoomId = null;
+    hideActiveGameReturnBanner();
+  }
+
   if (state.status === 'PLAYING' && state.myHand) {
     state.myHand = syncHandPreservingOrder(state.myHand);
   }
