@@ -133,6 +133,7 @@ app.post('/api/wallet/deposit', rateLimit(15, 60000), async (req, res) => {
     // Auto-verify Telebirr receipt directly against Ethio Telecom receipt page
     if (methodName === 'telebirr') {
       const verifyRes = await verifyTelebirrReceipt(txnTrimmed, num);
+      console.log(`[Deposit] Telebirr verify result for ${txnTrimmed}: ok=${verifyRes.ok}, unreachable=${verifyRes.unreachable}, msg=${verifyRes.message || ''}`);
       if (verifyRes.ok) {
         const deposit = await depositManager.createDeposit({
           userId,

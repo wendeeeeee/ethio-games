@@ -96,19 +96,22 @@ async function verifyTelebirrReceipt(rawTxnId, expectedAmount) {
   const url = `https://transactioninfo.ethiotelecom.et/receipt/${encodeURIComponent(txnId)}`;
   let html = '';
   try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 12000);
     const res = await fetch(url, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
       },
-      signal: AbortSignal.timeout(12000)
+      signal: controller.signal
     });
+    clearTimeout(timeout);
     if (!res.ok) {
+      // Treat ANY non-200 as unreachable so deposit falls through to PENDING
+      // (Render servers are outside Ethiopia and may get 403/blocked from ethiotelecom.et)
       return {
         ok: false,
-        unreachable: res.status >= 500,
-        message: res.status >= 500
-          ? 'Telebirr server temporarily unavailable'
-          : `⚠️ ይህ Transaction ID (${txnId}) በTelebirr ላይ አልተገኘም!`
+        unreachable: true,
+        message: `Telebirr receipt endpoint returned HTTP ${res.status}`
       };
     }
     html = await res.text();
