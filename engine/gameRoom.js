@@ -55,6 +55,7 @@ class GameRoom {
     this.turnState = null; // 'AWAITING_DRAW', 'AWAITING_DISCARD'
     this.isFirstDiscard = true; // Rule 1: Starter's first discard protected
     this.mustMeld41PlayerId = null; // Player who picked from ground and must meld 41
+    this.drewFromBasePlayerId = null; // Player who drew the flipped baseCard this turn (no GEBI allowed)
     this.gebiOpenPoints = {}; // Tracks Gebi card points attached before/while reaching 41
 
     this.pokeState = {
@@ -481,7 +482,7 @@ class GameRoom {
 
       const hasAlreadyOpened = this.tableMelds[playerId] && this.tableMelds[playerId].length > 0;
       const topCard = this.discardPile[this.discardPile.length - 1];
-      const isFreeJoker = topCard.isJoker || topCard.rank === this.jokerRank;
+      const isFreeJoker = isWildJoker(topCard, this.jokerRank, this.jokerSuits);
 
       drawnCard = this.discardPile.pop();
       hand.push(drawnCard);
@@ -512,6 +513,7 @@ class GameRoom {
       hand.push(drawnCard);
       this.turnState = 'AWAITING_DISCARD';
       this.mustMeld41PlayerId = playerId; // Must close & win Conquer!
+      this.drewFromBasePlayerId = playerId; // Drawing from base forbids GEBI this turn!
       this.resetPoke();
       this.resetTurnTimer();
 
@@ -536,17 +538,13 @@ class GameRoom {
 
     // Conquer Win Condition: All 13 cards melded onto table (via ወረድ + ገቢ) and final 14th card discarded -> WIN!
     if (hand.length === 0) {
-      const discardedIsJoker = Boolean(
-        !discardedCard.isFalseJoker && (
-          discardedCard.isJoker ||
-          (this.jokerRank && discardedCard.rank === this.jokerRank && (!this.jokerSuits || this.jokerSuits.includes(discardedCard.suit)))
-        )
-      );
+      const discardedIsJoker = isWildJoker(discardedCard, this.jokerRank, this.jokerSuits);
       const hasDubeMelds = (this.tableMelds[playerId] || []).some(m => Array.isArray(m) && m.length === 2);
       const isDouble = (this.jokerDouble && discardedIsJoker) || (this.dubeDouble && hasDubeMelds);
       this.doubleWin = isDouble;
 
       this.mustMeld41PlayerId = null;
+      this.drewFromBasePlayerId = null;
       this.discardPile.push(discardedCard);
       this.status = 'FINISHED';
       this.winner = playerId;
@@ -586,16 +584,12 @@ class GameRoom {
         this.hands[playerId] = [];
       }
 
-      const discardedIsJoker = Boolean(
-        !discardedCard.isFalseJoker && (
-          discardedCard.isJoker ||
-          (this.jokerRank && discardedCard.rank === this.jokerRank && (!this.jokerSuits || this.jokerSuits.includes(discardedCard.suit)))
-        )
-      );
+      const discardedIsJoker = isWildJoker(discardedCard, this.jokerRank, this.jokerSuits);
       const isDouble = (this.jokerDouble && discardedIsJoker) || (this.dubeDouble && !!dubeResult);
       this.doubleWin = isDouble;
 
       this.mustMeld41PlayerId = null;
+      this.drewFromBasePlayerId = null;
       this.discardPile.push(discardedCard);
       this.status = 'FINISHED';
       this.winner = playerId;
@@ -626,9 +620,9 @@ class GameRoom {
       };
     }
 
-    // Rule: GEBI (ገቢ) Restriction on Discarding
+    // Rule: GEBI (ገቢ) Restriction on Discarding (skipped if player drew from base where GEBI is forbidden)
     // A player CANNOT discard a card to ground if it can be GEBI into any open table meld!
-    if (isCardGebiToTable(discardedCard, this.tableMelds, this.jokerRank, this.jokerSuits)) {
+    if (this.drewFromBasePlayerId !== playerId && isCardGebiToTable(discardedCard, this.tableMelds, this.jokerRank, this.jokerSuits)) {
       hand.splice(cardIndex, 0, discardedCard); // restore card
       return {
         success: false,
@@ -638,6 +632,7 @@ class GameRoom {
     }
 
     // Normal discard to Ground
+    this.drewFromBasePlayerId = null;
     this.discardPile.push(discardedCard);
     this.discardsCount = (this.discardsCount || 0) + 1;
     this.log(`${this.getPlayerName(playerId)} discarded ${discardedCard.rank}${discardedCard.suit} to the ground.`);
@@ -755,7 +750,7 @@ class GameRoom {
         const idx = hand.findIndex(c => String(c.id) === String(card.id));
         if (idx !== -1) {
           const [handCard] = hand.splice(idx, 1);
-          const isJk = handCard.isJoker || handCard.rank === this.jokerRank;
+          const isJk = isWildJoker(handCard, this.jokerRank, this.jokerSuits);
           if (isJk) {
             if (card.assignedCard && jokerOpts.some(o => o.rank === card.assignedCard.rank && o.suit === card.assignedCard.suit)) {
               handCard.assignedCard = { rank: card.assignedCard.rank, suit: card.assignedCard.suit };
@@ -925,6 +920,9 @@ class GameRoom {
     if (this.status !== 'PLAYING') return { success: false, message: 'Game not active' };
     if (this.currentTurnPlayerId !== playerId) return { success: false, message: 'Can only attach cards on your turn' };
     if (this.turnState !== 'AWAITING_DISCARD') return { success: false, message: 'መጀመሪያ ካርታ ማንሳት አለብህ!' };
+    if (this.drewFromBasePlayerId === playerId) {
+      return { success: false, message: '⚠️ የተገለበጠውን (የቂጡን) ካርታ ስትስብ ገቢ (GEBI) ማድረግ አይቻልም!' };
+    }
 
     const playerHand = this.getHand(playerId);
     const cardIndex = playerHand.findIndex(c => String(c.id) === String(cardId));
@@ -1045,6 +1043,7 @@ class GameRoom {
       hasSpecial41: pointsInfo.hasSpecial41,
       specialReason: pointsInfo.specialReason,
       mustMeld41: this.mustMeld41PlayerId === playerId,
+      drewFromBase: this.drewFromBasePlayerId === playerId,
       trisCount: trisList.length,
       groundEligibility,
       pokeState: {

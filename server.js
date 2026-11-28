@@ -111,26 +111,22 @@ app.post('/api/wallet/deposit', rateLimit(15, 60000), async (req, res) => {
   }
 
   const methodName = method || 'telebirr';
-  const txnTrimmed = transactionId.trim();
+  let txnTrimmed = transactionId.trim();
+  if (methodName === 'telebirr') {
+    const urlMatch = txnTrimmed.match(/transactioninfo\.ethiotelecom\.et\/receipt\/([A-Za-z0-9]+)/i);
+    if (urlMatch && urlMatch[1]) {
+      txnTrimmed = urlMatch[1].trim().toUpperCase();
+    } else {
+      txnTrimmed = txnTrimmed.toUpperCase();
+    }
+  }
 
   try {
-    // Check for existing PENDING deposit with same TXN — let user know it's already submitted
-    const existingPending = depositManager.findPendingByTxn(txnTrimmed);
-    if (existingPending) {
-      // Already PENDING for admin review — return success so user isn't confused
-      return res.json({
-        success: true,
-        status: 'PENDING',
-        deposit: existingPending,
-        message: `📋 ይህ Transaction ID (${txnTrimmed}) ቀድሞ ተልኳል እና አስተዳዳሪ ሲያረጋግጥ ይጠብቁ። ደጋግመው መላክ አያስፈልግም!`
-      });
-    }
-
-    // Block only APPROVED duplicates (already credited)
+    // Strict duplicate check (local + Supabase) for both PENDING and APPROVED deposits
     if (await depositManager.isDuplicateTxnAsync(txnTrimmed)) {
       return res.status(400).json({
         success: false,
-        message: `⚠️ ይህ Transaction ID (${txnTrimmed}) ቀድሞ ገብቷል እና ተረጋግጧል! ተደጋጋሚ Transaction ID መጠቀም አይቻልም።`
+        message: `⚠️ ይህ Transaction ID (${txnTrimmed}) ቀድሞ ገብቷል! ተደጋጋሚ Transaction ID መጠቀም አይቻልም።`
       });
     }
 

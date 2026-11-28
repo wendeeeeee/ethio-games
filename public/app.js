@@ -1868,6 +1868,10 @@ if (confirmDepositBtn) {
       return;
     }
 
+    if (depositErrorMsg) {
+      depositErrorMsg.textContent = '';
+      depositErrorMsg.style.display = 'none';
+    }
     confirmDepositBtn.disabled = true;
     confirmDepositBtn.textContent = '⏳ በማስገባት ላይ...';
 
@@ -2504,7 +2508,7 @@ function handleDrawAction(source) {
     }
 
     const hasAlreadyOpened = currentGameState.tableMelds && currentGameState.tableMelds[userId] && currentGameState.tableMelds[userId].length > 0;
-    const isFreeJoker = currentGameState.topGroundCard && (currentGameState.topGroundCard.isJoker || currentGameState.topGroundCard.rank === currentGameState.jokerRank);
+    const isFreeJoker = currentGameState.topGroundCard && isWildJoker(currentGameState.topGroundCard, currentGameState.jokerRank, currentGameState.jokerSuits);
     playDrawSound();
     currentGameState.mustMeld41 = (!hasAlreadyOpened && !isFreeJoker);
     socket.emit('draw_card', { roomId: currentRoomId, userId, source: 'ground' });
@@ -2798,6 +2802,10 @@ function handleGebiAction() {
 
   if (currentGameState.turnState !== 'AWAITING_DISCARD') {
     return showSortToast('⚠️ ገቢ (GEBI) ለማድረግ መጀመሪያ ካርታ አንሳ!');
+  }
+
+  if (currentGameState.drewFromBase) {
+    return showSortToast('⚠️ የተገለበጠውን (የቂጡን) ካርታ ስትስብ ገቢ (GEBI) ማድረግ አይቻልም!');
   }
 
   const selectedCards = (currentGameState.myHand || []).filter(c =>
