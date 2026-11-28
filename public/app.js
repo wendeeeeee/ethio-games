@@ -1173,9 +1173,14 @@ socket.on('conquer_reconnect_success', ({ roomId, status }) => {
 socket.on('active_room_expired', () => {
   localStorage.removeItem('conquer_active_room_id');
   currentRoomId = null;
-  if (homeGameSelectView && (!currentGameState || currentGameState.status !== 'PLAYING')) {
-    homeGameSelectView.style.display = 'flex';
-  }
+  currentGameState = null;
+  if (lobbyView) lobbyView.style.display = 'block';
+  if (gameView) gameView.style.display = 'none';
+  if (homeGameSelectView) homeGameSelectView.style.display = 'flex';
+  if (sekaLobbySection) sekaLobbySection.style.display = 'none';
+  if (conquerLobbySection) conquerLobbySection.style.display = 'none';
+  document.documentElement.classList.remove('in-game');
+  document.body.classList.remove('in-game');
 });
 
 socket.on('wallet_update', (wallet) => {
@@ -1513,6 +1518,18 @@ if (localStorage.getItem('conquer_active_room_id')) {
   if (sekaLobbySection) sekaLobbySection.style.display = 'none';
   if (conquerLobbySection) conquerLobbySection.style.display = 'none';
   if (lobbyView) lobbyView.style.display = 'none';
+
+  // Safety fallback: if reconnect doesn't respond within 5 seconds, restore lobby
+  setTimeout(() => {
+    if (lobbyView && lobbyView.style.display === 'none' && (!gameView || gameView.style.display === 'none')) {
+      localStorage.removeItem('conquer_active_room_id');
+      currentRoomId = null;
+      lobbyView.style.display = 'block';
+      if (homeGameSelectView) homeGameSelectView.style.display = 'flex';
+      document.documentElement.classList.remove('in-game');
+      document.body.classList.remove('in-game');
+    }
+  }, 5000);
 }
 
 if (homeSekaBtn) {

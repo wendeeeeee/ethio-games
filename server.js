@@ -1293,6 +1293,13 @@ function broadcastRoomUpdate(room) {
     for (const p of players) {
       if (p && p.id) broadcastWallet(p.id);
     }
+    // Clean up finished bot rooms immediately to prevent memory leaks and reconnect issues
+    if (room.isFreeBot) {
+      socketPlayerMap.forEach((pInfo, sId) => {
+        if (pInfo.roomId === room.roomId) pInfo.roomId = null;
+      });
+      rooms.delete(room.roomId);
+    }
   }
 }
 
@@ -1309,6 +1316,13 @@ function broadcastSekaRoomUpdate(room) {
     }
     for (const p of players) {
       if (p && p.id) broadcastWallet(p.id);
+    }
+    // Clean up finished bot rooms immediately to prevent memory leaks and reconnect issues
+    if (room.isFreeBot) {
+      socketPlayerMap.forEach((pInfo, sId) => {
+        if (pInfo.roomId === room.roomId) pInfo.roomId = null;
+      });
+      sekaRooms.delete(room.roomId);
     }
   }
 }
